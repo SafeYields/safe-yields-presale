@@ -161,7 +161,7 @@ contract SafeYieldPresale is Pausable, Ownable {
         if (state != PresaleState.Ended) {
             revert PresaleNotEnded();
         }
-        uint128 safeTokensToClaim = getTotalsafeTokensOwed(msg.sender);
+        uint128 safeTokensToClaim = getTotalSafeTokensOwed(msg.sender);
 
         investments[msg.sender] = 0;
 
@@ -260,7 +260,7 @@ contract SafeYieldPresale is Pausable, Ownable {
      * @dev Get the total safeTokens owed to a user
      * @param user The user to get the total safeTokens owed for
      */
-    function getTotalsafeTokensOwed(
+    function getTotalSafeTokensOwed(
         address user
     ) public view returns (uint128) {
         return investments[user] + refererVolume[_hashreferer(user)];
