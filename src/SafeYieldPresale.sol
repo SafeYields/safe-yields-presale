@@ -1,4 +1,4 @@
-pragma solidity "0.8.21";
+pragma solidity 0.8.21;
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -59,7 +59,7 @@ contract SafeYieldPresale is Pausable, Ownable {
     uint128 public tokenPrice;
     uint128 public refererCommission;
 
-    PresaleState public state;
+    PresaleState public presaleState;
 
     mapping(address userAddress => uint128 safeTokensAllocation)
         public investments;
@@ -80,6 +80,7 @@ contract SafeYieldPresale is Pausable, Ownable {
     error PresaleNotLive();
     error PresaleNotEnded();
     error ReferalToSelf();
+    error InvalidUser();
 
     constructor(
         address _safeToken,
@@ -97,7 +98,7 @@ contract SafeYieldPresale is Pausable, Ownable {
         maxAllocationPerWallet = _maxAllocationPerWallet;
         tokenPrice = _tokenPrice;
         refererCommission = _refererCommission;
-        state = PresaleState.NotStarted;
+        presaleState = PresaleState.NotStarted;
     }
 
     /**
@@ -106,7 +107,7 @@ contract SafeYieldPresale is Pausable, Ownable {
      * @param usdcAmount The amount of USDC to buy the safeTokens with
      */
     function buy(address user, uint128 usdcAmount) external whenNotPaused {
-        if (state != PresaleState.Live) revert PresaleNotLive();
+        if (presaleState != PresaleState.Live) revert PresaleNotLive();
 
         uint128 safeTokensAlloc = calculatesSafeTokens(usdcAmount);
 
@@ -126,7 +127,7 @@ contract SafeYieldPresale is Pausable, Ownable {
         uint128 usdcAmount,
         address refererAddress
     ) external whenNotPaused {
-        if (state != PresaleState.Live) revert PresaleNotLive();
+        if (presaleState != PresaleState.Live) revert PresaleNotLive();
 
         bytes32 refererId = _hashreferer(refererAddress);
 
@@ -158,7 +159,7 @@ contract SafeYieldPresale is Pausable, Ownable {
      * @notice This function can only be called when the presale has ended
      */
     function claim() external whenNotPaused {
-        if (state != PresaleState.Ended) {
+        if (presaleState != PresaleState.Ended) {
             revert PresaleNotEnded();
         }
         uint128 safeTokensToClaim = getTotalsafeTokensOwed(msg.sender);
@@ -180,6 +181,7 @@ contract SafeYieldPresale is Pausable, Ownable {
      * @param _price The token price to set
      */
     function setTokenPrice(uint128 _price) public onlyOwner {
+        require(_price > 0, "Invalid token price");
         tokenPrice = _price;
     }
 
@@ -233,7 +235,7 @@ contract SafeYieldPresale is Pausable, Ownable {
      * @notice This function can only be called by the owner
      */
     function startPresale() public onlyOwner {
-        state = PresaleState.Live;
+        presaleState = PresaleState.Live;
     }
 
     /**
@@ -241,7 +243,7 @@ contract SafeYieldPresale is Pausable, Ownable {
      * @notice This function can only be called by the owner
      */
     function endPresale() public onlyOwner {
-        state = PresaleState.Ended;
+        presaleState = PresaleState.Ended;
     }
 
     /**
@@ -329,6 +331,8 @@ contract SafeYieldPresale is Pausable, Ownable {
             revert InvalidAllocation();
         }
 
+        if (user == address(0)) revert InvalidUser();
+
         bytes32 userRefererId = _hashreferer(user); //@audit assumption  - maxAllocationPerWallet includes the referer commission
 
         uint128 potentialSafeTokensAlloc = investments[user] +
@@ -355,7 +359,7 @@ contract SafeYieldPresale is Pausable, Ownable {
     }
 }
 
-//!@q is there a cap on referer volume
+//!@q is there a cap on referer volume per wallet
 //!@q does the maxAllocationPerWallet include the referer commission?
 //!@ who bears the referers comission the protocol or the user buying
 //!@ should withdrawals of usdc be matched with a deposit of  safeTokens for claiming admin side
