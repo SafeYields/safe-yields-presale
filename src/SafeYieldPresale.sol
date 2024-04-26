@@ -5,6 +5,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+
 // Requirements checklist
 //// - [x] The contract should be pausable.
 // - [x] The contract should be ownable.
@@ -81,6 +82,7 @@ contract SafeYieldPresale is Pausable, Ownable {
     error PresaleNotEnded();
     error ReferalToSelf();
     error InvalidUser();
+    error ZeroBalance();
 
     constructor(
         address _safeToken,
@@ -150,7 +152,7 @@ contract SafeYieldPresale is Pausable, Ownable {
             usdcAmount,
             safeTokensAlloc,
             refererCommissionAmount,
-            refererId
+            bytes32(refererId)
         );
     }
 
@@ -164,13 +166,14 @@ contract SafeYieldPresale is Pausable, Ownable {
         }
         uint128 safeTokensToClaim = getTotalSafeTokensOwed(msg.sender);
 
+        if (safeTokensToClaim == 0) {
+            revert ZeroBalance();
+        }
+
         investments[msg.sender] = 0;
 
         refererVolume[_hashreferer(msg.sender)] = 0;
 
-        if (safeTokensToClaim == 0) {
-            revert InvalidAllocation();
-        }
         safeToken.safeTransfer(msg.sender, safeTokensToClaim);
 
         emit TokensClaimed(msg.sender, safeTokensToClaim);
@@ -303,7 +306,7 @@ contract SafeYieldPresale is Pausable, Ownable {
      * @param referer The referer address to hash
      */
     function _hashreferer(address referer) private pure returns (bytes32) {
-        return keccak256(abi.encodePacked(referer));
+        return bytes32(abi.encodePacked(referer));
     }
 
     /**
@@ -311,7 +314,9 @@ contract SafeYieldPresale is Pausable, Ownable {
      * @param referer The referer id to retrieve
      */
     function _retrievreferer(bytes32 referer) private pure returns (address) {
-        return address(uint160(uint256(referer)));
+        uint256 tempData = uint256(referer); // Convert bytes32 to uint256
+        uint160 extractedAddress = uint160(tempData >> 96); // Remove padding zeros
+        return address(extractedAddress);
     }
 
     /**
@@ -328,14 +333,15 @@ contract SafeYieldPresale is Pausable, Ownable {
         uint128 refererCommissionAmount
     ) internal {
         if (safeTokensAlloc == 0) {
-            revert InvalidAllocation();
+            revert ZeroBalance();
         }
 
         if (user == address(0)) revert InvalidUser();
 
         bytes32 userRefererId = _hashreferer(user); //@audit assumption  - maxAllocationPerWallet includes the referer commission
 
-        uint128 potentialSafeTokensAlloc = investments[user] +
+        uint128 currentInvestment = investments[user];
+        uint128 potentialSafeTokensAlloc = currentInvestment +
             safeTokensAlloc +
             refererVolume[userRefererId];
 
@@ -348,7 +354,7 @@ contract SafeYieldPresale is Pausable, Ownable {
 
         // check that the max supply is not exceeded
         if (totalSold + safeTokensAlloc + refererCommissionAmount > maxSupply) {
-            revert InvalidAllocation();
+            revert MaxSupplyExceeded();
         }
 
         usdcToken.safeTransferFrom(user, address(this), usdcAmount);
