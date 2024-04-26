@@ -1,5 +1,5 @@
 pragma solidity 0.8.21;
-import {Test} from "forge-std/Test.sol";
+import {Test, console2} from "forge-std/Test.sol";
 import {SafeYieldPresale} from "src/SafeYieldPresale.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {MockToken} from "./mocks/MockToken.sol";
@@ -40,6 +40,7 @@ contract SafeYieldPresaleTest is Test {
         usdcTokenContract.mint(alice, 1000_000e6);
         usdcTokenContract.mint(bob, 1000_000e6);
         usdcTokenContract.mint(carol, 1000_000e6);
+        usdcTokenContract.mint(owner, 1000_000e6);
 
         vm.prank(owner);
         presale = new SafeYieldPresale(
@@ -67,6 +68,31 @@ contract SafeYieldPresaleTest is Test {
         _;
     }
 
+    modifier buyMultiple() {
+        address[] memory users = new address[](10);
+
+        users[0] = alice;
+        users[1] = bob;
+        users[2] = carol;
+        users[3] = address(0x55);
+        users[4] = address(0x66);
+        users[5] = address(0x77);
+        users[6] = address(0x88);
+        users[7] = address(0x99);
+        users[8] = address(0x10);
+        users[9] = address(0x12);
+
+        uint128 allocation = (_maxAllocationPerWallet * 1e6) / _tokenPrice;
+        for (uint256 i = 0; i < users.length; i++) {
+            vm.startPrank(users[i]);
+            MockToken(usdcToken).mint(users[i], allocation);
+            IERC20(usdcToken).approve(address(presale), UINT256_MAX);
+            presale.buy(users[i], allocation);
+            vm.stopPrank();
+        }
+        _;
+    }
+
     function testPresalePhase() public {
         vm.startPrank(owner);
         assertEq(uint(presale.presaleState()), uint(PresaleState.NotStarted));
@@ -77,7 +103,7 @@ contract SafeYieldPresaleTest is Test {
         vm.stopPrank();
     }
 
-    function testBuy() public approved(alice) startPresale {
+    function testBuyCorrectAmount() public approved(alice) startPresale {
         vm.prank(alice);
         presale.buy(alice, oneThousandUsdc);
 
@@ -86,8 +112,68 @@ contract SafeYieldPresaleTest is Test {
             _tokenPrice
         );
 
-        uint128 aliceAllocation = presale.getTotalsafeTokensOwed(alice);
+        uint128 aliceAllocation = presale.getTotalSafeTokensOwed(alice);
         assertEq(aliceAllocation, expectedAllocation);
+    }
+
+    function testBuyWithInvalidAmount_Failed()
+        public
+        approved(alice)
+        startPresale
+    {
+        uint128 minAllocation = (_minAllocationPerWallet * 1e6) / _tokenPrice;
+        uint128 maxAllocation = (_maxAllocationPerWallet * 1e6) / _tokenPrice;
+        vm.prank(alice);
+        vm.expectRevert(SafeYieldPresale.InvalidAllocation.selector);
+        presale.buy(alice, minAllocation - 1);
+
+        vm.prank(alice);
+        vm.expectRevert(SafeYieldPresale.InvalidAllocation.selector);
+        presale.buy(alice, maxAllocation + 1);
+    }
+
+    function testBuyFailNotInPresale() public approved(alice) {
+        vm.prank(alice);
+        vm.expectRevert(SafeYieldPresale.PresaleNotLive.selector);
+        presale.buy(alice, oneThousandUsdc);
+
+        vm.startPrank(owner);
+        vm.expectRevert(SafeYieldPresale.PresaleNotLive.selector);
+        presale.buyWithReferer(bob, oneThousandUsdc, alice);
+    }
+
+    function testBuyZeroAddress() public approved(alice) startPresale {
+        vm.prank(alice);
+        vm.expectRevert(SafeYieldPresale.InvalidUser.selector);
+        presale.buy(address(0), oneThousandUsdc);
+    }
+
+    //test referrer id hash
+
+    //
+    function testMaxSupplyExceeded()
+        public
+        approved(owner)
+        startPresale
+        buyMultiple
+    {
+        uint128 amountLeft = presale.calculatesSafeTokensAvailable();
+        console2.log("Amount left: ", amountLeft);
+        uint128 safe = presale.calculatesSafeTokens(oneThousandUsdc);
+        uint128 ownerInvestment = presale.investments(owner);
+        vm.prank(owner);
+        vm.expectRevert(SafeYieldPresale.MaxSupplyExceeded.selector);
+        presale.buy(owner, 1000e6);
+    }
+
+    function testHashIsCorrect() public {
+        bytes32 hash = _hashreferer(
+            address(0xB232255EFc5F6f1c9408d9DB4e0Ee4072a96d467)
+        );
+        console2.logBytes32(hash);
+        address referer = _retrievreferer(hash);
+        console2.log(referer);
+        assertEq(referer, address(0xB232255EFc5F6f1c9408d9DB4e0Ee4072a96d467));
     }
 
     function testBuyWithInvalidReferer_Failed()
@@ -114,8 +200,8 @@ contract SafeYieldPresaleTest is Test {
             _tokenPrice
         );
 
-        uint128 aliceAllocation = presale.getTotalsafeTokensOwed(alice);
-        uint128 bobAllocation = presale.getTotalsafeTokensOwed(bob);
+        uint128 aliceAllocation = presale.getTotalSafeTokensOwed(alice);
+        uint128 bobAllocation = presale.getTotalSafeTokensOwed(bob);
         uint128 aliceRefererCommission = presale.calculateRefererCommission(
             bobAllocation
         );
@@ -132,7 +218,7 @@ contract SafeYieldPresaleTest is Test {
             _tokenPrice
         );
 
-        uint128 aliceAllocation = presale.getTotalsafeTokensOwed(alice);
+        uint128 aliceAllocation = presale.getTotalSafeTokensOwed(alice);
         assertEq(aliceAllocation, expectedAllocation);
 
         vm.startPrank(owner);
@@ -140,11 +226,17 @@ contract SafeYieldPresaleTest is Test {
         IERC20(safeToken).transfer(address(presale), uint256(_maxSupply));
         vm.stopPrank();
 
+        assertEq(IERC20(safeToken).balanceOf(address(presale)), _maxSupply);
+
         vm.prank(alice);
         presale.claim();
 
         uint256 aliceBalance = IERC20(safeToken).balanceOf(alice);
         assertEq(aliceBalance, expectedAllocation);
+
+        vm.prank(alice);
+        vm.expectRevert(SafeYieldPresale.ZeroBalance.selector);
+        presale.claim();
     }
 
     function getExpectedAllocation(
@@ -152,5 +244,14 @@ contract SafeYieldPresaleTest is Test {
         uint128 tokenPrice
     ) public view returns (uint128) {
         return (usdcAmount * tokenPrice) / 1e6;
+    }
+
+    function _retrievreferer(bytes32 referer) private pure returns (address) {
+        uint256 tempData = uint256(referer); // Convert bytes32 to uint256
+        uint160 extractedAddress = uint160(tempData >> 96); // Remove padding zeros
+        return address(extractedAddress);
+    }
+    function _hashreferer(address referer) private pure returns (bytes32) {
+        return bytes32(abi.encodePacked(referer));
     }
 }
