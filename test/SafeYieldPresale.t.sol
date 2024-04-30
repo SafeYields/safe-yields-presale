@@ -19,7 +19,7 @@ contract SafeYieldPresaleTest is Test {
     uint128 public _minAllocationPerWallet = 1e18;
     uint128 public _maxAllocationPerWallet = 100000e18;
     uint128 public _tokenPrice = 1.2e18;
-    uint128 public _refererCommission = 10e17; // 10%
+    uint128 public _refererCommission = 1e17; // 10%
 
     uint128 oneThousandUsdc = 1000e6;
     uint128 oneHundredsUsdc = 100e6;
@@ -28,6 +28,7 @@ contract SafeYieldPresaleTest is Test {
     address public alice = address(0x22);
     address public bob = address(0x33);
     address public carol = address(0x44);
+    address public usdcReceiver = address(0x55);
 
     function setUp() public {
         MockToken safeTokenContract = new MockToken("SafeToken", "SAFE", 18);
@@ -113,7 +114,11 @@ contract SafeYieldPresaleTest is Test {
         );
 
         uint128 aliceAllocation = presale.getTotalSafeTokensOwed(alice);
+        uint128 totalSold = presale.totalSold();
+        uint128 investments = presale.investments(alice);
         assertEq(aliceAllocation, expectedAllocation);
+        assertEq(totalSold, expectedAllocation);
+        assertEq(investments, expectedAllocation);
     }
 
     function testBuyWithInvalidAmount_Failed()
@@ -192,6 +197,7 @@ contract SafeYieldPresaleTest is Test {
         vm.prank(alice);
         presale.buy(alice, oneThousandUsdc);
 
+        //alice refer bob
         vm.prank(bob);
         presale.buyWithReferer(bob, oneHundredsUsdc, alice);
 
@@ -221,6 +227,11 @@ contract SafeYieldPresaleTest is Test {
         uint128 aliceAllocation = presale.getTotalSafeTokensOwed(alice);
         assertEq(aliceAllocation, expectedAllocation);
 
+        //should not be able to claim before presale ends
+        vm.prank(alice);
+        vm.expectRevert(SafeYieldPresale.PresaleNotEnded.selector);
+        presale.claim();
+
         vm.startPrank(owner);
         presale.endPresale();
         IERC20(safeToken).transfer(address(presale), uint256(_maxSupply));
@@ -237,6 +248,122 @@ contract SafeYieldPresaleTest is Test {
         vm.prank(alice);
         vm.expectRevert(SafeYieldPresale.ZeroBalance.selector);
         presale.claim();
+    }
+
+    function testOnlyOwnerCanSetTokenPrice() public {
+        vm.prank(alice);
+        vm.expectRevert();
+        presale.setTokenPrice(1e18);
+
+        vm.startPrank(owner);
+        presale.setTokenPrice(1e18);
+        assertEq(presale.tokenPrice(), 1e18);
+    }
+
+    function testOnlyOwnerCanSetRefererCommission() public {
+        vm.prank(alice);
+        vm.expectRevert();
+        presale.setRefererCommission(1e18);
+
+        vm.startPrank(owner);
+        presale.setRefererCommission(1e18);
+        assertEq(presale.refererCommission(), 1e18);
+
+        vm.expectRevert(
+            SafeYieldPresale.InvalidReferComissionPercentage.selector
+        );
+        presale.setRefererCommission(1e19);
+
+        vm.stopPrank();
+    }
+
+    function testCalculateSafeToken() public {
+        uint128 safe = presale.calculatesSafeTokens(oneThousandUsdc);
+        assertEq(safe, 1200e18);
+    }
+
+    function testCalculateSafeTokenAvailable() public {
+        uint128 safe = presale.calculatesSafeTokensAvailable();
+        assertEq(safe, _maxSupply);
+    }
+
+    function testOnlyOwnerCanPauseAndUnpause() public {
+        vm.prank(alice);
+        vm.expectRevert();
+        presale.pause();
+
+        vm.startPrank(owner);
+        presale.pause();
+        assertEq(presale.paused(), true);
+
+        presale.unpause();
+        assertEq(presale.paused(), false);
+    }
+
+    function testOnlyOwnerCanStartAndEndPresale() public {
+        vm.prank(alice);
+        vm.expectRevert();
+        presale.startPresale();
+
+        vm.startPrank(owner);
+        presale.startPresale();
+        assertEq(uint(presale.presaleState()), uint(PresaleState.Live));
+
+        presale.endPresale();
+        assertEq(uint(presale.presaleState()), uint(PresaleState.Ended));
+        vm.stopPrank();
+    }
+
+    function testReferComissionCalculation() public {
+        console2.log("Good:", presale.refererCommission());
+        uint128 refererCommission = presale.calculateRefererCommission(1000e18);
+
+        assertEq(refererCommission, 100e18);
+
+        // vm.prank(owner);
+        // presale.setRefererCommission(5e17);
+
+        // refererCommission = presale.calculateRefererCommission(1000e18);
+        // assertEq(refererCommission, 50e18);
+    }
+
+    function testSetAllocations() public {
+        vm.prank(alice);
+        vm.expectRevert();
+        presale.setAllocations(1e18, 100e18);
+
+        vm.startPrank(owner);
+        presale.setAllocations(1e18, 100e18);
+        assertEq(presale.minAllocationPerWallet(), 1e18);
+        assertEq(presale.maxAllocationPerWallet(), 100e18);
+
+        vm.expectRevert(SafeYieldPresale.InvalidAllocation.selector);
+        presale.setAllocations(100e18, 1e18);
+    }
+
+    function testDepositSafeTokens() public {
+        vm.prank(alice);
+        vm.expectRevert();
+        presale.depositSafeTokens(1000e18, alice);
+
+        vm.startPrank(owner);
+        IERC20(safeToken).approve(address(presale), UINT256_MAX);
+        presale.depositSafeTokens(1000e18, owner);
+        assertEq(IERC20(safeToken).balanceOf(address(presale)), 1000e18);
+    }
+
+    //to work on
+    function testWithdrawUsdc() public approved(alice) startPresale {
+        vm.prank(alice);
+        presale.buy(alice, oneThousandUsdc);
+
+        vm.prank(alice);
+        vm.expectRevert();
+        presale.withdrawUSDC(alice);
+
+        vm.startPrank(owner);
+        presale.withdrawUSDC(usdcReceiver);
+        assertEq(IERC20(usdcToken).balanceOf(usdcReceiver), oneThousandUsdc);
     }
 
     function getExpectedAllocation(
