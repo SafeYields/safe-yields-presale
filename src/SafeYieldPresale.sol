@@ -83,6 +83,9 @@ contract SafeYieldPresale is Pausable, Ownable {
     error ReferalToSelf();
     error InvalidUser();
     error ZeroBalance();
+    error InvalidReferComissionPercentage();
+    error InvalidTokenPrice();
+    error InvalidMaxSupply();
 
     constructor(
         address _safeToken,
@@ -93,6 +96,12 @@ contract SafeYieldPresale is Pausable, Ownable {
         uint128 _tokenPrice,
         uint128 _refererCommission
     ) Ownable(msg.sender) {
+        if (_minAllocationPerWallet > _maxAllocationPerWallet)
+            revert InvalidAllocation();
+        if (_refererCommission > PRECISION)
+            revert InvalidReferComissionPercentage();
+        if (_tokenPrice == 0) revert InvalidTokenPrice();
+        if (_maxSupply == 0) revert InvalidMaxSupply();
         safeToken = IERC20(_safeToken);
         usdcToken = IERC20(_usdcToken);
         maxSupply = _maxSupply;
@@ -184,15 +193,17 @@ contract SafeYieldPresale is Pausable, Ownable {
      * @param _price The token price to set
      */
     function setTokenPrice(uint128 _price) public onlyOwner {
-        require(_price > 0, "Invalid token price");
+        if (_price == 0) revert InvalidTokenPrice();
         tokenPrice = _price;
     }
 
     /**
      * @dev Set the referer commission
      * @param _commission The referer commission to set
+     * referer commsion is not more than 100%
      */
     function setRefererCommission(uint128 _commission) public onlyOwner {
+        if (_commission > PRECISION) revert InvalidReferComissionPercentage();
         refererCommission = _commission;
     }
 
@@ -285,10 +296,13 @@ contract SafeYieldPresale is Pausable, Ownable {
     /**
      * @dev Deposit safeTokens into the contract
      * @param amount The amount of safeTokens to deposit
-     * @param owner The owner of the safeTokens
+     * @param owner_ The owner of the safeTokens
      */
-    function depositSafeTokens(uint128 amount, address owner) public onlyOwner {
-        safeToken.safeTransferFrom(owner, address(this), amount);
+    function depositSafeTokens(
+        uint128 amount,
+        address owner_
+    ) public onlyOwner {
+        safeToken.safeTransferFrom(owner_, address(this), amount);
     }
 
     ///!@q are withdrawals allowed before the presale ends? / all safeTokens are sold?
