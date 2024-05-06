@@ -12,6 +12,10 @@ contract SafeToken is ERC20, AccessControl {
 
     mapping(address minter => uint256 maxMintAmount) minterLimits;
 
+    error MaxSupplyExceeded();
+    error OnlyMinterRole();
+    error OnlyBurnerRole();
+
     constructor(
         string memory name,
         string memory symbol,
@@ -21,18 +25,15 @@ contract SafeToken is ERC20, AccessControl {
     }
 
     function mint(address to, uint256 amount) public {
-        require(
-            hasRole(MINTER_ROLE, _msgSender()),
-            "SafeToken: must have minter role to mint"
-        );
+        if (!hasRole(MINTER_ROLE, _msgSender())) revert OnlyMinterRole();
+
+        if (totalSupply() + amount > MAX_SUPPLY) revert MaxSupplyExceeded();
+
         _mint(to, amount);
     }
 
     function burn(address from, uint256 amount) public {
-        require(
-            hasRole(BURNER_ROLE, _msgSender()),
-            "SafeToken: must have burner role to burn"
-        );
+        if (!hasRole(BURNER_ROLE, _msgSender())) revert OnlyBurnerRole();
         _burn(from, amount);
     }
 }
