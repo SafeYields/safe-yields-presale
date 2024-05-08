@@ -53,6 +53,11 @@ contract SafeYieldPresale is Pausable, Ownable {
 
     uint128 public immutable maxSupply;
 
+    dividendPer share is 1
+
+    you bought on day 1
+    so you have
+
     struct RefererVolume {
         uint128 usdcVolume;
         uint128 safeTokenVolume;
@@ -444,6 +449,8 @@ contract SafeYieldPresale is Pausable, Ownable {
         safeYieldStaking.stake(amount);
     }
 }
+
+///!@ possible DOS is the tokens left are enough for purchase but not enough to cover referer volume
 
 //!@q is there a cap on referer volume per wallet
 //!@q does the maxAllocationPerWallet include the referer commission?
