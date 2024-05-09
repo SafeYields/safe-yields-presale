@@ -53,11 +53,6 @@ contract SafeYieldPresale is Pausable, Ownable {
 
     uint128 public immutable maxSupply;
 
-    dividendPer share is 1
-
-    you bought on day 1
-    so you have
-
     struct RefererVolume {
         uint128 usdcVolume;
         uint128 safeTokenVolume;
@@ -110,7 +105,6 @@ contract SafeYieldPresale is Pausable, Ownable {
         address _safeToken,
         address _usdcToken,
         address _safeYieldStaking,
-        address _receiptToken,
         uint128 _maxSupply,
         uint128 _minAllocationPerWallet,
         uint128 _maxAllocationPerWallet,
@@ -434,10 +428,10 @@ contract SafeYieldPresale is Pausable, Ownable {
 
         totalSold += safeTokensAlloc + refererCommissionAmount;
 
-        _autoStake(safeTokensAlloc);
+        _autoStake(safeTokensAlloc, user);
     }
 
-    function _autoStake(uint128 amount) private {
+    function _autoStake(uint128 amount, address user) private {
         //stake the safeTokens
         uint256 allowance = safeToken.allowance(
             address(this),
@@ -446,7 +440,7 @@ contract SafeYieldPresale is Pausable, Ownable {
         if (allowance < amount) {
             safeToken.approve(address(safeYieldStaking), amount);
         }
-        safeYieldStaking.stake(amount);
+        safeYieldStaking.stake(amount, user);
     }
 }
 
