@@ -4,7 +4,7 @@ pragma solidity 0.8.21;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ISSafeToken} from "./interfaces/IsSafeToken.sol";
 
-// import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 
 contract SafeStakingContract is Ownable2Step {
@@ -46,7 +46,7 @@ contract SafeStakingContract is Ownable2Step {
         address _sSafeToken,
         address _usdc,
         address _admin
-    ) Ownable2Step(_admin) {
+    ) Ownable(_admin) {
         safeToken = IERC20(_safeToken);
         sSafeToken = ISSafeToken(_sSafeToken);
         usdc = IERC20(_usdc);
