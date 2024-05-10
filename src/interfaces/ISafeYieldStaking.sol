@@ -6,7 +6,7 @@ interface ISafeYieldStaking {
     function unstake(uint128 amount) external;
     function claimRewards() external;
     function getStakedBalance(address user) external view returns (uint128);
-    function getRewardsBalancse(
+    function getRewardsBalance(
         address user
     ) external view returns (uint128, uint128);
 }

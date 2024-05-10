@@ -38,6 +38,7 @@ contract sSafeToken is ERC20, AccessControl {
         _burn(from, amount);
     }
 
+    //solhint-disable-next-line
     function transfer(
         address recipient,
         uint256 amount

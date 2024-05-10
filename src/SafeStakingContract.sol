@@ -35,7 +35,7 @@ contract SafeStakingContract is Ownable2Step {
     mapping(address user => MyStake stake) public userStakes;
 
     event Staked(address indexed user, uint128 amount);
-    event Unstaked(address indexed user, uint128 amount);
+    event UnStaked(address indexed user, uint128 amount);
     event RewardClaimed(address indexed user, uint128 amount, bool isUsdc);
     event UsdcRewardPerShareUpdated(uint128 newRewardPerShare);
     event SafeTokenRewardPerShareUpdated(uint128 newRewardPerShare);
@@ -155,7 +155,7 @@ contract SafeStakingContract is Ownable2Step {
 
         safeToken.transfer(msg.sender, amount);
 
-        emit Unstaked(msg.sender, amount);
+        emit UnStaked(msg.sender, amount);
     }
 
     function claimReward() external updateReward(msg.sender) {
