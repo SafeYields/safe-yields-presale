@@ -1,3 +1,11 @@
 {
-  "cSpell.words": ["remappings"]
+  "cSpell.words": [
+    "Alloc",
+    "Pausable",
+    "Presale",
+    "referer's",
+    "remappings",
+    "unstake"
+  ],
+  "solidity.compileUsingRemoteVersion": "v0.8.21+commit.d9974bed"
 }
