@@ -38,19 +38,11 @@ contract sSafeToken is ERC20, AccessControl {
         _burn(from, amount);
     }
 
-    //solhint-disable-next-line
-    function transfer(
-        address recipient,
-        uint256 amount
-    ) public override returns (bool) {
-        revert("Transfer not allowed");
-    }
-
-    function transferFrom(
-        address sender,
-        address recipient,
-        uint256 amount
-    ) public override returns (bool) {
+    function _update(
+        address /*from*/,
+        address /*to*/,
+        uint256 /*value*/
+    ) internal pure override {
         revert("Transfer not allowed");
     }
 }
