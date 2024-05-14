@@ -3,11 +3,13 @@ pragma solidity 0.8.21;
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 import {ISafeYieldStaking} from "./interfaces/ISafeYieldStaking.sol";
+import {ISafeYieldPreSale} from "./interfaces/ISafeYieldPreSale.sol";
+
+import {PreSaleState, ReferrerVolume} from "./types/SafeTypes.sol";
 
 // Requirements checklist
 //// - [x] The contract should be pausable.
@@ -41,7 +43,7 @@ import {ISafeYieldStaking} from "./interfaces/ISafeYieldStaking.sol";
 // money
 // Referrer
 
-contract SafeYieldPresale is Pausable, Ownable {
+contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
     using SafeERC20 for IERC20;
 
     uint128 public constant PRECISION = 1e18;
@@ -54,17 +56,6 @@ contract SafeYieldPresale is Pausable, Ownable {
 
     uint128 public immutable maxSupply;
 
-    struct ReferrerVolume {
-        uint128 usdcVolume;
-        uint128 safeTokenVolume;
-    }
-
-    enum PresaleState {
-        NotStarted,
-        Live,
-        Ended
-    }
-
     uint128 public totalSold;
     uint128 public minAllocationPerWallet;
     uint128 public maxAllocationPerWallet;
@@ -72,7 +63,7 @@ contract SafeYieldPresale is Pausable, Ownable {
     uint128 public referrerCommissionUsdc; //%
     uint128 public referrerCommissionSafeToken; //%
 
-    PresaleState public presaleState;
+    PreSaleState public preSaleState;
 
     mapping(address userAddress => uint128 safeTokensAllocation)
         public investments;
@@ -132,7 +123,7 @@ contract SafeYieldPresale is Pausable, Ownable {
         tokenPrice = _tokenPrice;
         referrerCommissionUsdc = _referrerCommissionUsdc;
         referrerCommissionSafeToken = _referrerCommissionSafeToken;
-        presaleState = PresaleState.NotStarted;
+        preSaleState = PreSaleState.NotStarted;
     }
 
     /**
@@ -141,7 +132,7 @@ contract SafeYieldPresale is Pausable, Ownable {
      * @param usdcAmount The amount of USDC to buy the safeTokens with
      */
     function buy(address user, uint128 usdcAmount) external whenNotPaused {
-        if (presaleState != PresaleState.Live) revert PresaleNotLive();
+        if (preSaleState != PreSaleState.Live) revert PresaleNotLive();
 
         uint128 safeTokensAlloc = calculatesSafeTokens(usdcAmount);
 
@@ -168,7 +159,7 @@ contract SafeYieldPresale is Pausable, Ownable {
         uint128 usdcAmount,
         address referrerAddress
     ) external whenNotPaused {
-        if (presaleState != PresaleState.Live) revert PresaleNotLive();
+        if (preSaleState != PreSaleState.Live) revert PresaleNotLive();
 
         bytes32 referrerId = _hashReferrer(referrerAddress);
 
@@ -206,7 +197,7 @@ contract SafeYieldPresale is Pausable, Ownable {
      * @notice This function can only be called when the presale has ended
      */
     function claim() external whenNotPaused {
-        if (presaleState != PresaleState.Ended) {
+        if (preSaleState != PreSaleState.Ended) {
             revert PresaleNotEnded();
         }
         uint128 safeTokensToClaim = getTotalSafeTokensOwed(msg.sender);
@@ -292,7 +283,7 @@ contract SafeYieldPresale is Pausable, Ownable {
      * @notice This function can only be called by the owner
      */
     function startPresale() public onlyOwner {
-        presaleState = PresaleState.Live;
+        preSaleState = PreSaleState.Live;
     }
 
     /**
@@ -300,7 +291,7 @@ contract SafeYieldPresale is Pausable, Ownable {
      * @notice This function can only be called by the owner
      */
     function endPresale() public onlyOwner {
-        presaleState = PresaleState.Ended;
+        preSaleState = PreSaleState.Ended;
     }
 
     /**
