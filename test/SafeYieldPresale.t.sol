@@ -2,7 +2,7 @@ pragma solidity 0.8.21;
 import {Test, console2} from "forge-std/Test.sol";
 import {SafeYieldPresale} from "src/SafeYieldPresale.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {MockToken} from "./mocks/MockToken.sol";
+import {USDCMockToken} from "./mocks/USDCMockToken.sol";
 
 contract SafeYieldPresaleTest is Test {
     SafeYieldPresale presale;
