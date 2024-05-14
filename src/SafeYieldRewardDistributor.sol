@@ -130,26 +130,6 @@ contract SafeYieldRewardDistributor is
         contractIndex[usdcBuyback] = 2;
     }
 
-    function updateSafeStaking(address newSafeStaking) external onlyOwner {
-        _updateContract(newSafeStaking, safeStaking);
-        emit SafeStakingUpdated(safeStaking, newSafeStaking);
-        safeStaking = newSafeStaking;
-    }
-
-    function updateTeamOperations(
-        address newTeamOperations
-    ) external onlyOwner {
-        _updateContract(newTeamOperations, teamOperations);
-        emit TeamOperationsUpdated(teamOperations, newTeamOperations);
-        teamOperations = newTeamOperations;
-    }
-
-    function updateUsdcBuyback(address newUsdcBuyback) external onlyOwner {
-        _updateContract(newUsdcBuyback, usdcBuyback);
-        emit UsdcBuybackUpdated(usdcBuyback, newUsdcBuyback);
-        usdcBuyback = newUsdcBuyback;
-    }
-
     /**
      * @notice allows admin to add a new recipient of fees.
      * @param newContractInfo the details of the new contract
@@ -269,6 +249,26 @@ contract SafeYieldRewardDistributor is
         approvedContracts.pop();
 
         emit ContractRemoved(contract_);
+    }
+
+    function updateSafeStaking(address newSafeStaking) external onlyOwner {
+        _updateContract(newSafeStaking, safeStaking);
+        emit SafeStakingUpdated(safeStaking, newSafeStaking);
+        safeStaking = newSafeStaking;
+    }
+
+    function updateTeamOperations(
+        address newTeamOperations
+    ) external onlyOwner {
+        _updateContract(newTeamOperations, teamOperations);
+        emit TeamOperationsUpdated(teamOperations, newTeamOperations);
+        teamOperations = newTeamOperations;
+    }
+
+    function updateUsdcBuyback(address newUsdcBuyback) external onlyOwner {
+        _updateContract(newUsdcBuyback, usdcBuyback);
+        emit UsdcBuybackUpdated(usdcBuyback, newUsdcBuyback);
+        usdcBuyback = newUsdcBuyback;
     }
 
     /**
