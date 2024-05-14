@@ -262,24 +262,26 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
     }
 
     /**
-     * @dev Calculate the safeTokens for a given USDC amount
-     * @param usdcAmount The amount of USDC to calculate the safeTokens for
-     * @return The safeTokens for the given USDC amount
+     * @dev Deposit safeTokens into the contract
+     * @param amount The amount of safeTokens to deposit
+     * @param owner_ The owner of the safeTokens
      */
-    function calculatesSafeTokens(
-        uint128 usdcAmount
-    ) public view returns (uint128) {
-        uint128 modifiedPrecision = 1e6;
-        return (usdcAmount * tokenPrice) / modifiedPrecision;
+    function depositSafeTokens(
+        uint128 amount,
+        address owner_
+    ) public onlyOwner {
+        safeToken.safeTransferFrom(owner_, address(this), amount);
     }
 
     /**
-     * @dev Calculate the safeTokens available for sale
-     * @return The safeTokens available for sale
+     * @dev Set the min and max allocations per wallet
+     * @param _min The minimum allocation per wallet
+     * @param _max The maximum allocation per wallet
      */
-    function calculatesSafeTokensAvailable() public view returns (uint128) {
-        if (totalSold >= maxSupply) return 0;
-        return maxSupply - totalSold;
+    function setAllocations(uint128 _min, uint128 _max) public onlyOwner {
+        if (_min > _max) revert SAFE_YIELD_INVALID_ALLOCATION();
+        minAllocationPerWallet = _min;
+        maxAllocationPerWallet = _max;
     }
 
     /**
@@ -315,6 +317,27 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
     }
 
     /**
+     * @dev Calculate the safeTokens for a given USDC amount
+     * @param usdcAmount The amount of USDC to calculate the safeTokens for
+     * @return The safeTokens for the given USDC amount
+     */
+    function calculatesSafeTokens(
+        uint128 usdcAmount
+    ) public view returns (uint128) {
+        uint128 modifiedPrecision = 1e6;
+        return (usdcAmount * tokenPrice) / modifiedPrecision;
+    }
+
+    /**
+     * @dev Calculate the safeTokens available for sale
+     * @return The safeTokens available for sale
+     */
+    function calculatesSafeTokensAvailable() public view returns (uint128) {
+        if (totalSold >= maxSupply) return 0;
+        return maxSupply - totalSold;
+    }
+
+    /**
      * @dev Calculate the referrer commission
      * @param safeTokens The amount of safeTokens to calculate the referrer commission for
      * @return The referrer commission
@@ -345,29 +368,6 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
             referrerVolumes[_hashReferrer(user)].safeTokenVolume;
     }
 
-    /**
-     * @dev Set the min and max allocations per wallet
-     * @param _min The minimum allocation per wallet
-     * @param _max The maximum allocation per wallet
-     */
-    function setAllocations(uint128 _min, uint128 _max) public onlyOwner {
-        if (_min > _max) revert SAFE_YIELD_INVALID_ALLOCATION();
-        minAllocationPerWallet = _min;
-        maxAllocationPerWallet = _max;
-    }
-
-    /**
-     * @dev Deposit safeTokens into the contract
-     * @param amount The amount of safeTokens to deposit
-     * @param owner_ The owner of the safeTokens
-     */
-    function depositSafeTokens(
-        uint128 amount,
-        address owner_
-    ) public onlyOwner {
-        safeToken.safeTransferFrom(owner_, address(this), amount);
-    }
-
     ///!@q are withdrawals allowed before the presale ends? / all safeTokens are sold?
     /**
      * @dev Withdraw USDC from the contract
@@ -376,26 +376,6 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
     function withdrawUSDC(address receiver) public onlyOwner {
         uint256 balance = usdcToken.balanceOf(address(this));
         usdcToken.transfer(receiver, balance);
-    }
-
-    /**
-     * @dev hash the referrer address
-     * @param referrer The referrer address to hash
-     */
-    function _hashReferrer(address referrer) private pure returns (bytes32) {
-        return bytes32(abi.encodePacked(referrer));
-    }
-
-    /**
-     * @dev retrieve the referrer address
-     * @param referrer The referrer id to retrieve
-     */
-    function _retrieveReferrer(
-        bytes32 referrer
-    ) private pure returns (address) {
-        uint256 tempData = uint256(referrer); // Convert bytes32 to uint256
-        uint160 extractedAddress = uint160(tempData >> 96); // Remove padding zeros
-        return address(extractedAddress);
     }
 
     /**
@@ -445,6 +425,26 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
         totalSold += safeTokensAlloc + referrerCommissionAmount;
 
         _autoStake(safeTokensAlloc, user);
+    }
+
+    /**
+     * @dev hash the referrer address
+     * @param referrer The referrer address to hash
+     */
+    function _hashReferrer(address referrer) private pure returns (bytes32) {
+        return bytes32(abi.encodePacked(referrer));
+    }
+
+    /**
+     * @dev retrieve the referrer address
+     * @param referrer The referrer id to retrieve
+     */
+    function _retrieveReferrer(
+        bytes32 referrer
+    ) private pure returns (address) {
+        uint256 tempData = uint256(referrer); // Convert bytes32 to uint256
+        uint160 extractedAddress = uint160(tempData >> 96); // Remove padding zeros
+        return address(extractedAddress);
     }
 
     function _autoStake(uint128 amount, address user) private {
