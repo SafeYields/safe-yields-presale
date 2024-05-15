@@ -22,9 +22,9 @@ interface ISafeYieldPreSale {
         uint128 _commissionSafe
     ) external;
 
-    function calculatesSafeTokens(
-        uint128 usdcAmount
-    ) external view returns (uint128);
+    // function calculatesSafeTokens(
+    //     uint128 usdcAmount
+    // ) external view returns (uint128);
     function calculatesSafeTokensAvailable() external view returns (uint128);
 
     function pause() external;
@@ -35,13 +35,13 @@ interface ISafeYieldPreSale {
 
     function endPresale() external;
 
-    function calculateReferrerCommissionSafe(
-        uint128 safeTokens
-    ) external view returns (uint128);
+    // function calculateReferrerCommissionSafe(
+    //     uint128 safeTokens
+    // ) external view returns (uint128);
 
-    function calculateReferrerCommissionUsdc(
-        uint128 usdcAmount
-    ) external view returns (uint128);
+    // function calculateReferrerCommissionUsdc(
+    //     uint128 usdcAmount
+    // ) external view returns (uint128);
 
     function getTotalSafeTokensOwed(
         address user
