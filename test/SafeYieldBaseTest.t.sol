@@ -41,9 +41,9 @@ abstract contract SafeYieldBaseTest is Test {
 
         presale = new SafeYieldPresale(
             address(safeToken),
+            address(sSafeToken),
             address(usdc),
             address(staking),
-            uint128(PRE_SALE_MAX_SUPPLY),
             1000e18,
             100_000e18,
             1e18,

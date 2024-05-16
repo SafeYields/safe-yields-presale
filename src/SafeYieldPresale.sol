@@ -111,7 +111,6 @@ contract SafeYieldPresale is Pausable, Ownable {
         address _sSafeToken,
         address _usdcToken,
         address _safeYieldStaking,
-        uint128 _maxSupply,
         uint128 _minAllocationPerWallet,
         uint128 _maxAllocationPerWallet,
         uint128 _tokenPrice,
@@ -127,7 +126,6 @@ contract SafeYieldPresale is Pausable, Ownable {
         ) revert SAFE_YIELD_INVALID_REFER_COMMISSION_PERCENTAGE();
 
         if (_tokenPrice == 0) revert SAFE_YIELD_INVALID_TOKEN_PRICE();
-        if (_maxSupply == 0) revert SAFE_YIELD_MAX_SUPPLY_EXCEEDED();
         if (_safeToken == address(0) || _usdcToken == address(0))
             revert SAFE_YIELD_INVALID_ADDRESS();
 
