@@ -5,15 +5,19 @@ import {PreSaleState} from "../types/SafeTypes.sol";
 interface ISafeYieldPreSale {
     function preSaleState() external view returns (PreSaleState);
 
-    function buy(address user, uint128 usdcAmount) external;
-
-    function buyWithReferrer(
-        address user,
+    function deposit(
+        address investor,
         uint128 usdcAmount,
-        address referrerAddress
+        bytes32 referrerId
     ) external;
 
-    function claim() external;
+    function claimSafeTokens() external;
+
+    function withdrawUSDC(address receiver, uint256 amount) external;
+
+    function redeemUsdcCommission() external;
+
+    function createReferrerId() external returns (bytes32 referrerId);
 
     function setTokenPrice(uint128 _price) external;
 
@@ -21,11 +25,6 @@ interface ISafeYieldPreSale {
         uint128 _commissionUsdc,
         uint128 _commissionSafe
     ) external;
-
-    // function calculatesSafeTokens(
-    //     uint128 usdcAmount
-    // ) external view returns (uint128);
-    function calculatesSafeTokensAvailable() external view returns (uint128);
 
     function pause() external;
 
@@ -35,21 +34,9 @@ interface ISafeYieldPreSale {
 
     function endPresale() external;
 
-    // function calculateReferrerCommissionSafe(
-    //     uint128 safeTokens
-    // ) external view returns (uint128);
-
-    // function calculateReferrerCommissionUsdc(
-    //     uint128 usdcAmount
-    // ) external view returns (uint128);
-
     function getTotalSafeTokensOwed(
         address user
     ) external view returns (uint128);
 
     function setAllocations(uint128 _min, uint128 _max) external;
-
-    function depositSafeTokens(uint128 amount, address owner_) external;
-
-    function withdrawUSDC(address receiver) external;
 }

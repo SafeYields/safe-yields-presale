@@ -12,7 +12,7 @@ import {ISafeToken} from "./interfaces/ISafeToken.sol";
 
 import {PreSaleState, ReferrerInfo} from "./types/SafeTypes.sol";
 
-contract SafeYieldPresale is Pausable, Ownable {
+contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
     using SafeERC20 for IERC20;
     using SafeERC20 for ISafeToken;
 
@@ -91,6 +91,7 @@ contract SafeYieldPresale is Pausable, Ownable {
                                  ERRORS
     //////////////////////////////////////////////////////////////*/
 
+    error SAFE_YIELD_REFERRER_MAX_WALLET_ALLOCATION_EXCEEDED();
     error SAFE_YIELD_INVALID_REFER_COMMISSION_PERCENTAGE();
     error SAFE_YIELD_MAX_WALLET_ALLOCATION_EXCEEDED();
     error SAFE_YIELD_MIN_WALLET_ALLOCATION_EXCEEDED();
@@ -101,8 +102,8 @@ contract SafeYieldPresale is Pausable, Ownable {
     error SAFE_YIELD_PRESALE_NOT_ENDED();
     error SAFE_YIELD_UNKNOWN_REFERRER();
     error SAFE_YIELD_REFERRAL_TO_SELF();
-    error SAFE_YIELD_INVALID_ADDRESS();
     error SAFE_YIELD_PRESALE_NOT_LIVE();
+    error SAFE_YIELD_INVALID_ADDRESS();
     error SAFE_YIELD_INVALID_USER();
     error SAFE_YIELD_ZERO_BALANCE();
 
@@ -150,7 +151,7 @@ contract SafeYieldPresale is Pausable, Ownable {
      * @dev Start the presale
      * @notice This function can only be called by the owner
      */
-    function startPresale() external onlyOwner {
+    function startPresale() external override onlyOwner {
         preSaleState = PreSaleState.Live;
     }
 
@@ -158,7 +159,7 @@ contract SafeYieldPresale is Pausable, Ownable {
      * @dev End the presale
      * @notice This function can only be called by the owner
      */
-    function endPresale() external onlyOwner {
+    function endPresale() external override onlyOwner {
         preSaleState = PreSaleState.Ended;
     }
 
@@ -172,7 +173,7 @@ contract SafeYieldPresale is Pausable, Ownable {
         address investor,
         uint128 usdcAmount,
         bytes32 referrerId
-    ) external whenNotPaused {
+    ) external override whenNotPaused {
         if (investor == address(0)) revert SAFE_YIELD_INVALID_USER();
         if (preSaleState != PreSaleState.Live)
             revert SAFE_YIELD_PRESALE_NOT_LIVE();
@@ -202,7 +203,7 @@ contract SafeYieldPresale is Pausable, Ownable {
     function setReferrerCommission(
         uint128 _commissionUsdc,
         uint128 _commissionSafe
-    ) external onlyOwner {
+    ) external override onlyOwner {
         if (_commissionUsdc > BPS_MAX || _commissionSafe > BPS_MAX)
             revert SAFE_YIELD_INVALID_REFER_COMMISSION_PERCENTAGE();
         referrerCommissionUsdc = _commissionUsdc;
@@ -215,7 +216,7 @@ contract SafeYieldPresale is Pausable, Ownable {
      * @dev Set the token price
      * @param _price The token price to set
      */
-    function setTokenPrice(uint128 _price) external onlyOwner {
+    function setTokenPrice(uint128 _price) external override onlyOwner {
         if (_price == 0) revert SAFE_YIELD_INVALID_TOKEN_PRICE();
         tokenPrice = _price;
 
@@ -227,7 +228,10 @@ contract SafeYieldPresale is Pausable, Ownable {
      * @param _min The minimum allocation per wallet
      * @param _max The maximum allocation per wallet
      */
-    function setAllocations(uint128 _min, uint128 _max) external onlyOwner {
+    function setAllocations(
+        uint128 _min,
+        uint128 _max
+    ) external override onlyOwner {
         if (_min > _max) revert SAFE_YIELD_INVALID_ALLOCATION();
         minAllocationPerWallet = _min;
         maxAllocationPerWallet = _max;
@@ -239,7 +243,10 @@ contract SafeYieldPresale is Pausable, Ownable {
      * @dev Withdraw USDC from the contract
      * @param receiver The receiver of the USDC
      */
-    function withdrawUSDC(address receiver, uint256 amount) external onlyOwner {
+    function withdrawUSDC(
+        address receiver,
+        uint256 amount
+    ) external override onlyOwner {
         usdcToken.transfer(receiver, amount);
 
         emit UsdcWithdrawn(receiver, amount);
@@ -249,7 +256,7 @@ contract SafeYieldPresale is Pausable, Ownable {
      * @dev Redeem USDC commission
      * @notice This function can only be called by the referrer
      */
-    function redeemUsdcCommission() external whenNotPaused {
+    function redeemUsdcCommission() external override whenNotPaused {
         bytes32 referrerId = keccak256(abi.encode(msg.sender));
 
         ReferrerInfo storage _referrerInfo = referrerInfo[referrerId];
@@ -270,7 +277,7 @@ contract SafeYieldPresale is Pausable, Ownable {
      * @dev Create a referrer ID
      * @notice This function can only be called by an investor
      */
-    function createReferrerId() external returns (bytes32 referrerId) {
+    function createReferrerId() external override returns (bytes32 referrerId) {
         /**
          * @dev check if the referrer has invested
          */
@@ -288,7 +295,7 @@ contract SafeYieldPresale is Pausable, Ownable {
      * @dev Claim safe tokens
      * @notice This function can only be called when the presale has ended
      */
-    function claimSafeTokens() external whenNotPaused {
+    function claimSafeTokens() external override whenNotPaused {
         if (preSaleState != PreSaleState.Ended)
             revert SAFE_YIELD_PRESALE_NOT_ENDED();
 
@@ -309,7 +316,7 @@ contract SafeYieldPresale is Pausable, Ownable {
      * @dev Pause the presale
      * @notice This function can only be called by the owner
      */
-    function pause() public onlyOwner {
+    function pause() public override onlyOwner {
         _pause();
     }
 
@@ -317,7 +324,7 @@ contract SafeYieldPresale is Pausable, Ownable {
      * @dev Unpause the presale
      * @notice This function can only be called by the owner
      */
-    function unpause() public onlyOwner {
+    function unpause() public override onlyOwner {
         _unpause();
     }
 
@@ -327,7 +334,7 @@ contract SafeYieldPresale is Pausable, Ownable {
      */
     function getTotalSafeTokensOwed(
         address user
-    ) public view returns (uint128) {
+    ) public view override returns (uint128) {
         bytes32 referrerId = keccak256(abi.encode(user));
         return
             investorAllocations[user] +
@@ -408,7 +415,7 @@ contract SafeYieldPresale is Pausable, Ownable {
                 investorAllocations[referrer.referrer] +
                     referrerSafeTokenCommission >
                 maxAllocationPerWallet
-            ) revert SAFE_YIELD_MAX_WALLET_ALLOCATION_EXCEEDED();
+            ) revert SAFE_YIELD_REFERRER_MAX_WALLET_ALLOCATION_EXCEEDED();
 
             referrer.usdcVolume += referrerUsdcCommission;
             referrer.safeTokenVolume += referrerSafeTokenCommission;
