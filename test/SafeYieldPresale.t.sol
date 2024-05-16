@@ -6,6 +6,9 @@ import {PreSaleState} from "src/types/SafeTypes.sol";
 import {SafeYieldBaseTest} from "./SafeYieldBaseTest.t.sol";
 
 contract SafeYieldPresaleTest is SafeYieldBaseTest {
+    /*//////////////////////////////////////////////////////////////
+                              NORMAL TESTS
+    //////////////////////////////////////////////////////////////*/
     modifier startPresale() {
         vm.startPrank(protocolAdmin);
         presale.startPresale();
@@ -13,32 +16,32 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         _;
     }
 
-    function testMinAllocationIsLessThanMaxAllocation() public {
+    function testMinAllocationIsLessThanMaxAllocation() public view {
         uint256 minAllocation = presale.minAllocationPerWallet();
         uint256 maxAllocation = presale.maxAllocationPerWallet();
 
         assertLt(minAllocation, maxAllocation);
     }
 
-    function testSafeStakingIsSetCorrectly() public {
+    function testSafeStakingIsSetCorrectly() public view {
         address stakingAddress = address(presale.safeYieldStaking());
 
         assertEq(stakingAddress, address(staking));
     }
 
-    function testTokenPriceIsSetCorrectly() public {
+    function testTokenPriceIsSetCorrectly() public view {
         uint256 tokenPrice = presale.tokenPrice();
 
         assertEq(tokenPrice, 1e18);
     }
 
-    function testSafeTokenIsSetCorrectly() public {
+    function testSafeTokenIsSetCorrectly() public view {
         address safeTokenAddress = address(presale.safeToken());
 
         assertEq(safeTokenAddress, address(safeToken));
     }
 
-    function testReferrerCommissionIsSetCorrectly() public {
+    function testReferrerCommissionIsSetCorrectly() public view {
         uint256 referrerCommissionUsdc = presale.referrerCommissionUsdc();
         uint256 referrerCommissionSafe = presale.referrerCommissionSafeToken();
 
@@ -46,7 +49,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         assertEq(referrerCommissionSafe, 5_00);
     }
 
-    function testPresaleNotStarted() public {
+    function testPresaleNotStarted() public view {
         assertEq(uint8(presale.preSaleState()), uint8(PreSaleState.NotStarted));
     }
 
@@ -199,8 +202,6 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         //create a referrer ID
         bytes32 refId = presale.createReferrerId();
 
-        console.logBytes32(refId);
-
         vm.stopPrank();
 
         vm.startPrank(BOB);
@@ -214,5 +215,71 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         vm.startPrank(ALICE);
         presale.redeemUsdcCommission();
         vm.stopPrank();
+
+        //end presale
+        vm.startPrank(protocolAdmin);
+        presale.endPresale();
+        vm.stopPrank();
+
+        uint128 safeTokens = presale.getTotalSafeTokensOwed(ALICE);
+
+        //claim safe tokens
+        vm.startPrank(ALICE);
+        sSafeToken.approve(address(staking), safeTokens);
+        presale.claimSafeTokens();
+        vm.stopPrank();
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                               FUZZ TESTS
+    //////////////////////////////////////////////////////////////*/
+
+    function testFuzz__testBuySafeTokensWithNoReferrer(
+        uint256 usdcAmount
+    ) public startPresale {
+        usdcAmount = bound(usdcAmount, 1_000e6, 10_000e6);
+
+        vm.startPrank(ALICE);
+        usdc.approve(address(presale), usdcAmount);
+
+        presale.deposit(ALICE, uint128(usdcAmount), bytes32(0));
+
+        uint256 safeTokensBought = (usdcAmount * 1e18) / 1e6;
+
+        //assertions
+        assertEq(usdc.balanceOf(address(presale)), usdcAmount);
+        assertEq(presale.getTotalSafeTokensOwed(ALICE), safeTokensBought);
+    }
+
+    function testFuzz__testBuySafeTokensWithReferrer(
+        uint256 usdcAmount
+    ) public startPresale {
+        usdcAmount = bound(usdcAmount, 1_000e6, 10_000e6);
+
+        vm.startPrank(ALICE);
+        usdc.approve(address(presale), usdcAmount);
+
+        presale.deposit(ALICE, uint128(usdcAmount), bytes32(0));
+
+        //create a referrer ID
+        bytes32 refId = presale.createReferrerId();
+
+        vm.stopPrank();
+
+        vm.startPrank(BOB);
+        usdc.approve(address(presale), usdcAmount);
+
+        presale.deposit(BOB, uint128(usdcAmount), refId);
+
+        uint256 safeTokensBought = (usdcAmount * 1e18) / 1e6;
+        uint256 referrerSafeCommission = (safeTokensBought * 5_00) / 1e4;
+
+        //assertions
+        assertEq(usdc.balanceOf(address(presale)), usdcAmount * 2);
+        assertEq(
+            presale.getTotalSafeTokensOwed(ALICE),
+            safeTokensBought + referrerSafeCommission
+        );
+        assertEq(presale.getTotalSafeTokensOwed(BOB), safeTokensBought);
     }
 }
