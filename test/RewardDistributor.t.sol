@@ -7,32 +7,9 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeMockToken} from "./mocks/SafeMockToken.sol";
 import {USDCMockToken} from "./mocks/USDCMockToken.sol";
 import {SafeYieldRewardDistributor} from "src/SafeYieldRewardDistributor.sol";
+import {SafeYieldBaseTest} from "./SafeYieldBaseTest.t.sol";
 
-contract SafeYieldRewardDistributorTest is Test {
-    USDCMockToken public usdc;
-    SafeMockToken public safeToken;
-    SafeYieldRewardDistributor public distributor;
-    address public teamOperations = makeAddr("teamOperations");
-    address public usdcBuyback = makeAddr("usdcBuyback");
-    address public safeStaking = makeAddr("safeStaking");
-    address public protocolAdmin = makeAddr("protocolAdmin");
-
-    function setUp() public {
-        usdc = new USDCMockToken("USDC", "USDC", 6);
-        safeToken = new SafeMockToken("SafeToken", "SAFE", 18);
-
-        distributor = new SafeYieldRewardDistributor(
-            address(safeToken),
-            address(usdc),
-            teamOperations,
-            usdcBuyback,
-            safeStaking,
-            protocolAdmin
-        );
-        safeToken.grantRole(safeToken.MINTER_ROLE(), address(distributor));
-        safeToken.setMinterLimit(address(distributor), 11_000_000e18);
-    }
-
+contract SafeYieldRewardDistributorTest is SafeYieldBaseTest {
     function test_MaxMintLimit() public {
         assertEq(safeToken.minterLimits(address(distributor)), 11_000_000e18);
 
@@ -58,8 +35,9 @@ contract SafeYieldRewardDistributorTest is Test {
         skip(2 hours);
 
         usdc.mint(address(distributor), 10_000e6);
-        vm.startPrank(address(safeStaking));
-        distributor.distributeToContract(address(safeStaking));
+
+        vm.startPrank(address(staking));
+        distributor.distributeToContract(address(staking));
         vm.stopPrank();
 
         vm.prank(address(usdcBuyback));
@@ -72,8 +50,8 @@ contract SafeYieldRewardDistributorTest is Test {
         distributor.distributeToContract(address(teamOperations));
 
         skip(1 hours);
-        vm.startPrank(address(safeStaking));
-        distributor.distributeToContract(address(safeStaking));
+        vm.startPrank(address(staking));
+        distributor.distributeToContract(address(staking));
         vm.stopPrank();
 
         vm.prank(address(usdcBuyback));
@@ -105,7 +83,7 @@ contract SafeYieldRewardDistributorTest is Test {
 
         //assertions
         assertEq(usdc.balanceOf(address(usdcBuyback)), 10_500e6);
-        assertEq(safeToken.balanceOf(address(safeStaking)), 10_500e18);
+        assertEq(safeToken.balanceOf(address(staking)), 10_500e18);
         assertEq(usdc.balanceOf(address(teamOperations)), 9_000e6);
         assertEq(usdc.balanceOf(address(distributor)), 10_500e6);
     }
@@ -118,8 +96,8 @@ contract SafeYieldRewardDistributorTest is Test {
         skip(2 hours);
 
         usdc.mint(address(distributor), 10_000e6);
-        vm.startPrank(address(safeStaking));
-        distributor.distributeToContract(address(safeStaking));
+        vm.startPrank(address(staking));
+        distributor.distributeToContract(address(staking));
         vm.stopPrank();
 
         vm.prank(address(usdcBuyback));
@@ -132,8 +110,8 @@ contract SafeYieldRewardDistributorTest is Test {
         distributor.distributeToContract(address(teamOperations));
 
         skip(1 hours);
-        vm.startPrank(address(safeStaking));
-        distributor.distributeToContract(address(safeStaking));
+        vm.startPrank(address(staking));
+        distributor.distributeToContract(address(staking));
         vm.stopPrank();
 
         vm.prank(address(usdcBuyback));
@@ -145,9 +123,9 @@ contract SafeYieldRewardDistributorTest is Test {
 
         //assertions
         assertEq(usdc.balanceOf(address(usdcBuyback)), 3_000e6);
-        assertEq(usdc.balanceOf(address(safeStaking)), 18_000e6);
+        assertEq(usdc.balanceOf(address(staking)), 18_000e6);
         assertEq(usdc.balanceOf(address(teamOperations)), 9_000e6);
-        assertEq(safeToken.balanceOf(address(safeStaking)), 0);
+        assertEq(safeToken.balanceOf(address(staking)), 0);
         assertEq(usdc.balanceOf(address(distributor)), 0);
     }
 }
