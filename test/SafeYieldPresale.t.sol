@@ -50,32 +50,138 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         assertEq(uint8(presale.preSaleState()), uint8(PreSaleState.NotStarted));
     }
 
-    // function testBuyShouldFailIfPresaleNotStarted() public {
-    //     vm.startPrank(ALICE);
-    //     usdc.approve(address(presale), 1_000e6);
+    function testBuyShouldFailIfPresaleNotStarted() public {
+        vm.startPrank(ALICE);
+        usdc.approve(address(presale), 1_000e6);
 
-    //     vm.expectRevert(
-    //         abi.encodeWithSelector(
-    //             SafeYieldPresaleS.SAFE_YIELD_PRESALE_NOT_LIVE.selector
-    //         )
-    //     );
-    //     presale.buy(ALICE, 1_000e6);
-    // }
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                SafeYieldPresale.SAFE_YIELD_PRESALE_NOT_LIVE.selector
+            )
+        );
+        presale.deposit(ALICE, 1_000e6, bytes32(0));
+    }
 
-    // function testBuyTokensShouldFailIfPotentialSafeTokensExceedMaxTokenAllocation()
-    //     public
-    //     startPresale
-    // {
-    //     vm.startPrank(ALICE);
-    //     usdc.approve(address(presale), 100_001e6);
+    function testBuySafeTokensShouldFailPotentialSafeTokensLessThanMinTokenAllocation()
+        public
+        startPresale
+    {
+        vm.startPrank(ALICE);
+        usdc.approve(address(presale), 999e6);
 
-    //     vm.expectRevert(
-    //         abi.encodeWithSelector(
-    //             SafeYieldPresaleS.SAFE_YIELD_INVALID_ALLOCATION.selector
-    //         )
-    //     );
-    //     presale.buy(ALICE, 100_001e6);
-    // }
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                SafeYieldPresale
+                    .SAFE_YIELD_MIN_WALLET_ALLOCATION_EXCEEDED
+                    .selector
+            )
+        );
+
+        presale.deposit(ALICE, 999e6, bytes32(0));
+    }
+
+    function testBuyTokensShouldFailIfReferrerIdIsInvalid()
+        public
+        startPresale
+    {
+        vm.startPrank(ALICE);
+        usdc.approve(address(presale), 1_000e6);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                SafeYieldPresale.SAFE_YIELD_UNKNOWN_REFERRER.selector
+            )
+        );
+
+        presale.deposit(
+            ALICE,
+            1_000e6,
+            keccak256(abi.encode("invalid_referrer_id"))
+        );
+    }
+
+    function testBuyTokesShouldFailIfReferrerIsSameAsBuyer()
+        public
+        startPresale
+    {
+        vm.startPrank(ALICE);
+        usdc.approve(address(presale), 1_000e6);
+
+        presale.deposit(ALICE, 1_000e6, bytes32(0));
+
+        //create a referrer ID
+        bytes32 refId = presale.createReferrerId();
+
+        usdc.approve(address(presale), 1_000e6);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                SafeYieldPresale.SAFE_YIELD_REFERRAL_TO_SELF.selector
+            )
+        );
+
+        presale.deposit(ALICE, 1_000e6, refId);
+    }
+
+    function testBuyTokensShouldFailIfPotentialSafeTokensExceedMaxTokenAllocation()
+        public
+        startPresale
+    {
+        vm.startPrank(ALICE);
+        usdc.approve(address(presale), 100_001e6);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                SafeYieldPresale
+                    .SAFE_YIELD_MAX_WALLET_ALLOCATION_EXCEEDED
+                    .selector
+            )
+        );
+
+        presale.deposit(ALICE, 100_001e6, bytes32(0));
+    }
+
+    function testBuyTokensShouldFailIfReferrersInvestmentPlusCommissionsExceedMaxTokenAllocation()
+        public
+        startPresale
+    {
+        vm.startPrank(ALICE);
+        usdc.approve(address(presale), 100_000e6);
+
+        presale.deposit(ALICE, 100_000e6, bytes32(0));
+
+        //create a referrer ID
+        bytes32 refId = presale.createReferrerId();
+
+        vm.stopPrank();
+
+        vm.startPrank(BOB);
+        usdc.approve(address(presale), 100_000e6);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                SafeYieldPresale
+                    .SAFE_YIELD_REFERRER_MAX_WALLET_ALLOCATION_EXCEEDED
+                    .selector
+            )
+        );
+
+        presale.deposit(BOB, 100_000e6, refId);
+        vm.stopPrank();
+    }
+
+    function testBuyTokensShouldFailIfPresaleIsPaused() public {
+        vm.startPrank(protocolAdmin);
+        presale.pause();
+        vm.stopPrank();
+
+        vm.startPrank(ALICE);
+        usdc.approve(address(presale), 1_000e6);
+
+        vm.expectRevert(abi.encodeWithSelector(EnforcedPause.selector));
+
+        presale.deposit(ALICE, 1_000e6, bytes32(0));
+    }
 
     function testBuySafeTokensWithNoReferrer() public startPresale {
         vm.startPrank(ALICE);

@@ -26,6 +26,8 @@ abstract contract SafeYieldBaseTest is Test {
     USDCMockToken public usdc;
     USDCMockToken public sSafeToken;
 
+    error EnforcedPause();
+
     function setUp() public {
         vm.startPrank(protocolAdmin);
         usdc = new USDCMockToken("USDC", "USDC", 6);
