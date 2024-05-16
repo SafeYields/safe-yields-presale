@@ -15,6 +15,10 @@ contract USDCMockToken is ERC20 {
         return decimal;
     }
 
+    function burn(address account, uint256 amount) public {
+        _burn(account, amount);
+    }
+
     function mint(address recipient, uint256 amount) public {
         _mint(recipient, amount);
     }
