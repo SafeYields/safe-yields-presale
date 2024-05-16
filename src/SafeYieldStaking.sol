@@ -141,22 +141,22 @@ contract SafeYieldStaking is Ownable2Step {
     }
 
     // The unstake function
-    function unstake(uint128 amount) public updateReward(msg.sender) {
+    function unstake(address user, uint128 amount) public updateReward(user) {
         // Transfer the amount of SafeToken from this contract to the sender
 
-        if (amount > userStakes[msg.sender].stakedSafeTokenAmount) {
+        if (amount > userStakes[user].stakedSafeTokenAmount) {
             revert("Insufficient staked amount");
         }
 
-        sSafeToken.burn(msg.sender, amount);
+        sSafeToken.burn(user, amount);
 
-        userStakes[msg.sender].stakedSafeTokenAmount -= amount;
+        userStakes[user].stakedSafeTokenAmount -= amount;
 
         totalStaked -= amount;
 
-        safeToken.transfer(msg.sender, amount);
+        safeToken.transfer(user, amount);
 
-        emit UnStaked(msg.sender, amount);
+        emit UnStaked(user, amount);
     }
 
     function claimReward() external updateReward(msg.sender) {
