@@ -257,6 +257,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
      * @notice This function can only be called by the referrer
      */
     function redeemUsdcCommission() external override whenNotPaused {
+        //@note lock until the presale ends??
         bytes32 referrerId = keccak256(abi.encode(msg.sender));
 
         ReferrerInfo storage _referrerInfo = referrerInfo[referrerId];
@@ -305,9 +306,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
         investorAllocations[msg.sender] = 0;
         referrerInfo[keccak256(abi.encode(msg.sender))].safeTokenVolume = 0;
 
-        sSafeToken.approve(address(safeYieldStaking), safeTokens);
-
-        safeYieldStaking.unstake(safeTokens);
+        safeYieldStaking.unstake(msg.sender, safeTokens);
 
         emit SafeTokensClaimed(msg.sender, safeTokens);
     }
