@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-struct ReferrerVolume {
+struct ReferrerInfo {
+    address referrer;
     uint128 usdcVolume;
     uint128 safeTokenVolume;
 }
