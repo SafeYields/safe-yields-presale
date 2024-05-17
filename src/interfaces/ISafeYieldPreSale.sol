@@ -26,6 +26,10 @@ interface ISafeYieldPreSale {
         uint128 _commissionSafe
     ) external;
 
+    function calculateSafeTokens(
+        uint128 usdcAmount
+    ) external view returns (uint128);
+
     function pause() external;
 
     function unpause() external;

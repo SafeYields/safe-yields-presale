@@ -311,6 +311,10 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
         emit SafeTokensClaimed(msg.sender, safeTokens);
     }
 
+    function safeTokensAvailable() public view returns (uint128) {
+        return uint128(PRE_SALE_CAP - totalSold);
+    }
+
     /**
      * @dev Pause the presale
      * @notice This function can only be called by the owner
@@ -325,6 +329,17 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
      */
     function unpause() public override onlyOwner {
         _unpause();
+    }
+
+    /**
+     * @dev calculate the safe tokens to be bought
+     * @param usdcAmount The amount of USDC to be used to buy the safe tokens
+     * @return safeTokens The amount of safe tokens to be bought
+     */
+    function calculateSafeTokens(
+        uint128 usdcAmount
+    ) public view override returns (uint128) {
+        return (usdcAmount * tokenPrice) / USDC_PRECISION;
     }
 
     /**
@@ -358,7 +373,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
          *  example if usdcAmount = 1_000e6 and tokenPrice = 1$ then
          *  safeTokensBought = (1_000e6 * 1e18) / 1e6 = 1_000e18 safe tokens.
          */
-        safeTokensBought = (usdcAmount * tokenPrice) / USDC_PRECISION;
+        safeTokensBought = calculateSafeTokens(usdcAmount);
 
         if (safeTokensBought == 0) revert SAFE_YIELD_INVALID_ALLOCATION();
 
