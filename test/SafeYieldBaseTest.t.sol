@@ -4,6 +4,8 @@ pragma solidity 0.8.21;
 import {Test, console} from "forge-std/Test.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeMockToken} from "./mocks/SafeMockToken.sol";
+import {SafeToken} from "src/SafeToken.sol";
+import {sSafeToken} from "src/sSafeToken.sol";
 import {USDCMockToken} from "./mocks/USDCMockToken.sol";
 import {SafeYieldRewardDistributor} from "src/SafeYieldRewardDistributor.sol";
 import {SafeYieldPresale} from "src/SafeYieldPresale.sol";
@@ -22,28 +24,28 @@ abstract contract SafeYieldBaseTest is Test {
     SafeYieldRewardDistributor public distributor;
     SafeYieldPresale public presale;
     SafeYieldStaking public staking;
-    SafeMockToken public safeToken;
+    SafeToken public safeToken;
     USDCMockToken public usdc;
-    USDCMockToken public sSafeToken;
+    sSafeToken public sToken;
 
     error EnforcedPause();
 
     function setUp() public {
         vm.startPrank(protocolAdmin);
         usdc = new USDCMockToken("USDC", "USDC", 6);
-        safeToken = new SafeMockToken("SafeToken", "SAFE", 18);
-        sSafeToken = new USDCMockToken("sSafeToken", "sSAFE", 18);
+        safeToken = new SafeToken("SafeToken", "SAFE", protocolAdmin);
+        sToken = new sSafeToken("sSafeToken", "sSAFE", protocolAdmin);
 
         staking = new SafeYieldStaking(
             address(safeToken),
-            address(sSafeToken),
+            address(sToken),
             address(usdc),
             protocolAdmin
         );
 
         presale = new SafeYieldPresale(
             address(safeToken),
-            address(sSafeToken),
+            address(sToken),
             address(usdc),
             address(staking),
             1000e18,
@@ -64,6 +66,9 @@ abstract contract SafeYieldBaseTest is Test {
 
         safeToken.grantRole(safeToken.MINTER_ROLE(), address(distributor));
         safeToken.grantRole(safeToken.MINTER_ROLE(), address(presale));
+
+        sToken.grantRole(sToken.MINTER_ROLE(), address(staking));
+        sToken.grantRole(sToken.BURNER_ROLE(), address(staking));
 
         safeToken.setMinterLimit(address(distributor), STAKING_MAX_SUPPLY);
         safeToken.setMinterLimit(address(presale), PRE_SALE_MAX_SUPPLY);

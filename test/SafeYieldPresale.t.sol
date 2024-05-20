@@ -188,10 +188,16 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
 
     function testBuySafeTokensWithNoReferrer() public startPresale {
         vm.startPrank(ALICE);
-        usdc.approve(address(presale), 1_000e6);
-
-        presale.deposit(ALICE, 1_000e6, bytes32(0));
+        usdc.approve(address(presale), 1_500e6);
+        console.logBytes32(bytes32(0));
+        console.log(1500e6);
+        presale.deposit(
+            ALICE,
+            1_500e6,
+            0x0000000000000000000000000000000000000000000000000000000000000000
+        );
     }
+    //1500000000
 
     function testBuySafeTokensWithReferrer() public startPresale {
         vm.startPrank(ALICE);
@@ -225,7 +231,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
 
         //claim safe tokens
         vm.startPrank(ALICE);
-        sSafeToken.approve(address(staking), safeTokens);
+        sToken.approve(address(staking), safeTokens);
         presale.claimSafeTokens();
         vm.stopPrank();
     }
