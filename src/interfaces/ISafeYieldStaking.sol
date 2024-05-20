@@ -1,12 +1,37 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
+import {Stake} from "../types/SafeTypes.sol";
 interface ISafeYieldStaking {
+    function rewardsEarned()
+        external
+        view
+        returns (uint128 pendingUsdcReward, uint128 pendingSafeTokenReward);
+
+    function rewardsPerToken()
+        external
+        view
+        returns (uint128 usdcRewardsPerToken, uint128 safeTokenRewardsPerToken);
+
     function stake(uint128 amount, address user) external;
+
     function unstake(address user, uint128 amount) external;
-    function claimRewards() external;
-    function getStakedBalance(address user) external view returns (uint128);
-    function getRewardsBalance(
-        address user
-    ) external view returns (uint128, uint128);
+
+    function stakeFor(
+        address investor,
+        uint128 investorAmount,
+        address referrer,
+        uint128 referrerAmount
+    ) external;
+    function claimReward() external;
+
+    function updateUsdcRewardPerShare(uint128 newRewardPerShare) external;
+
+    function updateSafeTokenRewardPerShare(uint128 newRewardPerShare) external;
+
+    function updateUsdcRewardRate(uint64 newRewardRate) external;
+
+    function updateSafeTokenRewardRate(uint64 newRewardRate) external;
+
+    function setPresale(address _presale) external;
 }
