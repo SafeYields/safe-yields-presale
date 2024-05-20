@@ -310,8 +310,11 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
 
         presale.deposit(BOB, uint128(usdcAmount), refId);
 
+        vm.stopPrank();
+
         uint256 safeTokensBought = (usdcAmount * 1e18) / 1e6;
         uint256 referrerSafeCommission = (safeTokensBought * 5_00) / 1e4;
+        uint256 referrerUSdcCommission = (usdcAmount * 5_00) / 1e4;
 
         //assertions
         assertEq(usdc.balanceOf(address(presale)), usdcAmount * 2);
@@ -320,5 +323,24 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
             safeTokensBought + referrerSafeCommission
         );
         assertEq(presale.getTotalSafeTokensOwed(BOB), safeTokensBought);
+
+        //referrer claim usdc
+        vm.prank(ALICE);
+        presale.redeemUsdcCommission();
+
+        assertEq(
+            usdc.balanceOf(address(presale)),
+            (usdcAmount * 2) - referrerUSdcCommission
+        );
+
+        vm.prank(protocolAdmin);
+        presale.endPresale();
+
+        uint256 aliceOwedSafeTokens = presale.getTotalSafeTokensOwed(ALICE);
+
+        vm.prank(ALICE);
+        presale.claimSafeTokens();
+
+        assertEq(safeToken.balanceOf(ALICE), aliceOwedSafeTokens);
     }
 }

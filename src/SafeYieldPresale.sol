@@ -330,7 +330,10 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
         if (preSaleState != PreSaleState.Ended)
             revert SAFE_YIELD_PRESALE_NOT_ENDED();
 
-        uint128 safeTokens = getTotalSafeTokensOwed(msg.sender);
+        uint128 safeTokens = safeYieldStaking
+            .userStakes(msg.sender)
+            .stakedSafeTokenAmount;
+
         if (safeTokens == 0) revert SAFE_YIELD_ZERO_BALANCE();
 
         investorAllocations[msg.sender] = 0;
@@ -466,20 +469,21 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
         investorAllocations[investor] += safeTokensBought;
 
         /**
-         * @dev mint both the safeTokens bought and the
-         * referrer safe  tokens commission
+         *
          */
-        safeToken.mint(address(this), totalSafeTokensToMint);
-
-        safeToken.approve(address(safeYieldStaking), totalSafeTokensToMint);
-
-        safeYieldStaking.stake(safeTokensBought, investor);
-
         if (referrerInvestor != address(0)) {
-            safeYieldStaking.stake(
-                referrerSafeTokenCommission,
-                referrerInvestor
+            safeToken.mint(address(safeYieldStaking), totalSafeTokensToMint);
+
+            safeYieldStaking.stakeFor(
+                investor,
+                safeTokensBought,
+                referrerInvestor,
+                referrerSafeTokenCommission
             );
+        } else {
+            safeToken.mint(address(this), safeTokensBought);
+            safeToken.approve(address(safeYieldStaking), safeTokensBought);
+            safeYieldStaking.stake(safeTokensBought, investor);
         }
     }
 }
