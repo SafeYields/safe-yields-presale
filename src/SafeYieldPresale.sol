@@ -97,10 +97,11 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
     error SAFE_YIELD_INVALID_REFER_COMMISSION_PERCENTAGE();
     error SAFE_YIELD_MAX_WALLET_ALLOCATION_EXCEEDED();
     error SAFE_YIELD_MIN_WALLET_ALLOCATION_EXCEEDED();
-    error SAFE_YIELD_INVALID_ALLOCATION();
     error SAFE_YIELD_MAX_SUPPLY_EXCEEDED();
+    error SAFE_YIELD_INVALID_USDC_AMOUNT();
     error SAFE_YIELD_INVALID_TOKEN_PRICE();
     error SAFE_YIELD_INVALID_MAX_SUPPLY();
+    error SAFE_YIELD_INVALID_ALLOCATION();
     error SAFE_YIELD_PRESALE_NOT_ENDED();
     error SAFE_YIELD_UNKNOWN_REFERRER();
     error SAFE_YIELD_REFERRAL_TO_SELF();
@@ -194,6 +195,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
         uint128 usdcAmount,
         bytes32 referrerId
     ) external override whenNotPaused {
+        if (usdcAmount < 1e6) revert SAFE_YIELD_INVALID_USDC_AMOUNT();
         if (investor == address(0)) revert SAFE_YIELD_INVALID_USER();
         if (preSaleState != PreSaleState.Live)
             revert SAFE_YIELD_PRESALE_NOT_LIVE();
@@ -277,7 +279,6 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
      * @notice This function can only be called by the referrer
      */
     function redeemUsdcCommission() external override whenNotPaused {
-        //@note lock until the presale ends??
         bytes32 referrerId = keccak256(abi.encodePacked(msg.sender));
 
         ReferrerInfo storage _referrerInfo = referrerInfo[referrerId];
@@ -381,8 +382,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
         safeTokensBought = calculateSafeTokens(usdcAmount);
 
         if (safeTokensBought == 0) revert SAFE_YIELD_INVALID_ALLOCATION();
-        //1500 00 00 00 00 00 00 00 00 00
-        //1000 00 00 00 00 00 00 00 00 00
+
         /**
          * @dev check if the safe tokens bought is less than
          * the min allocation per wallet
@@ -431,11 +431,11 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
              * the referrer safe token commission
              * is greater than the max allocation per wallet.
              */
-            if (
-                investorAllocations[referrer.referrer] +
-                    referrerSafeTokenCommission >
-                maxAllocationPerWallet
-            ) revert SAFE_YIELD_REFERRER_MAX_WALLET_ALLOCATION_EXCEEDED();
+            // if (
+            //     investorAllocations[referrer.referrer] +
+            //         referrerSafeTokenCommission >
+            //     maxAllocationPerWallet
+            // ) revert SAFE_YIELD_REFERRER_MAX_WALLET_ALLOCATION_EXCEEDED();
 
             referrer.usdcVolume += referrerUsdcCommission;
             referrer.safeTokenVolume += referrerSafeTokenCommission;
@@ -450,22 +450,19 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
             PRE_SALE_CAP
         ) revert SAFE_YIELD_MAX_SUPPLY_EXCEEDED();
 
-        totalSold += safeTokensBought;
+        uint128 totalSafeTokensToMint = safeTokensBought +
+            referrerSafeTokenCommission;
+
+        totalSold += totalSafeTokensToMint;
         investorAllocations[investor] += safeTokensBought;
 
         /**
          * @dev mint both the safeTokens bought and the
          * referrer safe  tokens commission
          */
-        safeToken.mint(
-            address(this),
-            safeTokensBought + referrerSafeTokenCommission
-        );
+        safeToken.mint(address(this), totalSafeTokensToMint);
 
-        safeToken.approve(
-            address(safeYieldStaking),
-            safeTokensBought + referrerSafeTokenCommission
-        );
+        safeToken.approve(address(safeYieldStaking), totalSafeTokensToMint);
 
         safeYieldStaking.stake(safeTokensBought, investor);
 
