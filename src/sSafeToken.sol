@@ -15,10 +15,12 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
 contract sSafeToken is ERC20, AccessControl {
+    /*//////////////////////////////////////////////////////////////
+                            STATE VARIABLES
+    //////////////////////////////////////////////////////////////*/
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");
     uint256 public constant MAX_SUPPLY = 200_000_000e18;
-
     mapping(address minter => uint256 maxMintAmount) minterLimits;
 
     constructor(
