@@ -79,6 +79,8 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
         uint128 indexed referrerCommissionUsdc,
         uint128 indexed referrerCommissionSafeToken
     );
+    event PreSaleStarted();
+    event PreSaleEnded();
 
     event TokenPriceSet(uint128 indexed tokenPrice);
 
@@ -148,11 +150,28 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
     }
 
     /**
+     * @dev Pause the presale
+     * @notice This function can only be called by the owner
+     */
+    function pause() external override onlyOwner {
+        _pause();
+    }
+
+    /**
+     * @dev Unpause the presale
+     * @notice This function can only be called by the owner
+     */
+    function unpause() external override onlyOwner {
+        _unpause();
+    }
+
+    /**
      * @dev Start the presale
      * @notice This function can only be called by the owner
      */
     function startPresale() external override onlyOwner {
         preSaleState = PreSaleState.Live;
+        emit PreSaleStarted();
     }
 
     /**
@@ -161,6 +180,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
      */
     function endPresale() external override onlyOwner {
         preSaleState = PreSaleState.Ended;
+        emit PreSaleEnded();
     }
 
     /**
@@ -258,7 +278,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
      */
     function redeemUsdcCommission() external override whenNotPaused {
         //@note lock until the presale ends??
-        bytes32 referrerId = keccak256(abi.encode(msg.sender));
+        bytes32 referrerId = keccak256(abi.encodePacked(msg.sender));
 
         ReferrerInfo storage _referrerInfo = referrerInfo[referrerId];
 
@@ -285,7 +305,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
         if (investorAllocations[msg.sender] == 0)
             revert SAFE_YIELD_ZERO_BALANCE();
 
-        referrerId = keccak256(abi.encode(msg.sender));
+        referrerId = keccak256(abi.encodePacked(msg.sender));
 
         referrerInfo[referrerId].referrer = msg.sender;
 
@@ -304,7 +324,8 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
         if (safeTokens == 0) revert SAFE_YIELD_ZERO_BALANCE();
 
         investorAllocations[msg.sender] = 0;
-        referrerInfo[keccak256(abi.encode(msg.sender))].safeTokenVolume = 0;
+        referrerInfo[keccak256(abi.encodePacked(msg.sender))]
+            .safeTokenVolume = 0;
 
         safeYieldStaking.unstake(msg.sender, safeTokens);
 
@@ -313,22 +334,6 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
 
     function safeTokensAvailable() public view returns (uint128) {
         return uint128(PRE_SALE_CAP - totalSold);
-    }
-
-    /**
-     * @dev Pause the presale
-     * @notice This function can only be called by the owner
-     */
-    function pause() public override onlyOwner {
-        _pause();
-    }
-
-    /**
-     * @dev Unpause the presale
-     * @notice This function can only be called by the owner
-     */
-    function unpause() public override onlyOwner {
-        _unpause();
     }
 
     /**
@@ -349,7 +354,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
     function getTotalSafeTokensOwed(
         address user
     ) public view override returns (uint128) {
-        bytes32 referrerId = keccak256(abi.encode(user));
+        bytes32 referrerId = keccak256(abi.encodePacked(user));
         return
             investorAllocations[user] +
             referrerInfo[referrerId].safeTokenVolume;
@@ -376,7 +381,8 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
         safeTokensBought = calculateSafeTokens(usdcAmount);
 
         if (safeTokensBought == 0) revert SAFE_YIELD_INVALID_ALLOCATION();
-
+        //1500 00 00 00 00 00 00 00 00 00
+        //1000 00 00 00 00 00 00 00 00 00
         /**
          * @dev check if the safe tokens bought is less than
          * the min allocation per wallet
