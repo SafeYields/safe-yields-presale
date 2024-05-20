@@ -130,8 +130,12 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
         ) revert SAFE_YIELD_INVALID_REFER_COMMISSION_PERCENTAGE();
 
         if (_tokenPrice == 0) revert SAFE_YIELD_INVALID_TOKEN_PRICE();
-        if (_safeToken == address(0) || _usdcToken == address(0))
-            revert SAFE_YIELD_INVALID_ADDRESS();
+        if (
+            _safeToken == address(0) ||
+            _usdcToken == address(0) ||
+            _sSafeToken == address(0) ||
+            _safeYieldStaking == address(0)
+        ) revert SAFE_YIELD_INVALID_ADDRESS();
 
         safeToken = ISafeToken(_safeToken);
         usdcToken = IERC20(_usdcToken);
@@ -269,7 +273,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
         address receiver,
         uint256 amount
     ) external override onlyOwner {
-        usdcToken.transfer(receiver, amount);
+        if (amount != 0) usdcToken.transfer(receiver, amount);
 
         emit UsdcWithdrawn(receiver, amount);
     }
@@ -299,7 +303,12 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
      * @dev Create a referrer ID
      * @notice This function can only be called by an investor
      */
-    function createReferrerId() external override returns (bytes32 referrerId) {
+    function createReferrerId()
+        external
+        override
+        whenNotPaused
+        returns (bytes32 referrerId)
+    {
         /**
          * @dev check if the referrer has invested
          */
