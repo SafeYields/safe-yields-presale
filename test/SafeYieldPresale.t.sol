@@ -53,6 +53,30 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         assertEq(uint8(presale.preSaleState()), uint8(PreSaleState.NotStarted));
     }
 
+    function testCreateReferrerId() public startPresale {
+        vm.startPrank(ALICE);
+        usdc.approve(address(presale), 1_000e6);
+
+        presale.deposit(ALICE, 1_000e6, bytes32(0));
+
+        bytes32 refId = presale.createReferrerId();
+
+        assertEq(refId, keccak256(abi.encodePacked(ALICE)));
+    }
+
+    function testCreateReferrerIdShouldFailIfCallerHasNotInvested()
+        public
+        startPresale
+    {
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                SafeYieldPresale.SAFE_YIELD_ZERO_BALANCE.selector
+            )
+        );
+        presale.createReferrerId();
+        vm.stopPrank();
+    }
+
     function testBuyShouldFailIfPresaleNotStarted() public {
         vm.startPrank(ALICE);
         usdc.approve(address(presale), 1_000e6);
