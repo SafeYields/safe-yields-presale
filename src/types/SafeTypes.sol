@@ -24,3 +24,12 @@ struct ContractShare {
     address contract_;
     uint16 share;
 }
+
+struct Stake {
+    uint128 stakedSafeTokenAmount;
+    uint128 safeRewards;
+    uint128 usdcPerTokenRewardClaimed;
+    uint128 usdcRewards;
+    uint128 safePerTokenRewardClaimed;
+    uint128 lastUpdateTimestamp;
+}
