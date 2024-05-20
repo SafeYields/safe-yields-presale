@@ -14,7 +14,6 @@ contract SafeToken is ISafeToken, ERC20, AccessControl {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");
     uint256 public constant MAX_SUPPLY = 20_000_000e18;
-    uint256 maxMintAllocated;
     /**
      * 11,000,000e18 for staking emissions
      * 2,000,000e18 for team operations
@@ -23,7 +22,16 @@ contract SafeToken is ISafeToken, ERC20, AccessControl {
      * 2,000,000e18 for early investors rounds
      * 2,000,000e18 for IDO
      */
+    /*//////////////////////////////////////////////////////////////
+                            STATE VARIABLES
+    //////////////////////////////////////////////////////////////*/
+    uint256 maxMintAllocated;
     mapping(address minter => uint256 maxMintAmount) public minterLimits;
+
+    /*//////////////////////////////////////////////////////////////
+                                 EVENTS
+    //////////////////////////////////////////////////////////////*/
+    event MinterLimitSet(address indexed minter, uint256 amount);
 
     /*//////////////////////////////////////////////////////////////
                                  ERRORS
@@ -64,6 +72,8 @@ contract SafeToken is ISafeToken, ERC20, AccessControl {
 
         maxMintAllocated += amount;
         minterLimits[minter] = amount;
+
+        emit MinterLimitSet(minter, amount);
     }
 
     function burn(address from, uint256 amount) public {

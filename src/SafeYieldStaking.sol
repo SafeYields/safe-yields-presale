@@ -3,45 +3,46 @@ pragma solidity 0.8.21;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ISSafeToken} from "./interfaces/IsSafeToken.sol";
-
+import {PreSaleState, Stake} from "./types/SafeTypes.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {ISafeYieldStaking} from "./interfaces/ISafeYieldStaking.sol";
+import {ISafeYieldPreSale} from "./interfaces/ISafeYieldPreSale.sol";
 
 contract SafeYieldStaking is Ownable2Step {
-    // The SafeToken contract, the staked token
+    /*//////////////////////////////////////////////////////////////
+                               IMMUTABLES
+    //////////////////////////////////////////////////////////////*/
     IERC20 public immutable safeToken;
     ISSafeToken public immutable sSafeToken;
     IERC20 public immutable usdc;
 
+    /*//////////////////////////////////////////////////////////////
+                            STATE VARIABLES
+    //////////////////////////////////////////////////////////////*/
+    ISafeYieldPreSale public presale;
     uint64 usdcRewardRate; // time
     uint64 safeTokenRewardRate; // time
-
-    struct MyStake {
-        uint128 stakedSafeTokenAmount;
-        uint128 safeRewards;
-        uint128 usdcPerTokenRewardClaimed;
-        uint128 usdcRewards;
-        uint128 safePerTokenRewardClaimed;
-        uint128 lastUpdateTimestamp;
-    }
-
     uint128 usdcRewardPerShare;
     uint128 safeTokenRewardPerShare;
-
     uint128 lastRewardUpdateTimestamp;
-
     uint128 totalStaked;
+    mapping(address user => Stake stake) public userStakes;
 
-    mapping(address user => MyStake stake) public userStakes;
-
+    /*//////////////////////////////////////////////////////////////
+                                 EVENTS
+    //////////////////////////////////////////////////////////////*/
     event Staked(address indexed user, uint128 amount);
     event UnStaked(address indexed user, uint128 amount);
     event RewardClaimed(address indexed user, uint128 amount, bool isUsdc);
     event UsdcRewardPerShareUpdated(uint128 newRewardPerShare);
     event SafeTokenRewardPerShareUpdated(uint128 newRewardPerShare);
 
-    // The SafeStakingContract constructor
+    /*//////////////////////////////////////////////////////////////
+                                 ERRORS
+    //////////////////////////////////////////////////////////////*/
+    error SAFE_YIELD_STAKING_LOCKED();
+
     constructor(
         address _safeToken,
         address _sSafeToken,
@@ -72,6 +73,14 @@ contract SafeYieldStaking is Ownable2Step {
 
         userStakes[user].usdcPerTokenRewardClaimed = usdcRewardsPerToken;
         userStakes[user].safePerTokenRewardClaimed = safeRewardPerToken;
+        _;
+    }
+
+    modifier lockStaking() {
+        if (
+            presale.preSaleState() == PreSaleState.Live &&
+            msg.sender != address(presale)
+        ) revert SAFE_YIELD_STAKING_LOCKED();
         _;
     }
 
@@ -128,7 +137,10 @@ contract SafeYieldStaking is Ownable2Step {
     }
 
     // The stake function
-    function stake(uint128 amount, address user) external updateReward(user) {
+    function stake(
+        uint128 amount,
+        address user
+    ) external lockStaking updateReward(user) {
         safeToken.transferFrom(msg.sender, address(this), amount);
 
         sSafeToken.mint(user, amount); // receipt token representing the stake
@@ -141,7 +153,10 @@ contract SafeYieldStaking is Ownable2Step {
     }
 
     // The unstake function
-    function unstake(address user, uint128 amount) public updateReward(user) {
+    function unstake(
+        address user,
+        uint128 amount
+    ) public lockStaking updateReward(user) {
         // Transfer the amount of SafeToken from this contract to the sender
 
         if (amount > userStakes[user].stakedSafeTokenAmount) {
@@ -159,7 +174,7 @@ contract SafeYieldStaking is Ownable2Step {
         emit UnStaked(user, amount);
     }
 
-    function claimReward() external updateReward(msg.sender) {
+    function claimReward() external lockStaking updateReward(msg.sender) {
         //fund the contract from rewards pool
         uint128 rewards = userStakes[msg.sender].safeRewards;
         uint128 usdcRewards = userStakes[msg.sender].usdcRewards;
@@ -204,5 +219,9 @@ contract SafeYieldStaking is Ownable2Step {
     ) external onlyOwner {
         //access controlled
         safeTokenRewardRate = newRewardRate;
+    }
+
+    function setPresale(address _presale) external onlyOwner {
+        presale = ISafeYieldPreSale(_presale);
     }
 }
