@@ -64,6 +64,8 @@ abstract contract SafeYieldBaseTest is Test {
             protocolAdmin
         );
 
+        staking.setPresale(address(presale));
+
         safeToken.grantRole(safeToken.MINTER_ROLE(), address(distributor));
         safeToken.grantRole(safeToken.MINTER_ROLE(), address(presale));
 
