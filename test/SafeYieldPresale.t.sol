@@ -16,6 +16,13 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         _;
     }
 
+    modifier pause() {
+        vm.startPrank(protocolAdmin);
+        presale.pause();
+        vm.stopPrank();
+        _;
+    }
+
     function testMinAllocationIsLessThanMaxAllocation() public view {
         uint256 minAllocation = presale.minAllocationPerWallet();
         uint256 maxAllocation = presale.maxAllocationPerWallet();
@@ -197,17 +204,19 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
     //     vm.stopPrank();
     // }
 
-    function testBuyTokensShouldFailIfPresaleIsPaused() public {
-        vm.startPrank(protocolAdmin);
-        presale.pause();
-        vm.stopPrank();
-
+    function testBuyTokensShouldFailIfPresaleIsPaused() public pause {
         vm.startPrank(ALICE);
         usdc.approve(address(presale), 1_000e6);
 
         vm.expectRevert(abi.encodeWithSelector(EnforcedPause.selector));
 
         presale.deposit(ALICE, 1_000e6, bytes32(0));
+    }
+
+    function testRedeemUsdcCommissionShouldFailIfPaused() public pause {
+        vm.startPrank(ALICE);
+        vm.expectRevert(abi.encodeWithSelector(EnforcedPause.selector));
+        presale.redeemUsdcCommission();
     }
 
     function testBuySafeTokensWithNoReferrer() public startPresale {
