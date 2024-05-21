@@ -20,6 +20,7 @@ abstract contract SafeYieldBaseTest is Test {
     address public protocolAdmin = makeAddr("protocolAdmin");
     address public ALICE = makeAddr("alice");
     address public BOB = makeAddr("bob");
+    address public NOT_ADMIN = makeAddr("notAdmin");
 
     SafeYieldRewardDistributor public distributor;
     SafeYieldPresale public presale;
@@ -28,6 +29,9 @@ abstract contract SafeYieldBaseTest is Test {
     USDCMockToken public usdc;
     sSafeToken public sToken;
 
+    error AccessControlUnauthorizedAccount(address account, bytes32 neededRole);
+    error OwnableUnauthorizedAccount(address account);
+    error OwnableInvalidOwner(address owner);
     error EnforcedPause();
 
     function setUp() public {
