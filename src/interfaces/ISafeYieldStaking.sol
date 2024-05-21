@@ -34,4 +34,8 @@ interface ISafeYieldStaking {
     function updateSafeTokenRewardRate(uint64 newRewardRate) external;
 
     function setPresale(address _presale) external;
+
+    function getUserStake(
+        address _user
+    ) external view returns (Stake memory stake);
 }

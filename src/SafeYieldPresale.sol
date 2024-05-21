@@ -331,7 +331,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
             revert SAFE_YIELD_PRESALE_NOT_ENDED();
 
         uint128 safeTokens = safeYieldStaking
-            .userStakes(msg.sender)
+            .getUserStake(msg.sender)
             .stakedSafeTokenAmount;
 
         if (safeTokens == 0) revert SAFE_YIELD_ZERO_BALANCE();

@@ -259,4 +259,8 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step {
     function setPresale(address _presale) external override onlyOwner {
         presale = ISafeYieldPreSale(_presale);
     }
+
+    function getUserStake(address _user) external view returns (Stake memory) {
+        return userStakes[_user];
+    }
 }
