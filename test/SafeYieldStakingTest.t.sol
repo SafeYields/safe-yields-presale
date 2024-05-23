@@ -11,9 +11,9 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
     /*//////////////////////////////////////////////////////////////
                               NORMAL TESTS
     //////////////////////////////////////////////////////////////*/
-    modifier mintSafeTokens(address user, uint256 amount) {
+    modifier mintSafeTokens(uint256 amount) {
         vm.prank(address(distributor));
-        safeToken.mint(user, amount);
+        safeToken.mint(amount);
         _;
     }
 
@@ -39,7 +39,7 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         staking.stake(1000e18, NOT_ADMIN);
     }
 
-    function testStakeSafeTokens() public mintSafeTokens(ALICE, 10_000e18) {
+    function testStakeSafeTokens() public mintSafeTokens(10_000e18) {
         vm.startPrank(ALICE);
         safeToken.approve(address(staking), 10_000e18);
 

@@ -320,7 +320,7 @@ contract SafeYieldRewardDistributorTest is SafeYieldBaseTest {
         assertEq(safeToken.allocationLimits(address(distributor)), 11_000_000e18);
 
         vm.prank(address(distributor));
-        safeToken.mint(address(distributor), 1_000_000e18);
+        safeToken.mint(1_000_000e18);
 
         assertEq(safeToken.allocationLimits(address(distributor)), 10_000_000e18);
     }

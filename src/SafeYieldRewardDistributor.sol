@@ -285,7 +285,7 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
 
                 uint256 tokensToMint = ((usdcDistributed * 1e18) / _getCurrentTokenPrice());
 
-                safeToken.mint(contract_, tokensToMint);
+                safeToken.mint(tokensToMint);
 
                 // console.log("Minted %s tokens to %s", tokensToMint, safeMinted);
                 safeMinted += tokensToMint;

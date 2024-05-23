@@ -14,6 +14,7 @@ contract SafeToken is ISafeToken, ERC20, AccessControl {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");
     uint256 public constant MAX_SUPPLY = 20_000_000e18;
+    //Safe Token allocation addresses
     /**
      * 11,000,000e18 for staking emissions
      * 2,000,000e18 for team operations
@@ -22,6 +23,11 @@ contract SafeToken is ISafeToken, ERC20, AccessControl {
      * 2,000,000e18 for early investors rounds
      * 2,000,000e18 for IDO
      */
+    address public constant TEAM_OPERATIONS = address(0x12);
+    address public constant CORE_CONTRIBUTORS = address(0x13);
+    address public constant FUTURE_LIQUIDITY = address(0x14);
+    address public constant EARLY_INVESTORS = address(0x15);
+
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
@@ -37,26 +43,36 @@ contract SafeToken is ISafeToken, ERC20, AccessControl {
                                  ERRORS
     //////////////////////////////////////////////////////////////*/
     error SAFE_YIELD__MAX_SUPPLY_EXCEEDED();
+    error SAFE_YIELD__MAX_MINT_ALLOC_EXCEEDED();
     error SAFE_YIELD__ONLY_MINTER_ROLE();
     error SAFE_YIELD__ONLY_BURNER_ROLE();
     error SAFE_YIELD__ONLY_ADMIN_ROLE();
 
     constructor(string memory name, string memory symbol, address admin) ERC20(name, symbol) {
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
+
+        _mint(TEAM_OPERATIONS, 2_000_000e18);
+        _mint(CORE_CONTRIBUTORS, 1_000_000e18);
+        _mint(FUTURE_LIQUIDITY, 2_000_000e18);
+        _mint(EARLY_INVESTORS, 2_000_000e18);
+
+        maxMintAllocated = totalSupply();
     }
 
     //! remove to param and mint to msg.sender instead
-    function mint(address to, uint256 amount) public override {
+    function mint(uint256 amount) public override {
         if (!hasRole(MINTER_ROLE, _msgSender())) {
             revert SAFE_YIELD__ONLY_MINTER_ROLE();
         }
 
-        //! either separate checks with different custom errors or make single error with params
-        if (totalSupply() + amount > MAX_SUPPLY || allocationLimits[_msgSender()] < amount) {
+        if (totalSupply() + amount > MAX_SUPPLY) {
             revert SAFE_YIELD__MAX_SUPPLY_EXCEEDED();
         }
+        if (amount > allocationLimits[_msgSender()]) {
+            revert SAFE_YIELD__MAX_MINT_ALLOC_EXCEEDED();
+        }
 
-        _mint(to, amount);
+        _mint(_msgSender(), amount);
 
         allocationLimits[_msgSender()] -= amount;
     }

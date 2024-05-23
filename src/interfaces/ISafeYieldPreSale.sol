@@ -12,7 +12,7 @@ interface ISafeYieldPreSale {
 
     function safeTokensAvailable() external view returns (uint128);
 
-    function withdrawUSDC(address receiver, uint256 amount) external;
+    function withdrawUSDC(uint256 amount) external;
 
     function redeemUsdcCommission() external;
 
