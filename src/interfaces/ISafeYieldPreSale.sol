@@ -24,6 +24,8 @@ interface ISafeYieldPreSale {
 
     function calculateSafeTokens(uint128 usdcAmount) external view returns (uint128);
 
+    function mintAllAllocations() external;
+
     function pause() external;
 
     function unpause() external;

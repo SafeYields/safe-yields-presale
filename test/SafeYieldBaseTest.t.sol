@@ -69,6 +69,11 @@ abstract contract SafeYieldBaseTest is Test {
         sToken.grantRole(sToken.MINTER_ROLE(), address(staking));
         sToken.grantRole(sToken.BURNER_ROLE(), address(staking));
 
+        //mint
+        presale.mintAllAllocations();
+
+        distributor.mintAllAllocations();
+
         _mintUsdc2Users();
 
         vm.stopPrank();

@@ -413,7 +413,6 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
         totalSold += totalSafeTokensToMint;
         investorAllocations[investor] += safeTokensBought;
 
-        safeToken.mint(totalSafeTokensToMint);
         safeToken.approve(address(safeYieldStaking), totalSafeTokensToMint);
 
         /**
@@ -426,5 +425,9 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
         } else {
             safeYieldStaking.stake(investor, totalSafeTokensToMint);
         }
+    }
+
+    function mintAllAllocations() external override onlyOwner {
+        safeToken.mint(PRE_SALE_CAP);
     }
 }

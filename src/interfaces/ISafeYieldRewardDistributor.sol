@@ -31,4 +31,6 @@ interface ISafeYieldRewardDistributor {
     function updateContractShares(ContractShare[] memory updatedAllocations) external;
 
     function removeExcessUsdc(uint256 amount) external;
+
+    function mintAllAllocations() external;
 }

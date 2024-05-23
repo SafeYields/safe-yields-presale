@@ -236,6 +236,10 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
         usdcBuyback = newUsdcBuyback;
     }
 
+    function mintAllAllocations() external override onlyOwner {
+        safeToken.mint(MAX_STAKING_EMISSIONS);
+    }
+
     /**
      * @notice returns all the contracts that are eligible for rewards.
      * @return all the contracts that are eligible for rewards.
@@ -285,7 +289,7 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
 
                 uint256 tokensToMint = ((usdcDistributed * 1e18) / _getCurrentTokenPrice());
 
-                safeToken.mint(tokensToMint);
+                safeToken.transfer(contract_, tokensToMint);
 
                 // console.log("Minted %s tokens to %s", tokensToMint, safeMinted);
                 safeMinted += tokensToMint;
