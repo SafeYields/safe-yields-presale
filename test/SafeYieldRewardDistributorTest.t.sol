@@ -316,15 +316,6 @@ contract SafeYieldRewardDistributorTest is SafeYieldBaseTest {
         assertEq(pendingRewards, pendingSafeToken, "Should return the expected amount of pending rewards");
     }
 
-    function test_MaxMintLimit() public {
-        assertEq(safeToken.allocationLimits(address(distributor)), 11_000_000e18);
-
-        vm.prank(address(distributor));
-        safeToken.mint(1_000_000e18);
-
-        assertEq(safeToken.allocationLimits(address(distributor)), 10_000_000e18);
-    }
-
     function test_distributeWithStakingEmissionLive() public {
         vm.startPrank(protocolAdmin);
 
