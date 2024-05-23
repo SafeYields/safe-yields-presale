@@ -17,6 +17,12 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step {
     ISSafeToken public immutable sSafeToken;
     IERC20 public immutable usdc;
 
+   /** @note 
+   * Deposit to UI.
+   * Emma finds strats.
+   * Intermediary contracts.
+   * contract to place trades.
+   */
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
@@ -26,7 +32,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step {
     uint128 usdcRewardPerShare;
     uint128 safeTokenRewardPerShare;
     uint128 lastRewardUpdateTimestamp;
-    uint128 totalStaked;
+    uint128 public override totalStaked;
     mapping(address user => Stake stake) public userStakes;
 
     /*//////////////////////////////////////////////////////////////
@@ -136,6 +142,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step {
             ((usdcRewardRate *
                 (uint128(block.timestamp) - lastRewardUpdateTimestamp) *
                 1e18) / totalStaked); // 18 decimals
+
         safeTokenRewardsPerToken =
             safeTokenRewardPerShare +
             ((safeTokenRewardRate *

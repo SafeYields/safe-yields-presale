@@ -8,7 +8,7 @@ import {ISafeYieldPreSale} from "./interfaces/ISafeYieldPreSale.sol";
 import {ISafeToken} from "./interfaces/ISafeToken.sol";
 import {StakingEmissionState, PreSaleState, ContractShare} from "./types/SafeTypes.sol";
 import {ISafeYieldRewardDistributor} from "./interfaces/ISafeYieldRewardDistributor.sol";
-
+//import {console} from "forge-std/Test.sol";
 contract SafeYieldRewardDistributor is
     ISafeYieldRewardDistributor,
     Ownable2Step
@@ -302,9 +302,16 @@ contract SafeYieldRewardDistributor is
             contractDetails.share * (accumulatedUsdcPerContract)
         );
 
+        // console.log("Contract share %s", contractDetails.share);
+        // console.log(
+        //     "accumulatedContractUsdc %s",
+        //     uint256(accumulatedContractUsdc)
+        // );
+
         usdcDistributed = SafeCast.toUint256(
             accumulatedContractUsdc - contractDetails.shareDebt
         );
+
         usdcDistributed += outStandingContractRewards[contract_];
         outStandingContractRewards[contract_] = 0;
 
@@ -319,11 +326,14 @@ contract SafeYieldRewardDistributor is
             safeMinted < MAX_STAKING_EMISSIONS
         ) {
             if (contract_ == safeStaking) {
+                //console.log("usdcToDistribute %s", usdcDistributed);
+
                 uint256 tokensToMint = ((usdcDistributed * 1e18) /
                     _getCurrentTokenPrice());
 
                 safeToken.mint(contract_, tokensToMint);
 
+               // console.log("Minted %s tokens to %s", tokensToMint, safeMinted);
                 safeMinted += tokensToMint;
 
                 emit RewardDistributed(contract_, tokensToMint);
@@ -352,8 +362,8 @@ contract SafeYieldRewardDistributor is
             _contractShares[1] = ContractShare(0, safeStaking, 3_500);
             _contractShares[2] = ContractShare(0, usdcBuyback, 3_500);
         } else {
-            _contractShares[0] = ContractShare(0, teamOperations, 6_000);
-            _contractShares[1] = ContractShare(0, safeStaking, 3_000);
+            _contractShares[0] = ContractShare(0, teamOperations, 3_000);
+            _contractShares[1] = ContractShare(0, safeStaking, 6_000);
             _contractShares[2] = ContractShare(0, usdcBuyback, 1_000);
         }
 
@@ -376,13 +386,18 @@ contract SafeYieldRewardDistributor is
     /// @dev Starts the staking emissions.
     function startStakingEmissions() public onlyOwner {
         currentStakingState = StakingEmissionState.Live;
+
+        switchSharesPerPhase();
     }
 
     /// @dev Ends the staking emissions.
     function endStakingEmissions() public onlyOwner {
-        if (safeMinted < MAX_STAKING_EMISSIONS)
-            revert SYRD__MAX_SUPPLY_NOT_EXCEEDED();
+        //!note keep this?
+        // if (safeMinted < MAX_STAKING_EMISSIONS)
+        //     revert SYRD__MAX_SUPPLY_NOT_EXCEEDED();
         currentStakingState = StakingEmissionState.Ended;
+
+        switchSharesPerPhase();
     }
 
     /// @dev Updates the shares of the contracts.
@@ -455,7 +470,22 @@ contract SafeYieldRewardDistributor is
             accumulatedContractUsdc - contractDetails.shareDebt
         );
 
-        return pendingContractUsdc + outStandingContractRewards[contract_];
+        // currentStakingState == StakingEmissionState.Live &&
+
+        /** uint256 tokensToMint = ((usdcDistributed * 1e18) /
+                    _getCurrentTokenPrice()); */
+        uint256 pendingContractRewards = pendingContractUsdc +
+            outStandingContractRewards[contract_];
+
+        if (currentStakingState == StakingEmissionState.Live) {
+            if (contract_ == safeStaking) {
+                pendingContractRewards = ((pendingContractRewards * 1e18) /
+                    _getCurrentTokenPrice());
+                return pendingContractRewards;
+            }
+        }
+
+        return pendingContractRewards;
     }
 
     /// @dev Distributes rewards to all contracts.
