@@ -18,12 +18,14 @@ contract SafeTokenTest is SafeYieldBaseTest {
         uint256 coreContributorsSupply = 1_000_000e18;
         uint256 futureLiquiditySupply = 2_000_000e18;
         uint256 earlyInvestorsSupply = 2_000_000e18;
+        uint256 idoSupply = 2_000_000e18;
+        uint256 stakingEmissionsSupply = 11_000_000e18;
 
-        uint256 totalSupply =
-            teamOperationsSupply + coreContributorsSupply + futureLiquiditySupply + earlyInvestorsSupply;
+        uint256 totalSupply = teamOperationsSupply + coreContributorsSupply + futureLiquiditySupply
+            + earlyInvestorsSupply + idoSupply + stakingEmissionsSupply;
         uint256 tokensRemaining = safeToken.MAX_SUPPLY() - totalSupply;
 
-        assertEq(tokensRemaining, 13_000_000e18);
+        assertEq(tokensRemaining, 0);
         assertEq(safeToken.totalSupply(), totalSupply);
         assertEq(safeToken.balanceOf(safeToken.TEAM_OPERATIONS()), teamOperationsSupply);
         assertEq(safeToken.balanceOf(safeToken.CORE_CONTRIBUTORS()), coreContributorsSupply);
@@ -38,7 +40,7 @@ contract SafeTokenTest is SafeYieldBaseTest {
     }
 
     function testSetAllocationLimitShouldFailIfAlreadySet() public {
-        vm.expectRevert(abi.encodeWithSelector(SafeToken.SAFE_YIELD__ALLOCATION_LIMIT_ALREADY_SET.selector));
+        vm.expectRevert(abi.encodeWithSelector(SafeToken.SAFE_YIELD__MAX_SUPPLY_EXCEEDED.selector));
         vm.prank(protocolAdmin);
         safeToken.setAllocationLimit(address(distributor), 1_000e18);
     }
@@ -50,12 +52,8 @@ contract SafeTokenTest is SafeYieldBaseTest {
     }
 
     function testMintShouldFailIfMaxMintAllocExceeded() public {
-        vm.startPrank(address(distributor));
-        safeToken.mint(distributor.MAX_STAKING_EMISSIONS());
-        vm.stopPrank();
-
-        vm.expectRevert(abi.encodeWithSelector(SafeToken.SAFE_YIELD__MAX_MINT_ALLOC_EXCEEDED.selector));
-        vm.prank(address(distributor));
+        vm.expectRevert(abi.encodeWithSelector(SafeToken.SAFE_YIELD__MAX_SUPPLY_EXCEEDED.selector));
+        vm.prank(address(presale));
         safeToken.mint(1_000e18);
     }
 }
