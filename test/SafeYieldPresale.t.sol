@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.21;
+pragma solidity 0.8.26;
 import {console} from "forge-std/Test.sol";
 import {SafeYieldPresale} from "src/SafeYieldPresale.sol";
 import {PreSaleState} from "src/types/SafeTypes.sol";
