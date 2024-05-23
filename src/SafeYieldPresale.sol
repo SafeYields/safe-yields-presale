@@ -38,6 +38,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
     uint128 public tokenPrice;
     uint128 public referrerCommissionUsdcBps;
     uint128 public referrerCommissionSafeTokenBps;
+    address public protocolAdmin;
 
     mapping(address userAddress => uint128 safeTokensAllocation) public investorAllocations;
     mapping(bytes32 referrerId => ReferrerInfo referrerInfo) public referrerInfo;
@@ -45,7 +46,6 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
-
     event TokensPurchased(
         address indexed buyer,
         uint128 indexed usdcAmount,
@@ -54,23 +54,17 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
         uint128 referrerCommissionSafeTokenBps,
         bytes32 referrerId
     );
-
-    event ReferrerIdCreated(address indexed referrer, bytes32 indexed referrerId);
-
-    event UsdcCommissionRedeemed(address indexed referrer, uint128 indexed usdcAmount);
-
-    event SafeTokensClaimed(address indexed investor, uint128 indexed safeTokens);
-
-    event UsdcWithdrawn(address indexed receiver, uint256 indexed amount);
-
     event ReferrerCommissionSet(
         uint128 indexed referrerCommissionUsdcBps, uint128 indexed referrerCommissionSafeTokenBps
     );
+    event ReferrerIdCreated(address indexed referrer, bytes32 indexed referrerId);
+    event UsdcCommissionRedeemed(address indexed referrer, uint128 indexed usdcAmount);
+    event SafeTokensClaimed(address indexed investor, uint128 indexed safeTokens);
+    event UsdcWithdrawn(address indexed receiver, uint256 indexed amount);
+    event TokenPriceSet(uint128 indexed tokenPrice);
     event PreSaleStarted();
     event PreSaleEnded();
-
-    event TokenPriceSet(uint128 indexed tokenPrice);
-
+    event TokensRecovered(address indexed tokenAddress, uint256 indexed amount);
     event AllocationSet(uint128 indexed minAllocationPerWallet, uint128 indexed maxAllocationPerWallet);
 
     /*//////////////////////////////////////////////////////////////
@@ -103,8 +97,9 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
         uint128 _maxAllocationPerWallet,
         uint128 _tokenPrice,
         uint128 _referrerCommissionUsdc,
-        uint128 _referrerCommissionSafeToken
-    ) Ownable(msg.sender) {
+        uint128 _referrerCommissionSafeToken,
+        address _protocolAdmin
+    ) Ownable(_protocolAdmin) {
         if (_minAllocationPerWallet > _maxAllocationPerWallet) {
             revert SAFE_YIELD_INVALID_ALLOCATION();
         }
@@ -138,7 +133,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
 
     /**
      * @dev Pause the presale
-     * @notice This function can only be called by the owner
+     * @notice This function can only be called by the owner()
      */
     function pause() external override onlyOwner {
         _pause();
@@ -146,7 +141,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
 
     /**
      * @dev Unpause the presale
-     * @notice This function can only be called by the owner
+     * @notice This function can only be called by the owner()
      */
     function unpause() external override onlyOwner {
         _unpause();
@@ -154,7 +149,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
 
     /**
      * @dev Start the presale
-     * @notice This function can only be called by the owner
+     * @notice This function can only be called by the owner()
      */
     function startPresale() external override onlyOwner {
         preSaleState = PreSaleState.Live;
@@ -163,7 +158,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
 
     /**
      * @dev End the presale
-     * @notice This function can only be called by the owner
+     * @notice This function can only be called by the owner()
      */
     function endPresale() external override onlyOwner {
         preSaleState = PreSaleState.Ended;
@@ -233,12 +228,22 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
 
     /**
      * @dev Withdraw USDC from the contract
-     * @param receiver The receiver of the USDC
      */
-    function withdrawUSDC(address receiver, uint256 amount) external override onlyOwner {
-        if (amount != 0) usdcToken.transfer(receiver, amount);
+    function withdrawUSDC(uint256 amount) external override onlyOwner {
+        if (amount != 0) usdcToken.transfer(owner(), amount);
 
-        emit UsdcWithdrawn(receiver, amount);
+        emit UsdcWithdrawn(protocolAdmin, amount);
+    }
+
+    /**
+     * @dev Recover tokens sent to the contract
+     * @param tokenAddress The address of the token to recover
+     * @param amount The amount of tokens to recover
+     */
+    function recoverTokens(address tokenAddress, uint256 amount) external onlyOwner {
+        IERC20(tokenAddress).safeTransfer(owner(), amount);
+
+        emit TokensRecovered(tokenAddress, amount);
     }
 
     /**
@@ -412,11 +417,11 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
          *
          */
         if (referrerInvestor != address(0)) {
-            safeToken.mint(address(safeYieldStaking), totalSafeTokensToMint);
+            //safeToken.mint(address(safeYieldStaking), totalSafeTokensToMint);
 
             safeYieldStaking.stakeFor(investor, safeTokensBought, referrerInvestor, referrerSafeTokenCommission);
         } else {
-            safeToken.mint(address(this), safeTokensBought);
+            // safeToken.mint(address(this), safeTokensBought);
             safeToken.approve(address(safeYieldStaking), safeTokensBought);
             safeYieldStaking.stake(safeTokensBought, investor);
         }

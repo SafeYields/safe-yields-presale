@@ -44,7 +44,16 @@ abstract contract SafeYieldBaseTest is Test {
         staking = new SafeYieldStaking(address(safeToken), address(sToken), address(usdc), protocolAdmin);
 
         presale = new SafeYieldPresale(
-            address(safeToken), address(sToken), address(usdc), address(staking), 1000e18, 100_000e18, 1e18, 5_00, 5_00
+            address(safeToken),
+            address(sToken),
+            address(usdc),
+            address(staking),
+            1000e18,
+            100_000e18,
+            1e18,
+            5_00,
+            5_00,
+            protocolAdmin
         );
 
         distributor = new SafeYieldRewardDistributor(

@@ -29,7 +29,16 @@ contract SafeYieldPresaleDeployment is Script {
         staking = new SafeYieldStaking(address(safe), address(sSafe), address(usdc), SAFE_YIELD_ADMIN);
 
         presale = new SafeYieldPresale(
-            address(safe), address(sSafe), address(usdc), address(staking), 1_000e18, 100_000e18, 1e18, 5_00, 5_00
+            address(safe),
+            address(sSafe),
+            address(usdc),
+            address(staking),
+            1_000e18,
+            100_000e18,
+            1e18,
+            5_00,
+            5_00,
+            SAFE_YIELD_ADMIN
         );
 
         vm.stopBroadcast();
