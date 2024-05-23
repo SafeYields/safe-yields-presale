@@ -115,7 +115,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step {
     }
 
     // The stake function
-    function stake(uint128 amount, address user) public override lockStaking updateReward(user) {
+    function stake(address user, uint128 amount) public override lockStaking updateReward(user) {
         safeToken.transferFrom(msg.sender, address(this), amount);
 
         sSafeToken.mint(user, amount); // receipt token representing the stake
@@ -152,17 +152,21 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step {
     {
         if (msg.sender != address(presale)) revert SAFE_YIELD_STAKING();
 
-        sSafeToken.mint(investor, investorAmount);
+        stake(investor, investorAmount);
 
-        sSafeToken.mint(referrer, referrerAmount);
+        stake(referrer, referrerAmount);
 
-        userStakes[investor].stakedSafeTokenAmount += investorAmount;
+        // sSafeToken.mint(investor, investorAmount);
 
-        userStakes[referrer].stakedSafeTokenAmount += referrerAmount;
+        // sSafeToken.mint(referrer, referrerAmount);
 
-        totalStaked += (investorAmount + referrerAmount);
+        // userStakes[investor].stakedSafeTokenAmount += investorAmount;
 
-        emit StakedFor(investor, investorAmount, referrer, referrerAmount);
+        // userStakes[referrer].stakedSafeTokenAmount += referrerAmount;
+
+        // totalStaked += (investorAmount + referrerAmount);
+
+        // emit StakedFor(investor, investorAmount, referrer, referrerAmount);
     }
 
     function claimReward() external override lockStaking updateReward(msg.sender) {
