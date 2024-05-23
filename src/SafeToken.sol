@@ -6,6 +6,7 @@ import { ERC20Burnable } from "@openzeppelin/contracts/token/ERC20/extensions/ER
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
 import { ISafeToken } from "./interfaces/ISafeToken.sol";
+//import { console } from "forge-std/Test.sol";
 
 contract SafeToken is ISafeToken, ERC20, AccessControl {
     /*//////////////////////////////////////////////////////////////
@@ -31,7 +32,6 @@ contract SafeToken is ISafeToken, ERC20, AccessControl {
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
-    uint256 maxMintAllocated;
     mapping(address receiver => uint256 amountAllocated) public allocationLimits;
 
     /*//////////////////////////////////////////////////////////////
@@ -42,8 +42,10 @@ contract SafeToken is ISafeToken, ERC20, AccessControl {
     /*//////////////////////////////////////////////////////////////
                                  ERRORS
     //////////////////////////////////////////////////////////////*/
-    error SAFE_YIELD__MAX_SUPPLY_EXCEEDED();
+
+    error SAFE_YIELD__ALLOCATION_LIMIT_ALREADY_SET();
     error SAFE_YIELD__MAX_MINT_ALLOC_EXCEEDED();
+    error SAFE_YIELD__MAX_SUPPLY_EXCEEDED();
     error SAFE_YIELD__ONLY_MINTER_ROLE();
     error SAFE_YIELD__ONLY_BURNER_ROLE();
     error SAFE_YIELD__ONLY_ADMIN_ROLE();
@@ -55,42 +57,67 @@ contract SafeToken is ISafeToken, ERC20, AccessControl {
         _mint(CORE_CONTRIBUTORS, 1_000_000e18);
         _mint(FUTURE_LIQUIDITY, 2_000_000e18);
         _mint(EARLY_INVESTORS, 2_000_000e18);
-
-        maxMintAllocated = totalSupply();
     }
+    /**
+     * @notice Mint new tokens
+     * @param numberOfTokens Amount of tokens to mint
+     * @dev Only minter role can mint new tokens
+     */
 
-    //! remove to param and mint to msg.sender instead
-    function mint(uint256 amount) public override {
+    function mint(uint256 numberOfTokens) public override {
         if (!hasRole(MINTER_ROLE, _msgSender())) {
             revert SAFE_YIELD__ONLY_MINTER_ROLE();
         }
-
-        if (totalSupply() + amount > MAX_SUPPLY) {
+        /**
+         * Check if the total supply before minting is within the
+         * maximum supply limit
+         */
+        if (totalSupply() + numberOfTokens > MAX_SUPPLY) {
             revert SAFE_YIELD__MAX_SUPPLY_EXCEEDED();
         }
-        if (amount > allocationLimits[_msgSender()]) {
+        /**
+         * Check if the amount to mint is within the allocation limit
+         * for the minter
+         */
+        if (numberOfTokens > allocationLimits[_msgSender()]) {
             revert SAFE_YIELD__MAX_MINT_ALLOC_EXCEEDED();
         }
 
-        _mint(_msgSender(), amount);
+        _mint(_msgSender(), numberOfTokens);
 
-        allocationLimits[_msgSender()] -= amount;
+        /**
+         * Reduce the allocation limit for the minter
+         */
+        allocationLimits[_msgSender()] -= numberOfTokens;
     }
+    /**
+     * @notice Set the allocation limit for a minter
+     * @param minter Address of the minter
+     * @param maxNumberOfTokens Maximum number of tokens the minter can mint
+     */
 
-    function setAllocationLimit(address minter, uint256 amount) public override {
+    function setAllocationLimit(address minter, uint256 maxNumberOfTokens) public override {
         if (!hasRole(DEFAULT_ADMIN_ROLE, _msgSender())) {
             revert SAFE_YIELD__ONLY_ADMIN_ROLE();
         }
 
-        //! give @param minter the minter role if it doesn't have it
-        if (maxMintAllocated + amount > MAX_SUPPLY) {
+        if (allocationLimits[minter] != 0) {
+            revert SAFE_YIELD__ALLOCATION_LIMIT_ALREADY_SET();
+        }
+        /**
+         * Grant the minter role to the address if it doesn't have it
+         */
+        if (!hasRole(MINTER_ROLE, minter)) {
+            _grantRole(MINTER_ROLE, minter);
+        }
+
+        if (totalSupply() + maxNumberOfTokens > MAX_SUPPLY) {
             revert SAFE_YIELD__MAX_SUPPLY_EXCEEDED();
         }
 
-        maxMintAllocated += amount;
-        allocationLimits[minter] = amount;
+        allocationLimits[minter] = maxNumberOfTokens;
 
-        emit MinterAllocationSet(minter, amount);
+        emit MinterAllocationSet(minter, maxNumberOfTokens);
     }
 
     function burn(address from, uint256 amount) public override {
