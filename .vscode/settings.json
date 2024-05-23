@@ -10,5 +10,6 @@
     "SYRD",
     "unstake"
   ],
-  "solidity.compileUsingRemoteVersion": "v0.8.21+commit.d9974bed"
+  "solidity.compileUsingRemoteVersion": "v0.8.26+commit.8a97fa7a",
+  "solidity.formatter": "forge"
 }
