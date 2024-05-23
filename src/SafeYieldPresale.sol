@@ -413,17 +413,18 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
         totalSold += totalSafeTokensToMint;
         investorAllocations[investor] += safeTokensBought;
 
+        safeToken.mint(totalSafeTokensToMint);
+        safeToken.approve(address(safeYieldStaking), totalSafeTokensToMint);
+
         /**
-         *
+         * @dev check if the referrer is not address(0)
+         * then stake the safe tokens bought for the investor and the referrer
+         * else stake the safe tokens bought for the investor only.
          */
         if (referrerInvestor != address(0)) {
-            //safeToken.mint(address(safeYieldStaking), totalSafeTokensToMint);
-
             safeYieldStaking.stakeFor(investor, safeTokensBought, referrerInvestor, referrerSafeTokenCommission);
         } else {
-            // safeToken.mint(address(this), safeTokensBought);
-            safeToken.approve(address(safeYieldStaking), safeTokensBought);
-            safeYieldStaking.stake(safeTokensBought, investor);
+            safeYieldStaking.stake(investor, totalSafeTokensToMint);
         }
     }
 }

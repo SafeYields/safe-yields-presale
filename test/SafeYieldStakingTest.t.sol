@@ -36,16 +36,16 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         vm.expectRevert(abi.encodeWithSelector(SafeYieldStaking.SAFE_YIELD_STAKING_LOCKED.selector));
 
         vm.prank(NOT_ADMIN);
-        staking.stake(1000e18, NOT_ADMIN);
+        staking.stake(NOT_ADMIN, 1_000e18);
     }
 
     function testStakeSafeTokens() public mintSafeTokens(10_000e18) {
         vm.startPrank(ALICE);
         safeToken.approve(address(staking), 10_000e18);
 
-        staking.stake(1000e18, ALICE);
+        staking.stake(ALICE, 1_000e18);
 
-        assertEq(staking.totalStaked(), 1000e18);
-        assertEq(staking.getUserStake(ALICE).stakedSafeTokenAmount, 1000e18);
+        assertEq(staking.totalStaked(), 1_000e18);
+        assertEq(staking.getUserStake(ALICE).stakedSafeTokenAmount, 1_000e18);
     }
 }
