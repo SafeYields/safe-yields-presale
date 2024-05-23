@@ -22,6 +22,7 @@ abstract contract SafeYieldBaseTest is Test {
     address public ALICE = makeAddr("alice");
     address public BOB = makeAddr("bob");
     address public NOT_ADMIN = makeAddr("notAdmin");
+    address public NOT_MINTER = makeAddr("notMinter");
 
     SafeYieldRewardDistributor public distributor;
     SafeYieldPresale public presale;
@@ -60,16 +61,13 @@ abstract contract SafeYieldBaseTest is Test {
             address(safeToken), address(usdc), teamOperations, usdcBuyback, address(staking), protocolAdmin
         );
 
-        staking.setPresale(address(presale));
+        safeToken.setAllocationLimit(address(distributor), STAKING_MAX_SUPPLY);
+        safeToken.setAllocationLimit(address(presale), PRE_SALE_MAX_SUPPLY);
 
-        safeToken.grantRole(safeToken.MINTER_ROLE(), address(distributor));
-        safeToken.grantRole(safeToken.MINTER_ROLE(), address(presale));
+        staking.setPresale(address(presale));
 
         sToken.grantRole(sToken.MINTER_ROLE(), address(staking));
         sToken.grantRole(sToken.BURNER_ROLE(), address(staking));
-
-        safeToken.setAllocationLimit(address(distributor), STAKING_MAX_SUPPLY);
-        safeToken.setAllocationLimit(address(presale), PRE_SALE_MAX_SUPPLY);
 
         _mintUsdc2Users();
 
