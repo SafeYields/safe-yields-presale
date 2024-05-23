@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import {Script, console} from "forge-std/Script.sol";
-import {SafeYieldPresale} from "src/SafeYieldPresale.sol";
-import {SafeYieldStaking} from "src/SafeYieldStaking.sol";
-import {sSafeToken} from "src/sSafeToken.sol";
-import {SafeToken} from "src/SafeToken.sol";
-import {USDCMockToken} from "test/mocks/USDCMockToken.sol";
+import { Script, console } from "forge-std/Script.sol";
+import { SafeYieldPresale } from "src/SafeYieldPresale.sol";
+import { SafeYieldStaking } from "src/SafeYieldStaking.sol";
+import { sSafeToken } from "src/sSafeToken.sol";
+import { SafeToken } from "src/SafeToken.sol";
+import { USDCMockToken } from "test/mocks/USDCMockToken.sol";
+
 contract SafeYieldPresaleDeployment is Script {
     uint256 public constant PRE_SALE_MAX_SUPPLY = 2_000_000e18;
 
-    address public constant SAFE_YIELD_ADMIN =
-        0x061Bc6f643038E4d6561aF4EBbc0B127cc5316cF;
+    address public constant SAFE_YIELD_ADMIN = 0x061Bc6f643038E4d6561aF4EBbc0B127cc5316cF;
     SafeYieldPresale public presale;
     SafeYieldStaking public staking;
     SafeToken public safe;
@@ -26,23 +26,10 @@ contract SafeYieldPresaleDeployment is Script {
         safe = new SafeToken("SafeToken", "SAFE", SAFE_YIELD_ADMIN);
         sSafe = new sSafeToken("sSafeToken", "sSAFE", SAFE_YIELD_ADMIN);
 
-        staking = new SafeYieldStaking(
-            address(safe),
-            address(sSafe),
-            address(usdc),
-            SAFE_YIELD_ADMIN
-        );
+        staking = new SafeYieldStaking(address(safe), address(sSafe), address(usdc), SAFE_YIELD_ADMIN);
 
         presale = new SafeYieldPresale(
-            address(safe),
-            address(sSafe),
-            address(usdc),
-            address(staking),
-            1_000e18,
-            100_000e18,
-            1e18,
-            5_00,
-            5_00
+            address(safe), address(sSafe), address(usdc), address(staking), 1_000e18, 100_000e18, 1e18, 5_00, 5_00
         );
 
         vm.stopBroadcast();
@@ -53,7 +40,7 @@ contract SafeYieldPresaleDeployment is Script {
 
         sSafe.grantRole(sSafe.MINTER_ROLE(), address(staking));
 
-        safe.setMinterLimit(address(presale), PRE_SALE_MAX_SUPPLY);
+        safe.setAllocationLimit(address(presale), PRE_SALE_MAX_SUPPLY);
 
         presale.startPresale();
 

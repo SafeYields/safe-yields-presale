@@ -46,7 +46,7 @@ contract SafeToken is ISafeToken, ERC20, AccessControl {
     }
 
     //! remove to param and mint to msg.sender instead
-    function mint(address to, uint256 amount) public {
+    function mint(address to, uint256 amount) public override {
         if (!hasRole(MINTER_ROLE, _msgSender())) {
             revert SAFE_YIELD__ONLY_MINTER_ROLE();
         }

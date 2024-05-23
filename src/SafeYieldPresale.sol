@@ -303,7 +303,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
         emit SafeTokensClaimed(msg.sender, safeTokens);
     }
 
-    function safeTokensAvailable() public view returns (uint128) {
+    function safeTokensAvailable() public view override returns (uint128) {
         return uint128(PRE_SALE_CAP - totalSold);
     }
 

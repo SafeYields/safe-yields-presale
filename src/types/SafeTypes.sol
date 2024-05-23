@@ -17,6 +17,7 @@ enum StakingEmissionState {
     NotStarted,
     Live, //STAKE
     Ended //USDC
+
 }
 
 struct ContractShare {
