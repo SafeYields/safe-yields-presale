@@ -6,7 +6,7 @@ import { PreSaleState } from "../types/SafeTypes.sol";
 interface ISafeYieldPreSale {
     function preSaleState() external view returns (PreSaleState);
 
-    function deposit(address investor, uint128 usdcAmount, bytes32 referrerId) external;
+    function deposit(uint128 usdcAmount, bytes32 referrerId) external;
 
     function claimSafeTokens() external;
 
