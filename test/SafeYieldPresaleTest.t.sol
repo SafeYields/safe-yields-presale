@@ -120,13 +120,89 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         presale.deposit(1_000e6, refId);
     }
 
-    function testBuyTokensShouldFailIfPotentialSafeTokensExceedMaxTokenAllocation() public startPresale {
+    // function testBuyTokensShouldFailIfPotentialSafeTokensExceedMaxTokenAllocation() public startPresale {
+    //     vm.startPrank(ALICE);
+    //     usdc.approve(address(presale), 100_001e6);
+
+    //     vm.expectRevert(abi.encodeWithSelector(SafeYieldPresale.SAFE_YIELD_MAX_WALLET_ALLOCATION_EXCEEDED.selector));
+
+    //     presale.deposit(100_001e6, bytes32(0));
+    // }
+
+    //!note do for both Referrer and NO referrer + If CAP or Max Wallet too.
+    function testBuyTokensWhenBuyerWantsToBuyMoreThanPRE_SALE_CAPWithNoReferrer() public startPresale {
+        test_mintUsdcAndDepositMultipleAddresses();
+
         vm.startPrank(ALICE);
-        usdc.approve(address(presale), 100_001e6);
+        usdc.approve(address(presale), 1_000e6);
+        presale.deposit(1_000e6, bytes32(0));
 
-        vm.expectRevert(abi.encodeWithSelector(SafeYieldPresale.SAFE_YIELD_MAX_WALLET_ALLOCATION_EXCEEDED.selector));
+        //create a referrer ID
+        bytes32 refId = presale.createReferrerId();
 
-        presale.deposit(100_001e6, bytes32(0));
+        console.log("Safe Tokens Remaining 2", presale.safeTokensAvailable());
+        vm.stopPrank();
+
+        vm.startPrank(BOB);
+        usdc.approve(address(presale), 110_000e6);
+        //100_000 00 00 00 00 00 00 00 00 00
+        uint256 bobUsdcBalancePrior = usdc.balanceOf(BOB);
+        presale.deposit(110_000e6, refId);
+        uint256 bobUsdcBalanceAfter = usdc.balanceOf(BOB);
+
+        console.log("Safe Tokens Remaining Third", presale.safeTokensAvailable());
+    }
+
+    function testBuyTokensWhenBuyerWantsToBuyMoreThanMaxPerWalletWithNoReferrer() public startPresale {
+        vm.startPrank(ALICE);
+        usdc.approve(address(presale), 110_000e6);
+
+        uint256 aliceUsdcBalancePrior = usdc.balanceOf(ALICE);
+        presale.deposit(110_000e6, bytes32(0));
+        uint256 aliceUsdcBalanceAfter = usdc.balanceOf(ALICE);
+
+        assertEq(aliceUsdcBalanceAfter, aliceUsdcBalancePrior - 100_000e6);
+        assertEq(usdc.balanceOf(address(presale)), 100_000e6);
+        assertEq(presale.getTotalSafeTokensOwed(ALICE), 100_000e18);
+    }
+
+    function testBuyTokensWhenBuyerWantsToBuyMoreThanMaxPerWalletWithReferrer() public startPresale {
+        vm.startPrank(ALICE);
+        usdc.approve(address(presale), 1_000e6);
+
+        presale.deposit(1_000e6, bytes32(0));
+
+        //create a referrer ID
+        bytes32 refId = presale.createReferrerId();
+
+        vm.stopPrank();
+
+        vm.startPrank(BOB);
+        usdc.approve(address(presale), 110_000e6);
+
+        uint256 bobUsdcBalancePrior = usdc.balanceOf(BOB);
+        presale.deposit(110_000e6, refId);
+        uint256 bobUsdcBalanceAfter = usdc.balanceOf(BOB);
+
+        //95_238 09 52 38 09 52 38 09 52 38
+        //4_761 90 47 61 90 47 61 90 47 61
+        //5000 00 00 00 00 00 00 00 00 00
+
+        // assertEq(bobUsdcBalanceAfter, bobUsdcBalancePrior - 100_000e6);
+        // assertEq(usdc.balanceOf(address(presale)), 101_000e6);
+        // assertEq(presale.getTotalSafeTokensOwed(BOB), 100_000e18);
+        // assertEq(presale.getTotalSafeTokensOwed(ALICE), 1_000e18);
+    }
+
+    function testBuySafeTokensWhenBuyerWantsToBuyMoreThanThePreSaleCAPWithReferrer() public startPresale {
+        vm.startPrank(protocolAdmin);
+        usdc.mint(ALICE, 2_000_000e6);
+        vm.stopPrank();
+
+        vm.startPrank(ALICE);
+        usdc.approve(address(presale), 2_000_000e6);
+
+        presale.deposit(100_000e6, bytes32(0));
     }
 
     function test_claimTokensShouldRevertIfPreSaleNotEnded() public {
@@ -290,5 +366,20 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         presale.claimSafeTokens();
 
         assertEq(safeToken.balanceOf(ALICE), aliceOwedSafeTokens);
+    }
+
+    function test_mintUsdcAndDepositMultipleAddresses() internal {
+        console.log("Safe Tokens Available", presale.safeTokensAvailable());
+        for (uint256 i = 1; i < 20; i++) {
+            vm.prank(protocolAdmin);
+            usdc.mint(address(uint160(i)), 100_000e6);
+
+            vm.startPrank(address(uint160(i)));
+            usdc.approve(address(presale), 100_000e6);
+            presale.deposit(uint128(100_000e6), bytes32(0));
+            vm.stopPrank();
+        }
+
+        console.log("Safe Tokens Available after", presale.safeTokensAvailable());
     }
 }
