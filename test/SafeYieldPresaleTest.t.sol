@@ -65,7 +65,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         vm.startPrank(ALICE);
         usdc.approve(address(presale), 1_000e6);
 
-        presale.deposit(ALICE, 1_000e6, bytes32(0));
+        presale.deposit(1_000e6, bytes32(0));
 
         bytes32 refId = presale.createReferrerId();
 
@@ -83,16 +83,16 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         usdc.approve(address(presale), 1_000e6);
 
         vm.expectRevert(abi.encodeWithSelector(SafeYieldPresale.SAFE_YIELD_PRESALE_NOT_LIVE.selector));
-        presale.deposit(ALICE, 1_000e6, bytes32(0));
+        presale.deposit(1_000e6, bytes32(0));
     }
 
     function testBuySafeTokensShouldFailPotentialSafeTokensLessThanMinTokenAllocation() public startPresale {
         vm.startPrank(ALICE);
         usdc.approve(address(presale), 999e6);
 
-        vm.expectRevert(abi.encodeWithSelector(SafeYieldPresale.SAFE_YIELD_MIN_WALLET_ALLOCATION_EXCEEDED.selector));
+        vm.expectRevert(SafeYieldPresale.SAFE_YIELD_BELOW_MIN_ALLOCATION.selector);
 
-        presale.deposit(ALICE, 999e6, bytes32(0));
+        presale.deposit(999e6, bytes32(0));
     }
 
     function testBuyTokensShouldFailIfReferrerIdIsInvalid() public startPresale {
@@ -101,14 +101,14 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
 
         vm.expectRevert(abi.encodeWithSelector(SafeYieldPresale.SAFE_YIELD_UNKNOWN_REFERRER.selector));
 
-        presale.deposit(ALICE, 1_000e6, keccak256(abi.encode("invalid_referrer_id")));
+        presale.deposit(1_000e6, keccak256(abi.encode("invalid_referrer_id")));
     }
 
     function testBuyTokesShouldFailIfReferrerIsSameAsBuyer() public startPresale {
         vm.startPrank(ALICE);
         usdc.approve(address(presale), 1_000e6);
 
-        presale.deposit(ALICE, 1_000e6, bytes32(0));
+        presale.deposit(1_000e6, bytes32(0));
 
         //create a referrer ID
         bytes32 refId = presale.createReferrerId();
@@ -117,7 +117,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
 
         vm.expectRevert(abi.encodeWithSelector(SafeYieldPresale.SAFE_YIELD_REFERRAL_TO_SELF.selector));
 
-        presale.deposit(ALICE, 1_000e6, refId);
+        presale.deposit(1_000e6, refId);
     }
 
     function testBuyTokensShouldFailIfPotentialSafeTokensExceedMaxTokenAllocation() public startPresale {
@@ -126,7 +126,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
 
         vm.expectRevert(abi.encodeWithSelector(SafeYieldPresale.SAFE_YIELD_MAX_WALLET_ALLOCATION_EXCEEDED.selector));
 
-        presale.deposit(ALICE, 100_001e6, bytes32(0));
+        presale.deposit(100_001e6, bytes32(0));
     }
 
     function test_claimTokensShouldRevertIfPreSaleNotEnded() public {
@@ -141,7 +141,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
     //     vm.startPrank(ALICE);
     //     usdc.approve(address(presale), 100_000e6);
 
-    //     presale.deposit(ALICE, 100_000e6, bytes32(0));
+    //     presale.deposit( 100_000e6, bytes32(0));
 
     //     //create a referrer ID
     //     bytes32 refId = presale.createReferrerId();
@@ -159,7 +159,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
     //         )
     //     );
 
-    //     presale.deposit(BOB, 100_000e6, refId);
+    //     presale.deposit( 100_000e6, refId);
     //     vm.stopPrank();
     // }
 
@@ -169,7 +169,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
 
         vm.expectRevert(abi.encodeWithSelector(EnforcedPause.selector));
 
-        presale.deposit(ALICE, 1_000e6, bytes32(0));
+        presale.deposit(1_000e6, bytes32(0));
     }
 
     function testRedeemUsdcCommissionShouldFailIfPaused() public pause {
@@ -183,7 +183,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         usdc.approve(address(presale), 1_500e6);
         console.logBytes32(bytes32(0));
         console.log(1500e6);
-        presale.deposit(ALICE, 1_500e6, 0x0000000000000000000000000000000000000000000000000000000000000000);
+        presale.deposit(1_500e6, 0x0000000000000000000000000000000000000000000000000000000000000000);
     }
     //1500000000
 
@@ -191,7 +191,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         vm.startPrank(ALICE);
         usdc.approve(address(presale), 1_000e6);
 
-        presale.deposit(ALICE, 1_000e6, bytes32(0));
+        presale.deposit(1_000e6, bytes32(0));
 
         //create a referrer ID
         bytes32 refId = presale.createReferrerId();
@@ -201,7 +201,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         vm.startPrank(BOB);
         usdc.approve(address(presale), 1_000e6);
 
-        presale.deposit(BOB, 1_000e6, refId);
+        presale.deposit(1_000e6, refId);
 
         skip(1 minutes);
 
@@ -234,7 +234,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         vm.startPrank(ALICE);
         usdc.approve(address(presale), usdcAmount);
 
-        presale.deposit(ALICE, uint128(usdcAmount), bytes32(0));
+        presale.deposit(uint128(usdcAmount), bytes32(0));
 
         uint256 safeTokensBought = (usdcAmount * 1e18) / 1e6;
 
@@ -249,7 +249,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         vm.startPrank(ALICE);
         usdc.approve(address(presale), usdcAmount);
 
-        presale.deposit(ALICE, uint128(usdcAmount), bytes32(0));
+        presale.deposit(uint128(usdcAmount), bytes32(0));
 
         //create a referrer ID
         bytes32 refId = presale.createReferrerId();
@@ -259,7 +259,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         vm.startPrank(BOB);
         usdc.approve(address(presale), usdcAmount);
 
-        presale.deposit(BOB, uint128(usdcAmount), refId);
+        presale.deposit(uint128(usdcAmount), refId);
 
         vm.stopPrank();
 
