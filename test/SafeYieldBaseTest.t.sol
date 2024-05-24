@@ -49,7 +49,7 @@ abstract contract SafeYieldBaseTest is Test {
             address(sToken),
             address(usdc),
             address(staking),
-            1000e18,
+            1_000e18,
             100_000e18,
             1e18,
             5_00,
@@ -81,6 +81,6 @@ abstract contract SafeYieldBaseTest is Test {
 
     function _mintUsdc2Users() internal {
         usdc.mint(ALICE, 110_000e6);
-        usdc.mint(BOB, 100_000e6);
+        usdc.mint(BOB, 110_000e6);
     }
 }
