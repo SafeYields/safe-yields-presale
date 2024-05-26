@@ -120,18 +120,18 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         presale.deposit(1_000e6, refId);
     }
 
-    // function testBuyTokensShouldFailIfPotentialSafeTokensExceedMaxTokenAllocation() public startPresale {
-    //     vm.startPrank(ALICE);
-    //     usdc.approve(address(presale), 100_001e6);
+    function testBuyTokensWhenBuyerWantsToBuyMoreThanPreSaleCapButLessThanMaxWalletAlloc() public startPresale {
+        /**
+         * Safe Tokens sold to 19 users = 1_900_000e18
+         */
+        test_mintUsdcAndDepositMultipleAddresses(20);
 
-    //     vm.expectRevert(abi.encodeWithSelector(SafeYieldPresale.SAFE_YIELD_MAX_WALLET_ALLOCATION_EXCEEDED.selector));
+        /**
+         * After minting to 19 users, 100_000e6 USDC is left to fill the presale cap
+         */
+        console.log("Safe Tokens Remaining After selling to 19 users", presale.safeTokensAvailable());
 
-    //     presale.deposit(100_001e6, bytes32(0));
-    // }
-
-    //!note do for both Referrer and NO referrer + If CAP or Max Wallet too.
-    function testBuyTokensWhenBuyerWantsToBuyMoreThanPRE_SALE_CAPWithNoReferrer() public startPresale {
-        test_mintUsdcAndDepositMultipleAddresses();
+        uint256 aliceUsdcBalancePrior = usdc.balanceOf(ALICE);
 
         vm.startPrank(ALICE);
         usdc.approve(address(presale), 1_000e6);
@@ -139,18 +139,70 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
 
         //create a referrer ID
         bytes32 refId = presale.createReferrerId();
-
-        console.log("Safe Tokens Remaining 2", presale.safeTokensAvailable());
+        /**
+         * After Alice buys 1_000e6 safe tokens, the remaining safe tokens available 99_000e18
+         */
+        console.log("Safe Tokens Remaining After Alice Buys", presale.safeTokensAvailable());
         vm.stopPrank();
 
+        console.log("usdc Raised:", presale.totalUsdcRaised());
+
+        /**
+         * Now Bob wants to 110_000e18 safe tokens which is more than the remaining safe tokens available
+         * So Bob should only be able to buy 99_000e18 safe tokens and get refunded. But since Bob has a referrer
+         * Bob will share remaining safe tokens with the referrer proportionally. so alice will get less than the 99_000e18
+         * safe tokens.
+         */
         vm.startPrank(BOB);
         usdc.approve(address(presale), 110_000e6);
-        //100_000 00 00 00 00 00 00 00 00 00
+
         uint256 bobUsdcBalancePrior = usdc.balanceOf(BOB);
+        console.log("Bob USDC Balance Prior", bobUsdcBalancePrior);
         presale.deposit(110_000e6, refId);
         uint256 bobUsdcBalanceAfter = usdc.balanceOf(BOB);
+        console.log("Bob USDC Balance After", bobUsdcBalanceAfter);
 
-        console.log("Safe Tokens Remaining Third", presale.safeTokensAvailable());
+        uint256 aliceUsdcBalanceAfter = usdc.balanceOf(ALICE);
+
+        //assertions
+        assertGt(bobUsdcBalanceAfter, 0);
+        assertEq(aliceUsdcBalanceAfter, aliceUsdcBalancePrior - 1_000e6, "Alice USDC Balance should be 1_000e6 less");
+        assertEq(usdc.balanceOf(address(presale)), 2_000_000e6, "USDC Balance of Presale should be 2_000_000e6");
+        assertEq(presale.safeTokensAvailable(), 0, "Safe Tokens Available should be 0");
+        assertEq(
+            presale.totalUsdcRaised(),
+            2_000_000e6 - presale.totalRedeemableReferrerUsdc(),
+            "Total USDC Raised should be 2_000_000e6 - totalRedeemableReferrerUsdc"
+        );
+    }
+
+    function testBuyTokensWhenBuyerWantsToBuyMoreThanPresaleCapAndAlsoMoreThanMaxWalletAlloc() public startPresale {
+        test_mintUsdcAndDepositMultipleAddresses(19);
+
+        /**
+         * After minting to 19 users, 200_000e6 USDC is left to fill the presale cap
+         */
+        console.log("Safe Tokens Remaining After selling to 19 users", presale.safeTokensAvailable());
+        assertEq(presale.safeTokensAvailable(), 200_000e18);
+
+        /**
+         * Alice wants buy 110_000e6 USDC worth of safe tokens ,
+         * which is more than her max wallet allocation of 100_000e18 safe tokens, assuming price
+         * of 1 safe token is 1 USDC, therefore Alice should only be able to buy 100_000e18 safe tokens
+         * Alice should also be refunded the remaining 10_000e6 USDC
+         */
+        vm.startPrank(ALICE);
+        usdc.approve(address(presale), 110_000e6);
+
+        uint256 aliceUsdcBalancePrior = usdc.balanceOf(ALICE);
+        presale.deposit(110_000e6, bytes32(0));
+        uint256 aliceUsdcBalanceAfter = usdc.balanceOf(ALICE);
+
+        assertEq(aliceUsdcBalanceAfter, aliceUsdcBalancePrior - 100_000e6);
+        assertEq(usdc.balanceOf(address(presale)), 1_900_000e6);
+        assertEq(presale.getTotalSafeTokensOwed(ALICE), 100_000e18);
+        assertEq(presale.safeTokensAvailable(), 100_000e18);
+        assertEq(presale.totalUsdcRaised(), 1_900_000e6);
     }
 
     function testBuyTokensWhenBuyerWantsToBuyMoreThanMaxPerWalletWithNoReferrer() public startPresale {
@@ -368,9 +420,15 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         assertEq(safeToken.balanceOf(ALICE), aliceOwedSafeTokens);
     }
 
-    function test_mintUsdcAndDepositMultipleAddresses() internal {
+    function test_mintUsdcAndDepositMultipleAddresses(uint256 numberOfAddress) internal {
+        /**
+         * so say numberOfAddress is 20 then we will mint 100_000e6 USDC to each address(ie 19 addresses)
+         * and deposit 100_000e6 USDC to the presale contract , so the total USDC deposited
+         * will be 1_900_000e6 USDC , 100_000e6 will be left to fill the presale cap.
+         * fill the Presale cap we can numberOfAddresses should be 21.(ie 20 users).
+         */
         console.log("Safe Tokens Available", presale.safeTokensAvailable());
-        for (uint256 i = 1; i < 20; i++) {
+        for (uint256 i = 1; i < numberOfAddress; i++) {
             vm.prank(protocolAdmin);
             usdc.mint(address(uint160(i)), 100_000e6);
 
@@ -379,7 +437,5 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
             presale.deposit(uint128(100_000e6), bytes32(0));
             vm.stopPrank();
         }
-
-        console.log("Safe Tokens Available after", presale.safeTokensAvailable());
     }
 }
