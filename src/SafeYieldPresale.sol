@@ -6,6 +6,8 @@ import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol"
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { ISafeYieldStaking } from "./interfaces/ISafeYieldStaking.sol";
 import { ISafeYieldPreSale } from "./interfaces/ISafeYieldPreSale.sol";
 import { ISafeToken } from "./interfaces/ISafeToken.sol";
@@ -13,6 +15,9 @@ import { PreSaleState, ReferrerInfo } from "./types/SafeTypes.sol";
 import { console } from "forge-std/Test.sol";
 
 contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
+    using Math for uint128;
+    using Math for uint256;
+
     using SafeERC20 for IERC20;
     using SafeERC20 for ISafeToken;
 
@@ -40,7 +45,8 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
     uint128 public referrerCommissionUsdcBps;
     uint128 public referrerCommissionSafeTokenBps;
     address public protocolAdmin;
-    uint128 public totalReferrerUsdc;
+    uint128 public totalRedeemableReferrerUsdc;
+    uint128 public totalUsdcRaised; //total usdc raised in the presale minus the referrer commission
 
     mapping(address userAddress => uint128 safeTokensAllocation) public investorAllocations;
     mapping(bytes32 referrerId => ReferrerInfo referrerInfo) public referrerInfo;
@@ -176,11 +182,15 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
     function deposit(uint128 usdcAmount, bytes32 referrerId) external override whenNotPaused {
         if (preSaleState != PreSaleState.Live) revert SAFE_YIELD_PRESALE_NOT_LIVE();
 
-        (uint128 safeTokensBought, uint128 referrerUsdcCommission, uint128 referrerSafeTokenCommission) =
-            _buyToken(_msgSender(), usdcAmount, referrerId);
+        (
+            uint128 safeTokensBought,
+            uint128 referrerUsdcCommission,
+            uint128 referrerSafeTokenCommission,
+            uint128 usdcUsed
+        ) = _buyToken(_msgSender(), usdcAmount, referrerId);
 
         emit TokensPurchased(
-            _msgSender(), usdcAmount, safeTokensBought, referrerUsdcCommission, referrerSafeTokenCommission, referrerId
+            _msgSender(), usdcUsed, safeTokensBought, referrerUsdcCommission, referrerSafeTokenCommission, referrerId
         );
     }
 
@@ -228,11 +238,12 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
      * @dev Withdraw USDC from the contract
      */
     function withdrawUSDC() external override onlyOwner {
-        uint128 amountAvailable = usdcToken.balance(this) - referrerUsdcCommission;
+        //!note keep this in mind
+        //uint256 amountAvailable = usdcToken.balanceOf(address(this)) - totalRedeemableReferrerUsdc;
 
-        if (amountWithdrawable != 0) usdcToken.transfer(owner(), amountAvailable);
+        if (totalUsdcRaised != 0) usdcToken.transfer(owner(), totalUsdcRaised);
 
-        emit UsdcWithdrawn(protocolAdmin, amount);
+        emit UsdcWithdrawn(owner(), totalUsdcRaised);
     }
 
     /**
@@ -332,7 +343,12 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
 
     function _buyToken(address investor, uint128 usdcAmount, bytes32 referrerId)
         internal
-        returns (uint128 safeTokensBought, uint128 referrerUsdcCommission, uint128 referrerSafeTokenCommission)
+        returns (
+            uint128 safeTokensBought,
+            uint128 referrerUsdcCommission,
+            uint128 referrerSafeTokenCommission,
+            uint128 usdcUsed
+        )
     {
         usdcToken.safeTransferFrom(investor, address(this), usdcAmount);
 
@@ -347,25 +363,36 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
         /**
          * @dev check if the safe tokens bought is less than
          * the min allocation per wallet
+         * @!note : Is this check necessary?
          */
         if (safeTokensBought < minAllocationPerWallet) {
             revert SAFE_YIELD_BELOW_MIN_ALLOCATION();
         }
 
-        uint128 safeTokensAvailable = safeTokensAvailable();
+        uint128 safeTokensAvailableForPurchase = safeTokensAvailable();
 
-        if (safeTokensBought > safeTokensAvailable) {
-            safeTokensBought = safeTokensAvailable;
+        uint128 usdcToRefund;
 
-            console.log("Safe Tokens Bought In CAP", safeTokensBought);
+        if (safeTokensBought > safeTokensAvailableForPurchase) {
+            safeTokensBought = safeTokensAvailableForPurchase;
+            /**
+             * @dev calculate the remaining usdc to be refunded to the investor
+             * say usdAmount is 110_000
+             * say safeTokensBought is 99_000e18
+             * say tokenPrice is 1e18
+             * usdcToRefund = 110_000e6 - (99_000e18 * 1e6) / 1e18 = 110_000e6 - 99_000e6 = 11_000e6
+             */
+            usdcToRefund = usdcAmount - SafeCast.toUint128((safeTokensBought.mulDiv(USDC_PRECISION, tokenPrice)));
 
             if (referrerId != bytes32(0)) {
                 /**
-                 *
+                 * @dev say referrerCommissionUsdcBps is 5% (500)
+                 * totalShareBps = 10_000 + 500 = 10_500
                  */
-                uint128 remainingBps = BPS_MAX + referrerCommissionSafeTokenBps;
+                uint128 totalShareBps = BPS_MAX + referrerCommissionSafeTokenBps;
 
                 /**
+                 * @dev say safeTokensAvailableForPurchase is 500
                  * total left: 500.
                  * buyer wants 600 and has a referrer who gets 10% of the buyer's purchase from protocol
                  * we're going to split 500 tokens between the buyer and the referrer allowing 10% of the buyer's purchase to be available for the referrer
@@ -373,7 +400,8 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
                  * proportional amount for the buyer = 500 / 110 * 100 = 454.545454545454545454
                  * proportional amount for the referrer = 500 - 454.545454545454545454 = 45.454545454545454545
                  */
-                safeTokensBought = (safeTokensBought * BPS_MAX) / (remainingBps);
+                safeTokensBought =
+                    SafeCast.toUint128(safeTokensBought.mulDiv(BPS_MAX, totalShareBps, Math.Rounding.Ceil));
             }
         }
 
@@ -383,18 +411,14 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
          */
         if (investorAllocations[investor] + safeTokensBought > maxAllocationPerWallet) {
             safeTokensBought = maxAllocationPerWallet - investorAllocations[investor];
+
+            usdcToRefund = usdcAmount - SafeCast.toUint128((safeTokensBought.mulDiv(USDC_PRECISION, tokenPrice)));
         }
 
-        /**
-         * if alice brought 600 usdc and but paid for the remaining tokens 454.545454545454545454
-         * then we should refund alice the remaining usdc she paid for the remaining tokens
-         * 600 - 454.545454545454545454 = 145.454545454545454545
-         * if 1 usdc = 1.5 safe
-         * ? = 145.454545454545454545
-         */
-        uint128 refundUsdc = usdcAmount - (safeTokensBought * USDC_PRECISION) / tokenPrice;
+        usdcAmount = usdcAmount - usdcToRefund;
+        usdcUsed = usdcAmount;
 
-        usdcToken.safeTransfer(investor, refundUsdc);
+        usdcToken.safeTransfer(investor, usdcToRefund);
 
         //referral commissions
         address referrerInvestor;
@@ -411,16 +435,23 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
              * @dev calculate the referrer commission
              * in both USDC and SafeToken
              */
-            referrerUsdcCommission = (usdcAmount * referrerCommissionUsdcBps) / BPS_MAX;
-            referrerSafeTokenCommission = (safeTokensBought * referrerCommissionSafeTokenBps) / BPS_MAX;
+            referrerUsdcCommission =
+                SafeCast.toUint128(usdcAmount.mulDiv(referrerCommissionUsdcBps, BPS_MAX, Math.Rounding.Floor));
 
-            console.log("Referrer Safe Tokens Commission", referrerSafeTokenCommission);
+            referrerSafeTokenCommission = SafeCast.toUint128(
+                safeTokensBought.mulDiv(referrerCommissionSafeTokenBps, BPS_MAX, Math.Rounding.Floor)
+            );
 
-            totalReferrerUsdc += referrerUsdcCommission;
+            totalRedeemableReferrerUsdc += referrerUsdcCommission;
 
             _referrerInfo.usdcVolume += referrerUsdcCommission;
             _referrerInfo.safeTokenVolume += referrerSafeTokenCommission;
         }
+        /**
+         * @dev update the total usdc raised
+         * This is the total amount of USDC raised in the presale minus the referrer commission.
+         */
+        totalUsdcRaised += usdcAmount - referrerUsdcCommission;
 
         uint128 totalSafeTokensToMint = safeTokensBought + referrerSafeTokenCommission;
 
