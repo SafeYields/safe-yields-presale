@@ -34,3 +34,8 @@ struct Stake {
     uint128 safePerTokenRewardClaimed;
     uint128 lastUpdateTimestamp;
 }
+
+struct ReferrerRecipient {
+    address referrerRecipient;
+    uint128 usdcAmountInvested;
+}

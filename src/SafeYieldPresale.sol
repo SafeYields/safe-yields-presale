@@ -11,7 +11,7 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { ISafeYieldStaking } from "./interfaces/ISafeYieldStaking.sol";
 import { ISafeYieldPreSale } from "./interfaces/ISafeYieldPreSale.sol";
 import { ISafeToken } from "./interfaces/ISafeToken.sol";
-import { PreSaleState, ReferrerInfo } from "./types/SafeTypes.sol";
+import { PreSaleState, ReferrerInfo, ReferrerRecipient } from "./types/SafeTypes.sol";
 import { console } from "forge-std/Test.sol";
 
 contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
@@ -50,10 +50,11 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
 
     mapping(address userAddress => uint128 safeTokensAllocation) public investorAllocations;
     mapping(bytes32 referrerId => ReferrerInfo referrerInfo) public referrerInfo;
-
+    mapping(address referrer => ReferrerRecipient[]) public referrerRecipients;
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
+
     event TokensPurchased(
         address indexed buyer,
         uint128 indexed usdcAmount,
@@ -446,6 +447,10 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
 
             _referrerInfo.usdcVolume += referrerUsdcCommission;
             _referrerInfo.safeTokenVolume += referrerSafeTokenCommission;
+
+            referrerRecipients[referrerInvestor].push(
+                ReferrerRecipient({ referrerRecipient: investor, usdcAmountInvested: usdcAmount })
+            );
         }
         /**
          * @dev update the total usdc raised
