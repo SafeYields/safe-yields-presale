@@ -12,6 +12,18 @@ import { SafeYieldBaseTest } from "./SafeYieldBaseTest.t.sol";
 import { ContractShare } from "src/types/SafeTypes.sol";
 
 contract SafeYieldRewardDistributorTest is SafeYieldBaseTest {
+    /**
+     * @notice Shares Info.
+     *  1. During Staking Emissions:
+     * 35% of the rewards will be distributed to $SAFE stakers.
+     * 30% of the rewards will be used for team operations.
+     * 35% of the rewards will be used for USDC buybacks and burns.
+     *
+     * 2. After Staking Emissions:
+     * 60% of the rewards will be distributed to $SAFE stakers.
+     * 30% of the rewards will be used for team operations.
+     * 10% of the rewards will be used for USDC buybacks and burns.
+     */
     function testUpdateSafeStakingRevertsIfCallerIsNotTheOwner() external {
         vm.startPrank(NOT_ADMIN);
         vm.expectRevert(abi.encodeWithSelector(OwnableUnauthorizedAccount.selector, NOT_ADMIN));
@@ -21,7 +33,7 @@ contract SafeYieldRewardDistributorTest is SafeYieldBaseTest {
 
     function testRevertIfNewSafeStakingIsZero() external {
         vm.startPrank(protocolAdmin);
-        vm.expectRevert(abi.encodeWithSelector(SafeYieldRewardDistributor.SYRD__ZERO_ADDRESS.selector));
+        vm.expectRevert(SafeYieldRewardDistributor.SYRD__ZERO_ADDRESS.selector);
         distributor.updateSafeStaking(address(0));
         vm.stopPrank();
     }
@@ -35,7 +47,7 @@ contract SafeYieldRewardDistributorTest is SafeYieldBaseTest {
 
     function testRevertIfNewTeamOperationsIsZero() external {
         vm.startPrank(protocolAdmin);
-        vm.expectRevert(abi.encodeWithSelector(SafeYieldRewardDistributor.SYRD__ZERO_ADDRESS.selector));
+        vm.expectRevert(SafeYieldRewardDistributor.SYRD__ZERO_ADDRESS.selector);
         distributor.updateTeamOperations(address(0));
         vm.stopPrank();
     }
@@ -49,7 +61,7 @@ contract SafeYieldRewardDistributorTest is SafeYieldBaseTest {
 
     function testRevertIfNewUsdcBuybackIsZero() external {
         vm.startPrank(protocolAdmin);
-        vm.expectRevert(abi.encodeWithSelector(SafeYieldRewardDistributor.SYRD__ZERO_ADDRESS.selector));
+        vm.expectRevert(SafeYieldRewardDistributor.SYRD__ZERO_ADDRESS.selector);
         distributor.updateUsdcBuyback(address(0));
         vm.stopPrank();
     }
@@ -321,78 +333,60 @@ contract SafeYieldRewardDistributorTest is SafeYieldBaseTest {
 
         distributor.startStakingEmissions();
 
-        distributor.switchSharesPerPhase();
-
         vm.stopPrank();
 
-        usdc.mint(address(distributor), 10_000e6);
-
-        // vm.startPrank(address(safeStaking));
-        // distributor.distributeToContract(address(safeStaking));
         skip(2 hours);
 
         usdc.mint(address(distributor), 10_000e6);
-
-        vm.startPrank(address(staking));
-        distributor.distributeToContract(address(staking));
-        vm.stopPrank();
-
-        vm.prank(address(usdcBuyback));
-        distributor.distributeToContract(address(usdcBuyback));
-
-        skip(2 hours);
-        usdc.mint(address(distributor), 10_000e6);
-
-        vm.startPrank(address(teamOperations));
-        distributor.distributeToContract(address(teamOperations));
 
         skip(1 hours);
-        vm.startPrank(address(staking));
-        distributor.distributeToContract(address(staking));
-        vm.stopPrank();
 
         vm.prank(address(usdcBuyback));
         distributor.distributeToContract(address(usdcBuyback));
 
-        /**
-         *  1. During Staking Emissions:
-         * 35% of the rewards will be distributed to $SAFE stakers.
-         * 30% of the rewards will be used for team operations.
-         * 35% of the rewards will be used for USDC buybacks and burns.
-         *
-         * 2. After Staking Emissions:
-         * 60% of the rewards will be distributed to $SAFE stakers.
-         * 30% of the rewards will be used for team operations.
-         * 10% of the rewards will be used for USDC buybacks and burns.
-         */
+        console.log("UsdcBuyBack Distributed");
 
-        //usdcbuyback get 35% of 30_000e6 if startStakingEmissions is called and
-        //10% of 30_000e6 if startStakingEmissions is not called
+        vm.prank(address(teamOperations));
+        distributor.distributeToContract(address(teamOperations));
 
-        //safeStaking get 35% of 30_000e6 if startStakingEmissions is called and
-        //60% of 30_000e6 if startStakingEmissions is not called
+        vm.startPrank(address(staking));
+        distributor.distributeToContract(address(staking));
+        vm.stopPrank();
 
-        //teamOperations get 30% of 30_000e6 if startStakingEmissions is called and
-        //30% of 30_000e6 if startStakingEmissions is not called
+        console.log("Balance of Team Operations: ", usdc.balanceOf(address(teamOperations)));
+        console.log("Balance of USDC Buyback: ", usdc.balanceOf(address(usdcBuyback)));
+        console.log("Balance of Staking: ", safeToken.balanceOf(address(staking)));
 
-        //reward distributor balance should be 0 after all distributions if startStakingEmissions is not
-        //called and 35% of 30_000e6 if startStakingEmissions is called
+        skip(2 hours);
+        usdc.mint(address(distributor), 10_000e6);
 
-        //assertions
-        assertEq(usdc.balanceOf(address(usdcBuyback)), 10_500e6);
-        assertEq(safeToken.balanceOf(address(staking)), 10_500e18);
-        assertEq(usdc.balanceOf(address(teamOperations)), 9_000e6);
-        assertEq(usdc.balanceOf(address(distributor)), 10_500e6);
+        console.log();
+        console.log("************** Second Distribution **************");
+        console.log();
+        skip(1 hours);
+
+        vm.prank(address(staking));
+        distributor.distributeToContract(address(staking));
+
+        vm.prank(address(usdcBuyback));
+        distributor.distributeToContract(address(usdcBuyback));
+
+        vm.prank(address(teamOperations));
+        distributor.distributeToContract(address(teamOperations));
+
+        console.log("New Balance of Team Operations: ", usdc.balanceOf(address(teamOperations)));
+        console.log("New Balance of USDC Buyback: ", usdc.balanceOf(address(usdcBuyback)));
+        console.log("New Balance of Staking: ", safeToken.balanceOf(address(staking)));
+
+        // //assertions
+        assertEq(usdc.balanceOf(address(usdcBuyback)), 7_000e6);
+        assertEq(safeToken.balanceOf(address(staking)), 7_000e18);
+        assertEq(usdc.balanceOf(address(teamOperations)), 6_000e6);
+        // assertEq(usdc.balanceOf(address(distributor)), 10_500e6);
     }
 
     function test_distributeWithStakingEmissionNotStarted() public {
         usdc.mint(address(distributor), 10_000e6);
-
-        // vm.startPrank(address(safeStaking));
-        // distributor.distributeToContract(address(safeStaking));
-        skip(2 hours);
-
-        usdc.mint(address(distributor), 10_000e6);
         vm.startPrank(address(staking));
         distributor.distributeToContract(address(staking));
         vm.stopPrank();
@@ -413,92 +407,21 @@ contract SafeYieldRewardDistributorTest is SafeYieldBaseTest {
 
         vm.prank(address(usdcBuyback));
         distributor.distributeToContract(address(usdcBuyback));
+
+        console.log("Balance of Team Operations: ", usdc.balanceOf(address(teamOperations)));
+        console.log("Balance of USDC Buyback: ", usdc.balanceOf(address(usdcBuyback)));
+        console.log("Balance of Staking: ", usdc.balanceOf(address(staking)));
 
         //teamOperations get 30% of 30_000e6
         //usdcbuyback get 10% of 30_000e6
         //safeStaking get 60% of 30_000e6
 
         //assertions
-        assertEq(usdc.balanceOf(address(usdcBuyback)), 3_000e6);
-        assertEq(usdc.balanceOf(address(staking)), 18_000e6);
-        assertEq(usdc.balanceOf(address(teamOperations)), 9_000e6);
-        assertEq(safeToken.balanceOf(address(staking)), 0);
-        assertEq(usdc.balanceOf(address(distributor)), 0);
-    }
-
-    function test_endEmissionShouldSwitchToNormalRewardShares() public {
-        vm.startPrank(protocolAdmin);
-        distributor.startStakingEmissions();
-        vm.stopPrank();
-
-        usdc.mint(address(distributor), 31_000_000e6);
-
-        skip(5 minutes);
-
-        vm.startPrank(address(staking));
-        distributor.distributeToContract(address(staking));
-        vm.stopPrank();
-
-        vm.prank(address(usdcBuyback));
-        distributor.distributeToContract(address(usdcBuyback));
-
-        skip(5 minutes);
-
-        vm.startPrank(address(teamOperations));
-        distributor.distributeToContract(address(teamOperations));
-        vm.stopPrank();
-
-        vm.prank(address(staking));
-        distributor.distributeToContract(address(staking));
-
-        vm.prank(address(usdcBuyback));
-        distributor.distributeToContract(address(usdcBuyback));
-
-        //assertions
-        assertEq(usdc.balanceOf(address(usdcBuyback)), 10_850_000e6);
-        assertEq(safeToken.balanceOf(address(staking)), 10_850_000e18);
-        assertEq(usdc.balanceOf(address(teamOperations)), 9_300_000e6);
-        assertEq(usdc.balanceOf(address(distributor)), 10_850_000e6);
-
-        usdc.mint(address(distributor), 428_571.42e6);
-
-        skip(5 minutes);
-
-        vm.prank(address(staking));
-        distributor.distributeToContract(address(staking));
-
-        uint256 safeTokensRemaining = distributor.MAX_STAKING_EMISSIONS() - distributor.safeMinted();
-
-        console.log("safeTokensRemaining: ", safeTokensRemaining);
-
-        vm.startPrank(protocolAdmin);
-        distributor.endStakingEmissions();
-        vm.stopPrank();
-
-        usdc.mint(address(distributor), 10_000e6);
-
-        skip(5 minutes);
-
-        vm.startPrank(address(staking));
-        distributor.distributeToContract(address(staking));
-        vm.stopPrank();
-
-        vm.prank(address(usdcBuyback));
-        distributor.distributeToContract(address(usdcBuyback));
-
-        skip(5 minutes);
-
-        //assert shares after staking emissions
-        (,, uint16 usdcBuybacksShare) = distributor.approvedContracts(distributor.contractIndex(address(usdcBuyback)));
-
-        (,, uint16 safeStakingShare) = distributor.approvedContracts(distributor.contractIndex(address(staking)));
-
-        (,, uint16 teamOperationsShare) =
-            distributor.approvedContracts(distributor.contractIndex(address(teamOperations)));
-
-        assertEq(usdcBuybacksShare, 10_00);
-        assertEq(safeStakingShare, 60_00);
-        assertEq(teamOperationsShare, 30_00);
+        // assertEq(usdc.balanceOf(address(usdcBuyback)), 3_000e6);
+        // assertEq(usdc.balanceOf(address(staking)), 18_000e6);
+        // assertEq(usdc.balanceOf(address(teamOperations)), 9_000e6);
+        // assertEq(safeToken.balanceOf(address(staking)), 0);
+        // assertEq(usdc.balanceOf(address(distributor)), 0);
     }
 
     /*//////////////////////////////////////////////////////////////

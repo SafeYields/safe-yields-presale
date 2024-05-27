@@ -3,17 +3,21 @@ pragma solidity 0.8.26;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Ownable2Step, Ownable } from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { ISafeYieldPreSale } from "./interfaces/ISafeYieldPreSale.sol";
 import { ISafeToken } from "./interfaces/ISafeToken.sol";
 import { StakingEmissionState, PreSaleState, ContractShare } from "./types/SafeTypes.sol";
 import { ISafeYieldRewardDistributor } from "./interfaces/ISafeYieldRewardDistributor.sol";
-//import {console} from "forge-std/Test.sol";
+//import { console } from "forge-std/Test.sol";
 
 contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step {
+    using SafeERC20 for IERC20;
+    using SafeERC20 for ISafeToken;
     /*//////////////////////////////////////////////////////////////
                       IMMUTABLES & CONSTANTS
     //////////////////////////////////////////////////////////////*/
+
     uint16 public constant BPS_MAX = 10_000;
     uint256 public constant MAX_STAKING_EMISSIONS = 11_000_000e18;
 
@@ -31,6 +35,7 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
     address public safeStaking;
     uint256 public safeMinted;
 
+    uint256 totalUsdcFromSafeMinting;
     uint256 public accumulatedUsdcPerContract;
     uint256 public lastBalance;
     uint48 public lastUpdatedTimestamp;
@@ -48,7 +53,7 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
     event TeamOperationsUpdated(address indexed previousTeamOperations, address indexed newTeamOperations);
     event UsdcBuybackUpdated(address indexed previousUsdcBuyback, address indexed newUsdcBuyback);
 
-    event RewardDistributed(address indexed contract_, uint256 indexed usdcDistributed);
+    event RewardDistributed(address indexed contract_, uint256 indexed rewardsDistributed);
     /*//////////////////////////////////////////////////////////////
                                  ERRORS
     //////////////////////////////////////////////////////////////*/
@@ -267,12 +272,6 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
 
         int256 accumulatedContractUsdc = SafeCast.toInt256(contractDetails.share * (accumulatedUsdcPerContract));
 
-        // console.log("Contract share %s", contractDetails.share);
-        // console.log(
-        //     "accumulatedContractUsdc %s",
-        //     uint256(accumulatedContractUsdc)
-        // );
-
         usdcDistributed = SafeCast.toUint256(accumulatedContractUsdc - contractDetails.shareDebt);
 
         usdcDistributed += outStandingContractRewards[contract_];
@@ -280,27 +279,37 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
 
         if (usdcDistributed != 0) {
             approvedContracts[contractIndex[contract_]].shareDebt = accumulatedContractUsdc;
-            lastBalance = usdcToken.balanceOf(address(this)) - usdcDistributed;
+
+            /**
+             * @dev If the Staking emissions are live, the last balance will be the current balance.
+             * since the usdc are not distributed out of the contract.
+             * If the Staking emissions have ended, the last balance will be the current balance
+             * minus the usdc distributed since rewards are distributed out of the contract immediately.
+             */
+            if (currentStakingState == StakingEmissionState.Live) {
+                if (contract_ == safeStaking) {
+                    lastBalance = usdcToken.balanceOf(address(this));
+                }
+            } else {
+                lastBalance = usdcToken.balanceOf(address(this)) - usdcDistributed;
+            }
         }
 
         if (currentStakingState == StakingEmissionState.Live && safeMinted < MAX_STAKING_EMISSIONS) {
             if (contract_ == safeStaking) {
-                //console.log("usdcToDistribute %s", usdcDistributed);
-
                 uint256 tokensToMint = ((usdcDistributed * 1e18) / _getCurrentTokenPrice());
 
                 safeToken.transfer(contract_, tokensToMint);
 
-                // console.log("Minted %s tokens to %s", tokensToMint, safeMinted);
                 safeMinted += tokensToMint;
 
                 emit RewardDistributed(contract_, tokensToMint);
                 return tokensToMint;
             }
         }
-        if (!usdcToken.transfer(contract_, usdcDistributed)) {
-            revert SYRD__TRANSFER_FAILED();
-        }
+
+        usdcToken.safeTransfer(contract_, usdcDistributed);
+
         emit RewardDistributed(contract_, usdcDistributed);
     }
 
@@ -312,6 +321,8 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
      * 30% for team operations, and 10% for USDC buybacks.
      */
     function switchSharesPerPhase() public override {
+        //!note no issues with share debt?
+
         ContractShare[] memory _contractShares = new ContractShare[](3);
         if (currentStakingState == StakingEmissionState.Live && safeMinted < MAX_STAKING_EMISSIONS) {
             _contractShares[0] = ContractShare(0, teamOperations, 3_000);
@@ -330,7 +341,9 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
     function updateAllocations() public override {
         if (uint48(block.timestamp) > lastUpdatedTimestamp) {
             uint256 contractBalance = usdcToken.balanceOf(address(this));
+
             uint256 diff = contractBalance - lastBalance;
+
             if (diff != 0) {
                 accumulatedUsdcPerContract += diff / BPS_MAX;
                 lastBalance = contractBalance;

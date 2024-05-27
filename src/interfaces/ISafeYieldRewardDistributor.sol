@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
-import { ContractShare } from "../types/SafeTypes.sol";
+import { ContractShare, StakingEmissionState } from "../types/SafeTypes.sol";
 
 interface ISafeYieldRewardDistributor {
+    function currentStakingState() external view returns (StakingEmissionState);
     function updateSafeStaking(address newSafeStaking) external;
 
     function updateTeamOperations(address newTeamOperations) external;
