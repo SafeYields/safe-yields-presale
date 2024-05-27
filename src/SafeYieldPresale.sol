@@ -308,14 +308,14 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
             revert SAFE_YIELD_PRESALE_NOT_ENDED();
         }
 
-        uint128 safeTokens = safeYieldStaking.getUserStake(msg.sender).stakedSafeTokenAmount;
+        uint128 safeTokens = safeYieldStaking.getUserStake(msg.sender).stakeAmount;
 
         if (safeTokens == 0) revert SAFE_YIELD_ZERO_BALANCE();
 
         investorAllocations[msg.sender] = 0;
         referrerInfo[keccak256(abi.encodePacked(msg.sender))].safeTokenVolume = 0;
 
-        safeYieldStaking.unstake(msg.sender, safeTokens);
+        safeYieldStaking.unStake(msg.sender, safeTokens);
 
         emit SafeTokensClaimed(msg.sender, safeTokens);
     }
@@ -471,9 +471,11 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
          * else stake the safe tokens bought for the investor only.
          */
         if (referrerInvestor != address(0)) {
-            safeYieldStaking.stakeFor(investor, safeTokensBought, referrerInvestor, referrerSafeTokenCommission);
+            safeYieldStaking.autoStakeForBothReferrerAndRecipient(
+                investor, safeTokensBought, referrerInvestor, referrerSafeTokenCommission
+            );
         } else {
-            safeYieldStaking.stake(investor, totalSafeTokensToMint);
+            safeYieldStaking.stakeFor(investor, totalSafeTokensToMint);
         }
     }
 
