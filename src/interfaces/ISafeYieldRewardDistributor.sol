@@ -5,6 +5,9 @@ import { ContractShare, StakingEmissionState } from "../types/SafeTypes.sol";
 
 interface ISafeYieldRewardDistributor {
     function currentStakingState() external view returns (StakingEmissionState);
+
+    function withdrawStakingUsdc() external;
+
     function updateSafeStaking(address newSafeStaking) external;
 
     function updateTeamOperations(address newTeamOperations) external;

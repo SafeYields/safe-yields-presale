@@ -73,7 +73,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
     event TokenPriceSet(uint128 indexed tokenPrice);
     event PreSaleStarted();
     event PreSaleEnded();
-    event TokensRecovered(address indexed tokenAddress, uint256 indexed amount);
+    event SafeTokensRecovered(uint256 indexed amount);
     event AllocationSet(uint128 indexed minAllocationPerWallet, uint128 indexed maxAllocationPerWallet);
 
     /*//////////////////////////////////////////////////////////////
@@ -249,13 +249,12 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
 
     /**
      * @dev Recover tokens sent to the contract
-     * @param tokenAddress The address of the token to recover
      * @param amount The amount of tokens to recover
      */
-    function recoverTokens(address tokenAddress, uint256 amount) external onlyOwner {
-        IERC20(tokenAddress).safeTransfer(owner(), amount);
+    function recoverSafeTokens(uint256 amount) external onlyOwner {
+        safeToken.transfer(owner(), amount);
 
-        emit TokensRecovered(tokenAddress, amount);
+        emit SafeTokensRecovered(amount);
     }
 
     /**
@@ -321,7 +320,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
     }
 
     function safeTokensAvailable() public view override returns (uint128) {
-        return uint128(PRE_SALE_CAP - totalSold);
+        return SafeCast.toUint128(PRE_SALE_CAP - totalSold);
     }
 
     /**

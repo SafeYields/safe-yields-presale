@@ -18,7 +18,8 @@ import { ISafeYieldRewardDistributor } from "./interfaces/ISafeYieldRewardDistri
 /**
  * @title SafeYieldStaking contract
  * @author @raiyanmook27
- * @dev This contract is used for staking SafeToken and USDC.
+ * @dev This contract is used for staking SafeToken.
+ * users receive sSafeToken as receipt tokens.
  * Users can stake SafeToken and USDC to earn rewards.
  */
 contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step {
@@ -70,6 +71,10 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step {
     /*//////////////////////////////////////////////////////////////
                                MODIFIERS
     //////////////////////////////////////////////////////////////*/
+    /**
+     * @dev Modifier to lock staking during the presale.
+     * If the presale is live, only the presale contract can call the function.
+     */
     modifier lockStaking() {
         if (presale.preSaleState() == PreSaleState.Live) {
             if (msg.sender != address(presale)) {
@@ -85,7 +90,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step {
         usdc = IERC20(_usdc);
     }
 
-    function updateRewards() public {
+    function updateRewards() public override {
         if (totalStaked == 0) {
             lastUpdateRewardsTimestamp = uint48(block.timestamp);
             return;
@@ -104,7 +109,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step {
         }
     }
 
-    function stakeFor(address user, uint128 amount) public lockStaking {
+    function stakeFor(address user, uint128 amount) public override lockStaking {
         if (amount < 1e18) revert SAFE_YIELD_INVALID_STAKE_AMOUNT();
 
         updateRewards();
@@ -121,7 +126,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step {
         uint128 recipientAmount,
         address referrer,
         uint128 referrerAmount
-    ) external lockStaking {
+    ) external override lockStaking {
         safeToken.safeTransferFrom(msg.sender, address(this), recipientAmount + referrerAmount);
 
         _stake(recipient, recipientAmount);
@@ -131,7 +136,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step {
         emit StakedFor(recipient, recipientAmount, referrer, referrerAmount);
     }
 
-    function unStake(address user, uint128 amount) external lockStaking {
+    function unStake(address user, uint128 amount) external override lockStaking {
         if (amount < 1e18) revert SAFE_YIELD_INVALID_STAKE_AMOUNT();
         if (userStake[user].stakeAmount < amount) revert SAFE_YIELD_INSUFFICIENT_STAKE();
 
@@ -150,11 +155,11 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step {
         emit UnStaked(user, amount);
     }
 
-    function getUserStake(address _user) external view returns (Stake memory) {
+    function getUserStake(address _user) external view override returns (Stake memory) {
         return userStake[_user];
     }
 
-    function setPresale(address _presale) external onlyOwner {
+    function setPresale(address _presale) external override onlyOwner {
         if (_presale == address(0)) revert SAFE_YIELD_INVALID_ADDRESS();
         presale = ISafeYieldPreSale(_presale);
 
@@ -165,12 +170,12 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step {
      * @param _distributor The address of the reward distributor contract.
      */
 
-    function setRewardDistributor(address _distributor) external onlyOwner {
+    function setRewardDistributor(address _distributor) external override onlyOwner {
         if (_distributor == address(0)) revert SAFE_YIELD_INVALID_ADDRESS();
         distributor = ISafeYieldRewardDistributor(_distributor);
     }
 
-    function claimRewards() public lockStaking {
+    function claimRewards() public override lockStaking {
         if (userStake[msg.sender].stakeAmount == 0) return;
 
         updateRewards();
@@ -199,17 +204,13 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step {
         }
     }
 
-    function calculatePendingRewards(address user) public returns (uint128 pendingRewards) {
+    function calculatePendingRewards(address user) public override returns (uint128 pendingRewards) {
         if (totalStaked == 0 || userStake[user].stakeAmount == 0) {
             return 0;
         }
 
         updateRewards();
-        /**
-         * @dev Calculate the accumulated rewards for the user.
-         * The accumulated rewards are calculated by multiplying the user's stake amount
-         * with the accumulated rewards per share.
-         */
+
         int128 accumulatedRewards = SafeCast.toInt128(
             SafeCast.toInt256(userStake[user].stakeAmount.mulDiv(accumulatedRewardsPerShare, PRECISION))
         );

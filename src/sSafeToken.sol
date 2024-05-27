@@ -32,11 +32,11 @@ contract sSafeToken is IsSafeToken, ERC20, AccessControl {
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
     }
 
-    function mint(address to, uint256 amount) public onlyRole(MINTER_ROLE) {
+    function mint(address to, uint256 amount) public override onlyRole(MINTER_ROLE) {
         _mint(to, amount);
     }
 
-    function burn(address from, uint256 amount) public onlyRole(BURNER_ROLE) {
+    function burn(address from, uint256 amount) public override onlyRole(BURNER_ROLE) {
         _burn(from, amount);
     }
 
