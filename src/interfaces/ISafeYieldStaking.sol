@@ -4,29 +4,26 @@ pragma solidity 0.8.26;
 import { Stake } from "../types/SafeTypes.sol";
 
 interface ISafeYieldStaking {
-    function totalStaked() external view returns (uint128);
+    function updateRewards() external;
 
-    function rewardsEarned() external view returns (uint128 pendingUsdcReward, uint128 pendingSafeTokenReward);
+    function stakeFor(address user, uint128 amount) external;
 
-    function rewardsPerToken() external view returns (uint128 usdcRewardsPerToken, uint128 safeTokenRewardsPerToken);
+    function autoStakeForBothReferrerAndRecipient(
+        address recipient,
+        uint128 recipientAmount,
+        address referrer,
+        uint128 referrerAmount
+    ) external;
 
-    function stake(address user, uint128 amount) external;
+    function unStake(address user, uint128 amount) external;
 
-    function unstake(address user, uint128 amount) external;
+    function claimRewards() external;
 
-    function stakeFor(address investor, uint128 investorAmount, address referrer, uint128 referrerAmount) external;
-
-    function claimReward() external;
-
-    function updateUsdcRewardPerShare(uint128 newRewardPerShare) external;
-
-    function updateSafeTokenRewardPerShare(uint128 newRewardPerShare) external;
-
-    function updateUsdcRewardRate(uint64 newRewardRate) external;
-
-    function updateSafeTokenRewardRate(uint64 newRewardRate) external;
+    function calculatePendingRewards(address user) external returns (uint128 pendingRewards);
 
     function setPresale(address _presale) external;
+
+    function setRewardDistributor(address _distributor) external;
 
     function getUserStake(address _user) external view returns (Stake memory stake);
 }

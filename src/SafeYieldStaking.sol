@@ -2,32 +2,50 @@
 pragma solidity 0.8.26;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { IsSafeToken } from "./interfaces/IsSafeToken.sol";
-import { PreSaleState, Stake } from "./types/SafeTypes.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { Ownable2Step } from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+
+import { IsSafeToken } from "./interfaces/IsSafeToken.sol";
+import { PreSaleState, Stake, StakingEmissionState } from "./types/SafeTypes.sol";
 import { ISafeYieldStaking } from "./interfaces/ISafeYieldStaking.sol";
 import { ISafeYieldPreSale } from "./interfaces/ISafeYieldPreSale.sol";
+import { ISafeYieldRewardDistributor } from "./interfaces/ISafeYieldRewardDistributor.sol";
+//import { console } from "forge-std/Test.sol";
 
+/**
+ * @title SafeYieldStaking contract
+ * @author @raiyanmook27
+ * @dev This contract is used for staking SafeToken and USDC.
+ * Users can stake SafeToken and USDC to earn rewards.
+ */
 contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step {
-    /*//////////////////////////////////////////////////////////////
-                               IMMUTABLES
-    //////////////////////////////////////////////////////////////*/
-    IERC20 public immutable safeToken;
-    IsSafeToken public immutable sSafeToken;
-    IERC20 public immutable usdc;
+    using Math for uint256;
+    using Math for int256;
+    using Math for uint128;
+    using SafeERC20 for IERC20;
 
     /*//////////////////////////////////////////////////////////////
-                            STATE VARIABLES
+                        IMMUTABLES & CONSTANTS
+    //////////////////////////////////////////////////////////////*/
+    uint128 public constant PRECISION = 1e18;
+    IERC20 public immutable safeToken;
+    IERC20 public immutable usdc;
+    IsSafeToken public immutable sSafeToken;
+
+    /*//////////////////////////////////////////////////////////////
+                        STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
     ISafeYieldPreSale public presale;
-    uint64 usdcRewardRate; // time
-    uint64 safeTokenRewardRate; // time
-    uint128 usdcRewardPerShare;
-    uint128 safeTokenRewardPerShare;
-    uint128 lastRewardUpdateTimestamp;
-    uint128 public override totalStaked;
-    mapping(address user => Stake stake) public userStakes;
+    ISafeYieldRewardDistributor public distributor;
+    uint128 public totalStaked;
+    uint128 public accumulatedRewardsPerShare; //@dev accumulated usdc/safe per safe staked.
+    uint48 public lastUpdateRewardsTimestamp;
+    uint256 public lastSafeTokenBalance;
+    uint256 public lastUsdcBalance;
+    mapping(address user => Stake stake) public userStake;
 
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
@@ -37,15 +55,29 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step {
         address indexed investor, uint128 indexed investorAmount, address indexed referrer, uint128 referrerAmount
     );
     event UnStaked(address indexed user, uint128 amount);
-    event UsdcRewardPerShareUpdated(uint128 newRewardPerShare);
-    event SafeTokenRewardPerShareUpdated(uint128 newRewardPerShare);
-    event RewardClaimed(address indexed user, uint128 amount, bool isUsdc);
+    event RewardsClaimed(address indexed user, uint128 amount);
+    event PresaleSet(address presale);
 
     /*//////////////////////////////////////////////////////////////
                                  ERRORS
     //////////////////////////////////////////////////////////////*/
     error SAFE_YIELD_STAKING_LOCKED();
-    error SAFE_YIELD_STAKING();
+    error SAFE_YIELD_ONLY_PRESALE();
+    error SAFE_YIELD_INVALID_STAKE_AMOUNT();
+    error SAFE_YIELD_INSUFFICIENT_STAKE();
+    error SAFE_YIELD_INVALID_ADDRESS();
+
+    /*//////////////////////////////////////////////////////////////
+                               MODIFIERS
+    //////////////////////////////////////////////////////////////*/
+    modifier lockStaking() {
+        if (presale.preSaleState() == PreSaleState.Live) {
+            if (msg.sender != address(presale)) {
+                revert SAFE_YIELD_STAKING_LOCKED();
+            }
+        }
+        _;
+    }
 
     constructor(address _safeToken, address _sSafeToken, address _usdc, address _admin) Ownable(_admin) {
         safeToken = IERC20(_safeToken);
@@ -53,176 +85,150 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step {
         usdc = IERC20(_usdc);
     }
 
-    modifier updateReward(address user) {
-        (uint128 usdcRewardsPerToken, uint128 safeRewardPerToken) = rewardsPerToken();
-        usdcRewardPerShare = usdcRewardsPerToken;
-        safeTokenRewardPerShare = safeRewardPerToken;
-        lastRewardUpdateTimestamp = uint128(block.timestamp);
-
-        (uint128 pendingUsdcReward, uint128 pendingSafeTokenReward) = rewardsEarned();
-
-        userStakes[user].usdcRewards += pendingUsdcReward;
-        userStakes[user].safeRewards += pendingSafeTokenReward;
-
-        userStakes[user].usdcPerTokenRewardClaimed = usdcRewardsPerToken;
-        userStakes[user].safePerTokenRewardClaimed = safeRewardPerToken;
-        _;
-    }
-
-    modifier lockStaking() {
-        if (presale.preSaleState() == PreSaleState.Live && msg.sender != address(presale)) {
-            revert SAFE_YIELD_STAKING_LOCKED();
-        }
-        _;
-    }
-
-    function rewardsEarned() public view override returns (uint128 pendingUsdcReward, uint128 pendingSafeTokenReward) {
-        // Calculate the user's pending USDC reward
-        (uint128 usdcRewardPerToken, uint128 safeTokenRewardPerToken) = rewardsPerToken();
-
-        if (userStakes[msg.sender].stakedSafeTokenAmount == 0) {
-            return (0, 0);
-        }
-
-        pendingUsdcReward = ((userStakes[msg.sender].stakedSafeTokenAmount * usdcRewardPerToken) / 1e18)
-            + userStakes[msg.sender].usdcRewards;
-
-        // Calculate the user's pending SafeToken reward
-        pendingSafeTokenReward = ((userStakes[msg.sender].stakedSafeTokenAmount * safeTokenRewardPerToken) / 1e18)
-            - userStakes[msg.sender].safeRewards;
-
-        // Return the user's pending rewards
-
-        return (pendingUsdcReward, pendingSafeTokenReward);
-    }
-
-    function rewardsPerToken()
-        public
-        view
-        override
-        returns (uint128 usdcRewardsPerToken, uint128 safeTokenRewardsPerToken)
-    {
+    function updateRewards() public {
         if (totalStaked == 0) {
-            return (0, 0);
+            lastUpdateRewardsTimestamp = uint48(block.timestamp);
+            return;
         }
-        usdcRewardPerShare
-            + ((usdcRewardRate * (uint128(block.timestamp) - lastRewardUpdateTimestamp) * 1e18) / totalStaked); // 18 decimals
 
-        safeTokenRewardsPerToken = safeTokenRewardPerShare
-            + ((safeTokenRewardRate * (uint128(block.timestamp) - lastRewardUpdateTimestamp) * 1e18) / totalStaked); // 18 decimals
+        if (uint48(block.timestamp) > lastUpdateRewardsTimestamp) {
+            uint256 shareableRewards = distributor.distributeToContract(address(this));
 
-        return (usdcRewardsPerToken, safeTokenRewardsPerToken);
+            if (shareableRewards != 0) {
+                uint128 rewardsPerTokenStaked = SafeCast.toUint128(shareableRewards.mulDiv(PRECISION, totalStaked));
+
+                accumulatedRewardsPerShare += rewardsPerTokenStaked;
+            }
+
+            lastUpdateRewardsTimestamp = uint48(block.timestamp);
+        }
     }
 
-    // The stake function
-    function stake(address user, uint128 amount) public override lockStaking updateReward(user) {
-        safeToken.transferFrom(msg.sender, address(this), amount);
+    function stakeFor(address user, uint128 amount) public lockStaking {
+        if (amount < 1e18) revert SAFE_YIELD_INVALID_STAKE_AMOUNT();
 
-        sSafeToken.mint(user, amount); // receipt token representing the stake
+        updateRewards();
 
-        userStakes[user].stakedSafeTokenAmount += amount;
+        safeToken.safeTransferFrom(msg.sender, address(this), amount);
 
-        totalStaked += amount;
+        _stake(user, amount);
 
         emit Staked(user, amount);
     }
 
-    // The unstake function
-    function unstake(address user, uint128 amount) public override lockStaking updateReward(user) {
-        // Transfer the amount of SafeToken from this contract to the sender
+    function autoStakeForBothReferrerAndRecipient(
+        address recipient,
+        uint128 recipientAmount,
+        address referrer,
+        uint128 referrerAmount
+    ) external lockStaking {
+        safeToken.safeTransferFrom(msg.sender, address(this), recipientAmount + referrerAmount);
 
-        if (amount > userStakes[user].stakedSafeTokenAmount) {
-            revert("Insufficient staked amount");
-        }
+        _stake(recipient, recipientAmount);
 
-        sSafeToken.burn(user, amount);
+        _stake(referrer, referrerAmount);
 
-        userStakes[user].stakedSafeTokenAmount -= amount;
+        emit StakedFor(recipient, recipientAmount, referrer, referrerAmount);
+    }
+
+    function unStake(address user, uint128 amount) external lockStaking {
+        if (amount < 1e18) revert SAFE_YIELD_INVALID_STAKE_AMOUNT();
+        if (userStake[user].stakeAmount < amount) revert SAFE_YIELD_INSUFFICIENT_STAKE();
+
+        claimRewards();
+
+        userStake[user].stakeAmount -= amount;
+        userStake[user].rewardDebt -=
+            SafeCast.toInt128(SafeCast.toInt256(amount.mulDiv(accumulatedRewardsPerShare, PRECISION)));
 
         totalStaked -= amount;
 
-        safeToken.transfer(user, amount);
+        sSafeToken.burn(user, amount);
+
+        safeToken.safeTransfer(user, amount);
 
         emit UnStaked(user, amount);
     }
 
-    function stakeFor(address investor, uint128 investorAmount, address referrer, uint128 referrerAmount)
-        external
-        override
-    {
-        if (msg.sender != address(presale)) revert SAFE_YIELD_STAKING();
-
-        stake(investor, investorAmount);
-
-        stake(referrer, referrerAmount);
-
-        // sSafeToken.mint(investor, investorAmount);
-
-        // sSafeToken.mint(referrer, referrerAmount);
-
-        // userStakes[investor].stakedSafeTokenAmount += investorAmount;
-
-        // userStakes[referrer].stakedSafeTokenAmount += referrerAmount;
-
-        // totalStaked += (investorAmount + referrerAmount);
-
-        // emit StakedFor(investor, investorAmount, referrer, referrerAmount);
-    }
-
-    function claimReward() external override lockStaking updateReward(msg.sender) {
-        //fund the contract from rewards pool
-        uint128 rewards = userStakes[msg.sender].safeRewards;
-        uint128 usdcRewards = userStakes[msg.sender].usdcRewards;
-
-        if (rewards > 0) {
-            userStakes[msg.sender].safeRewards = 0;
-            safeToken.transfer(msg.sender, rewards);
-            emit RewardClaimed(msg.sender, rewards, false);
-        }
-
-        if (usdcRewards > 0) {
-            userStakes[msg.sender].usdcRewards = 0;
-            usdc.transfer(msg.sender, usdcRewards);
-            emit RewardClaimed(msg.sender, usdcRewards, true);
-        }
-    }
-
-    function updateUsdcRewardPerShare(uint128 newRewardPerShare) external override onlyOwner {
-        //access controlled
-        usdcRewardPerShare = newRewardPerShare;
-        emit UsdcRewardPerShareUpdated(newRewardPerShare);
-    }
-
-    function updateSafeTokenRewardPerShare(uint128 newRewardPerShare) external override onlyOwner {
-        //access controlled
-        safeTokenRewardPerShare = newRewardPerShare;
-
-        emit SafeTokenRewardPerShareUpdated(newRewardPerShare);
-    }
-
-    function updateUsdcRewardRate(uint64 newRewardRate) external onlyOwner {
-        //access controlled
-        usdcRewardRate = newRewardRate;
-    }
-
-    function updateSafeTokenRewardRate(uint64 newRewardRate) external override onlyOwner {
-        //access controlled
-        safeTokenRewardRate = newRewardRate;
-    }
-
-    function setPresale(address _presale) external override onlyOwner {
-        presale = ISafeYieldPreSale(_presale);
-    }
-
     function getUserStake(address _user) external view returns (Stake memory) {
-        return userStakes[_user];
+        return userStake[_user];
+    }
+
+    function setPresale(address _presale) external onlyOwner {
+        if (_presale == address(0)) revert SAFE_YIELD_INVALID_ADDRESS();
+        presale = ISafeYieldPreSale(_presale);
+
+        emit PresaleSet(_presale);
+    }
+    /**
+     * @dev Set the reward distributor contract.
+     * @param _distributor The address of the reward distributor contract.
+     */
+
+    function setRewardDistributor(address _distributor) external onlyOwner {
+        if (_distributor == address(0)) revert SAFE_YIELD_INVALID_ADDRESS();
+        distributor = ISafeYieldRewardDistributor(_distributor);
+    }
+
+    function claimRewards() public lockStaking {
+        if (userStake[msg.sender].stakeAmount == 0) return;
+
+        updateRewards();
+
+        uint128 pendingRewards = calculatePendingRewards(_msgSender());
+
+        /**
+         * @dev If the user has pending rewards, the rewards are transferred to the user.
+         * If the staking emissions are live, the rewards are transferred in SafeToken.
+         * If any other state, the rewards are transferred in USDC.
+         */
+        if (pendingRewards != 0) {
+            userStake[_msgSender()].rewardDebt = SafeCast.toInt128(SafeCast.toInt256(pendingRewards));
+
+            if (distributor.currentStakingState() == StakingEmissionState.Live) {
+                //safe rewards
+                safeToken.safeTransfer(_msgSender(), pendingRewards);
+            } else {
+                //usdc rewards
+                usdc.safeTransfer(_msgSender(), pendingRewards);
+            }
+
+            emit RewardsClaimed(_msgSender(), pendingRewards);
+
+            return;
+        }
+    }
+
+    function calculatePendingRewards(address user) public returns (uint128 pendingRewards) {
+        if (totalStaked == 0 || userStake[user].stakeAmount == 0) {
+            return 0;
+        }
+
+        updateRewards();
+        /**
+         * @dev Calculate the accumulated rewards for the user.
+         * The accumulated rewards are calculated by multiplying the user's stake amount
+         * with the accumulated rewards per share.
+         */
+        int128 accumulatedRewards = SafeCast.toInt128(
+            SafeCast.toInt256(userStake[user].stakeAmount.mulDiv(accumulatedRewardsPerShare, PRECISION))
+        );
+
+        /**
+         * @dev Calculate the pending rewards for the user.
+         * The pending rewards are calculated by subtracting the user's reward debt from the accumulated rewards.
+         * users debt is the amount of rewards the user has already claimed.
+         */
+        pendingRewards = SafeCast.toUint128(SafeCast.toUint256(accumulatedRewards - userStake[user].rewardDebt));
+    }
+
+    function _stake(address _user, uint128 amount) internal {
+        userStake[_user].stakeAmount += amount;
+        userStake[_user].rewardDebt +=
+            SafeCast.toInt128(SafeCast.toInt256((amount.mulDiv(accumulatedRewardsPerShare, PRECISION))));
+
+        totalStaked += amount;
+
+        sSafeToken.mint(_user, amount);
     }
 }
-
-/**
- * @note
- * Deposit to UI.
- * Emma finds strats.
- * Intermediary contracts.
- * contract to place trades.
- */
