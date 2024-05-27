@@ -313,7 +313,7 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
 
         if (currentStakingState == StakingEmissionState.Live && safeMinted < MAX_STAKING_EMISSIONS) {
             if (contract_ == safeStaking) {
-                uint256 tokensToMint = ((usdcDistributed * 1e18) / _getCurrentTokenPrice());
+                uint256 tokensToMint = ((usdcDistributed * 1e30) / _getCurrentTokenPrice());
 
                 safeToken.transfer(contract_, tokensToMint);
 
@@ -453,7 +453,7 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
 
         if (currentStakingState == StakingEmissionState.Live) {
             if (contract_ == safeStaking) {
-                pendingContractRewards = ((pendingContractRewards * 1e18) / _getCurrentTokenPrice());
+                pendingContractRewards = ((pendingContractRewards * 1e30) / _getCurrentTokenPrice());
                 return pendingContractRewards;
             }
         }
@@ -497,6 +497,6 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
 
     /// @dev Internal function to get the current token price.
     function _getCurrentTokenPrice() internal pure returns (uint256) {
-        return 1e6; //@note : implement logic to get the current token price
+        return 1e18; //@note : implement logic to get the current token price
     }
 }
