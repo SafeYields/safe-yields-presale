@@ -22,8 +22,11 @@ contract sSafeToken is IsSafeToken, ERC20, AccessControl {
     //////////////////////////////////////////////////////////////*/
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");
-    uint256 public constant MAX_SUPPLY = 200_000_000e18;
-    mapping(address minter => uint256 maxMintAmount) minterLimits;
+
+    /*//////////////////////////////////////////////////////////////
+                                 ERRORS
+    //////////////////////////////////////////////////////////////*/
+    error SAFE_YIELD__TRANSFER_NOT_ALLOWED();
 
     constructor(string memory name, string memory symbol, address admin) ERC20(name, symbol) {
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
@@ -37,9 +40,12 @@ contract sSafeToken is IsSafeToken, ERC20, AccessControl {
         _burn(from, amount);
     }
 
-    function _update(address from, address to, uint256 /*value*/ ) internal pure override {
-        if (from != address(0) && to != address(0)) {
-            revert("Transfer not allowed");
+    function _update(address from, address to, uint256 value) internal override {
+        if (from != address(0)) {
+            if (to != address(0)) {
+                revert SAFE_YIELD__TRANSFER_NOT_ALLOWED();
+            }
         }
+        super._update(from, to, value);
     }
 }
