@@ -36,6 +36,13 @@ abstract contract SafeYieldBaseTest is Test {
     error OwnableInvalidOwner(address owner);
     error EnforcedPause();
 
+    modifier startPresale() {
+        vm.startPrank(protocolAdmin);
+        presale.startPresale();
+        vm.stopPrank();
+        _;
+    }
+
     function setUp() public {
         vm.startPrank(protocolAdmin);
         usdc = new USDCMockToken("USDC", "USDC", 6);
@@ -65,6 +72,8 @@ abstract contract SafeYieldBaseTest is Test {
         safeToken.setAllocationLimit(address(presale), PRE_SALE_MAX_SUPPLY);
 
         staking.setPresale(address(presale));
+
+        staking.setRewardDistributor(address(distributor));
 
         sToken.grantRole(sToken.MINTER_ROLE(), address(staking));
         sToken.grantRole(sToken.BURNER_ROLE(), address(staking));
