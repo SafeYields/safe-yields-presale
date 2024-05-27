@@ -35,7 +35,7 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
     address public safeStaking;
     uint256 public safeMinted;
 
-    uint256 totalUsdcFromSafeMinting;
+    uint256 public totalUsdcFromSafeMinting;
     uint256 public accumulatedUsdcPerContract;
     uint256 public lastBalance;
     uint48 public lastUpdatedTimestamp;
@@ -49,10 +49,13 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
     //////////////////////////////////////////////////////////////*/
     event ContractAdded(address indexed contract_, uint16 indexed share);
     event ContractRemoved(address indexed contract_);
+    event StakingEmissionsStarted();
+    event StakingEmissionsEnded();
+    event AllAllocationsMinted(uint256 indexed amount);
     event SafeStakingUpdated(address indexed previousStaking, address indexed newStaking);
     event TeamOperationsUpdated(address indexed previousTeamOperations, address indexed newTeamOperations);
     event UsdcBuybackUpdated(address indexed previousUsdcBuyback, address indexed newUsdcBuyback);
-
+    event UsdcWithdrawn(address indexed recipient, uint256 indexed amount);
     event RewardDistributed(address indexed contract_, uint256 indexed rewardsDistributed);
     /*//////////////////////////////////////////////////////////////
                                  ERRORS
@@ -241,8 +244,21 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
         usdcBuyback = newUsdcBuyback;
     }
 
+    /**
+     * @notice withdraws the USDC from the contract.
+     * @dev this withdraws the USDC meant for staking rewards,
+     * during the staking emissions.
+     */
+    function withdrawStakingUsdc() external override onlyOwner {
+        usdcToken.safeTransfer(owner(), totalUsdcFromSafeMinting);
+
+        emit UsdcWithdrawn(owner(), totalUsdcFromSafeMinting);
+    }
+
     function mintAllAllocations() external override onlyOwner {
         safeToken.mint(MAX_STAKING_EMISSIONS);
+
+        emit AllAllocationsMinted(MAX_STAKING_EMISSIONS);
     }
 
     /**
@@ -303,6 +319,8 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
 
                 safeMinted += tokensToMint;
 
+                totalUsdcFromSafeMinting += usdcDistributed;
+
                 emit RewardDistributed(contract_, tokensToMint);
                 return tokensToMint;
             }
@@ -357,6 +375,8 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
         currentStakingState = StakingEmissionState.Live;
 
         switchSharesPerPhase();
+
+        emit StakingEmissionsStarted();
     }
 
     /// @dev Ends the staking emissions.
@@ -367,6 +387,8 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
         currentStakingState = StakingEmissionState.Ended;
 
         switchSharesPerPhase();
+
+        emit StakingEmissionsEnded();
     }
 
     /// @dev Updates the shares of the contracts.
@@ -427,12 +449,6 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
         int256 accumulatedContractUsdc = SafeCast.toInt256(contractDetails.share * accUsdc);
         uint256 pendingContractUsdc = SafeCast.toUint256(accumulatedContractUsdc - contractDetails.shareDebt);
 
-        // currentStakingState == StakingEmissionState.Live &&
-
-        /**
-         * uint256 tokensToMint = ((usdcDistributed * 1e18) /
-         *                 _getCurrentTokenPrice());
-         */
         uint256 pendingContractRewards = pendingContractUsdc + outStandingContractRewards[contract_];
 
         if (currentStakingState == StakingEmissionState.Live) {
