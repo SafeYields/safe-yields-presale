@@ -12,7 +12,7 @@ import { ISafeYieldStaking } from "./interfaces/ISafeYieldStaking.sol";
 import { ISafeYieldPreSale } from "./interfaces/ISafeYieldPreSale.sol";
 import { ISafeToken } from "./interfaces/ISafeToken.sol";
 import { PreSaleState, ReferrerInfo, ReferrerRecipient } from "./types/SafeTypes.sol";
-import { console } from "forge-std/Test.sol";
+//import { console } from "forge-std/Test.sol";
 
 contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
     using Math for uint128;
