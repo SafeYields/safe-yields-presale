@@ -76,6 +76,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step {
      * If the presale is live, only the presale contract can call the function.
      */
     modifier lockStaking() {
+        //!check if presale has not ended instead
         if (presale.preSaleState() == PreSaleState.Live) {
             if (msg.sender != address(presale)) {
                 revert SAFE_YIELD_STAKING_LOCKED();

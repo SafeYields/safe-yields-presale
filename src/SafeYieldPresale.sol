@@ -252,6 +252,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
      * @param amount The amount of tokens to recover
      */
     function recoverSafeTokens(uint256 amount) external onlyOwner {
+        //! allow only when sale has ended
         safeToken.transfer(owner(), amount);
 
         emit SafeTokensRecovered(amount);
@@ -373,6 +374,8 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
 
         uint128 usdcToRefund;
 
+        //! check greater or equal
+
         if (safeTokensBought > safeTokensAvailableForPurchase) {
             safeTokensBought = safeTokensAvailableForPurchase;
             /**
@@ -382,7 +385,8 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
              * say tokenPrice is 1e18
              * usdcToRefund = 110_000e6 - (99_000e18 * 1e6) / 1e18 = 110_000e6 - 99_000e6 = 11_000e6
              */
-            usdcToRefund = usdcAmount - SafeCast.toUint128((safeTokensBought.mulDiv(USDC_PRECISION, tokenPrice)));
+            usdcToRefund = usdcAmount
+                - SafeCast.toUint128((safeTokensBought.mulDiv(USDC_PRECISION, tokenPrice, Math.Rounding.Ceil)));
 
             if (referrerId != bytes32(0)) {
                 /**
@@ -397,7 +401,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
                  * buyer wants 600 and has a referrer who gets 10% of the buyer's purchase from protocol
                  * we're going to split 500 tokens between the buyer and the referrer allowing 10% of the buyer's purchase to be available for the referrer
                  * 100% + 10% = 110%  = 500 tokens
-                 * proportional amount for the buyer = 500 / 110 * 100 = 454.545454545454545454
+                 * proportional amount for the buyer = 500 * 100 / 110 = 454.545454545454545454
                  * proportional amount for the referrer = 500 - 454.545454545454545454 = 45.454545454545454545
                  */
                 safeTokensBought =
@@ -415,7 +419,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
             usdcToRefund = usdcAmount - SafeCast.toUint128((safeTokensBought.mulDiv(USDC_PRECISION, tokenPrice)));
         }
 
-        usdcAmount = usdcAmount - usdcToRefund;
+        usdcAmount -= usdcToRefund;
         usdcUsed = usdcAmount;
 
         usdcToken.safeTransfer(investor, usdcToRefund);
@@ -435,6 +439,8 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
              * @dev calculate the referrer commission
              * in both USDC and SafeToken
              */
+
+            //!POSSIBLE OVERFLOWS / UNDERFLOW if user buying more than is available, subtract instead of recalculating %s
             referrerUsdcCommission =
                 SafeCast.toUint128(usdcAmount.mulDiv(referrerCommissionUsdcBps, BPS_MAX, Math.Rounding.Floor));
 
