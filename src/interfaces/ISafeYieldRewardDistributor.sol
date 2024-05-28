@@ -8,6 +8,8 @@ interface ISafeYieldRewardDistributor {
 
     function withdrawStakingUsdc() external;
 
+    function isSafeRewardsDistributed() external view returns (bool);
+
     function updateSafeStaking(address newSafeStaking) external;
 
     function updateTeamOperations(address newTeamOperations) external;

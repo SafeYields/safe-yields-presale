@@ -30,6 +30,8 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
     ISafeYieldPreSale public safePresale;
     StakingEmissionState public currentStakingState;
 
+    bool public isSafeRewardsDistributed;
+
     address public teamOperations;
     address public usdcBuyback;
     address public safeStaking;
@@ -321,7 +323,10 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
 
                 totalUsdcFromSafeMinting += usdcDistributed;
 
+                isSafeRewardsDistributed = true;
+
                 emit RewardDistributed(contract_, tokensToMint);
+
                 return tokensToMint;
             }
         }

@@ -13,7 +13,7 @@ import { PreSaleState, Stake, StakingEmissionState } from "./types/SafeTypes.sol
 import { ISafeYieldStaking } from "./interfaces/ISafeYieldStaking.sol";
 import { ISafeYieldPreSale } from "./interfaces/ISafeYieldPreSale.sol";
 import { ISafeYieldRewardDistributor } from "./interfaces/ISafeYieldRewardDistributor.sol";
-//import { console } from "forge-std/Test.sol";
+import { console } from "forge-std/Test.sol";
 
 /**
  * @title SafeYieldStaking contract
@@ -41,8 +41,11 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step {
     //////////////////////////////////////////////////////////////*/
     ISafeYieldPreSale public presale;
     ISafeYieldRewardDistributor public distributor;
+
+    uint128 public usdcAccumulatedRewardsPerStake; //@dev accumulated usdc per safe staked.
+    uint128 public safeAccumulatedRewardsPerStake; //@dev accumulated safe per safe staked.
+
     uint128 public totalStaked;
-    uint128 public accumulatedRewardsPerShare; //@dev accumulated usdc/safe per safe staked.
     uint48 public lastUpdateRewardsTimestamp;
     uint256 public lastSafeTokenBalance;
     uint256 public lastUsdcBalance;
@@ -76,8 +79,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step {
      * If the presale is live, only the presale contract can call the function.
      */
     modifier lockStaking() {
-        //!check if presale has not ended instead
-        if (presale.preSaleState() == PreSaleState.Live) {
+        if (presale.preSaleState() != PreSaleState.Ended) {
             if (msg.sender != address(presale)) {
                 revert SAFE_YIELD_STAKING_LOCKED();
             }
@@ -98,12 +100,21 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step {
         }
 
         if (uint48(block.timestamp) > lastUpdateRewardsTimestamp) {
+            /**
+             * @dev Distribute rewards to the staking contract.
+             * if its during stake emission, rewards are distributed in SafeToken.
+             * Any other state, rewards are distributed in USDC.(60% USDC)
+             */
             uint256 shareableRewards = distributor.distributeToContract(address(this));
 
             if (shareableRewards != 0) {
                 uint128 rewardsPerTokenStaked = SafeCast.toUint128(shareableRewards.mulDiv(PRECISION, totalStaked));
 
-                accumulatedRewardsPerShare += rewardsPerTokenStaked;
+                if (distributor.isSafeRewardsDistributed()) {
+                    safeAccumulatedRewardsPerStake += rewardsPerTokenStaked;
+                } else {
+                    usdcAccumulatedRewardsPerStake += rewardsPerTokenStaked;
+                }
             }
 
             lastUpdateRewardsTimestamp = uint48(block.timestamp);
@@ -144,8 +155,14 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step {
         claimRewards();
 
         userStake[user].stakeAmount -= amount;
-        userStake[user].rewardDebt -=
-            SafeCast.toInt128(SafeCast.toInt256(amount.mulDiv(accumulatedRewardsPerShare, PRECISION)));
+
+        userStake[user].usdcRewardsDebt -= SafeCast.toInt128(
+            SafeCast.toInt256(amount.mulDiv(usdcAccumulatedRewardsPerStake, PRECISION, Math.Rounding.Floor))
+        );
+
+        userStake[user].safeRewardsDebt -= SafeCast.toInt128(
+            SafeCast.toInt256(amount.mulDiv(safeAccumulatedRewardsPerStake, PRECISION, Math.Rounding.Floor))
+        );
 
         totalStaked -= amount;
 
@@ -154,10 +171,6 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step {
         safeToken.safeTransfer(user, amount);
 
         emit UnStaked(user, amount);
-    }
-
-    function getUserStake(address _user) external view override returns (Stake memory) {
-        return userStake[_user];
     }
 
     function setPresale(address _presale) external override onlyOwner {
@@ -176,44 +189,68 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step {
         distributor = ISafeYieldRewardDistributor(_distributor);
     }
 
+    function getUserStake(address _user) external view override returns (Stake memory) {
+        return userStake[_user];
+    }
+
     function claimRewards() public override lockStaking {
         if (userStake[msg.sender].stakeAmount == 0) return;
 
         updateRewards();
 
-        uint128 pendingRewards = calculatePendingRewards(_msgSender());
+        (uint128 pendingUsdcRewards, uint128 pendingSafeRewards) = calculatePendingRewards(_msgSender());
 
+        console.log("pendingUsdcRewards", pendingUsdcRewards);
+        console.log("pendingSafeRewards", pendingSafeRewards);
         /**
          * @dev If the user has pending rewards, the rewards are transferred to the user.
          * If the staking emissions are live, the rewards are transferred in SafeToken.
          * If any other state, the rewards are transferred in USDC.
          */
-        if (pendingRewards != 0) {
-            userStake[_msgSender()].rewardDebt = SafeCast.toInt128(SafeCast.toInt256(pendingRewards));
+        if (pendingSafeRewards != 0) {
+            userStake[_msgSender()].safeRewardsDebt = SafeCast.toInt128(SafeCast.toInt256(pendingSafeRewards));
 
-            if (distributor.currentStakingState() == StakingEmissionState.Live) {
-                //safe rewards
-                safeToken.safeTransfer(_msgSender(), pendingRewards);
-            } else {
-                //usdc rewards
-                usdc.safeTransfer(_msgSender(), pendingRewards);
-            }
+            //safe rewards
+            safeToken.safeTransfer(_msgSender(), pendingSafeRewards);
 
-            emit RewardsClaimed(_msgSender(), pendingRewards);
+            emit RewardsClaimed(_msgSender(), pendingSafeRewards);
+
+            return;
+        }
+
+        if (pendingUsdcRewards != 0) {
+            userStake[_msgSender()].usdcRewardsDebt = SafeCast.toInt128(SafeCast.toInt256(pendingUsdcRewards));
+
+            //usdc rewards
+            usdc.safeTransfer(_msgSender(), pendingUsdcRewards);
+
+            emit RewardsClaimed(_msgSender(), pendingUsdcRewards);
 
             return;
         }
     }
 
-    function calculatePendingRewards(address user) public override returns (uint128 pendingRewards) {
+    function calculatePendingRewards(address user)
+        public
+        override
+        returns (uint128 pendingUsdcRewards, uint128 pendingSafeRewards)
+    {
         if (totalStaked == 0 || userStake[user].stakeAmount == 0) {
-            return 0;
+            return (0, 0);
         }
 
         updateRewards();
 
-        int128 accumulatedRewards = SafeCast.toInt128(
-            SafeCast.toInt256(userStake[user].stakeAmount.mulDiv(accumulatedRewardsPerShare, PRECISION))
+        int128 accumulateUsdcRewards = SafeCast.toInt128(
+            SafeCast.toInt256(
+                userStake[user].stakeAmount.mulDiv(usdcAccumulatedRewardsPerStake, PRECISION, Math.Rounding.Floor)
+            )
+        );
+
+        int128 accumulateSafeRewards = SafeCast.toInt128(
+            SafeCast.toInt256(
+                userStake[user].stakeAmount.mulDiv(safeAccumulatedRewardsPerStake, PRECISION, Math.Rounding.Floor)
+            )
         );
 
         /**
@@ -221,13 +258,23 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step {
          * The pending rewards are calculated by subtracting the user's reward debt from the accumulated rewards.
          * users debt is the amount of rewards the user has already claimed.
          */
-        pendingRewards = SafeCast.toUint128(SafeCast.toUint256(accumulatedRewards - userStake[user].rewardDebt));
+        pendingUsdcRewards =
+            SafeCast.toUint128(SafeCast.toUint256(accumulateUsdcRewards - userStake[user].usdcRewardsDebt));
+
+        pendingSafeRewards =
+            SafeCast.toUint128(SafeCast.toUint256(accumulateSafeRewards - userStake[user].safeRewardsDebt));
     }
 
     function _stake(address _user, uint128 amount) internal {
         userStake[_user].stakeAmount += amount;
-        userStake[_user].rewardDebt +=
-            SafeCast.toInt128(SafeCast.toInt256((amount.mulDiv(accumulatedRewardsPerShare, PRECISION))));
+
+        userStake[_user].usdcRewardsDebt += SafeCast.toInt128(
+            SafeCast.toInt256((amount.mulDiv(usdcAccumulatedRewardsPerStake, PRECISION, Math.Rounding.Floor)))
+        );
+
+        userStake[_user].safeRewardsDebt += SafeCast.toInt128(
+            SafeCast.toInt256((amount.mulDiv(safeAccumulatedRewardsPerStake, PRECISION, Math.Rounding.Floor)))
+        );
 
         totalStaked += amount;
 

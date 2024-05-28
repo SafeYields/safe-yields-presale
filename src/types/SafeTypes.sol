@@ -37,7 +37,8 @@ struct Stake2 {
 
 struct Stake {
     uint128 stakeAmount;
-    int128 rewardDebt;
+    int128 usdcRewardsDebt;
+    int128 safeRewardsDebt;
 }
 
 struct ReferrerRecipient {
