@@ -43,6 +43,13 @@ abstract contract SafeYieldBaseTest is Test {
         _;
     }
 
+    modifier startEndPresale() {
+        vm.startPrank(protocolAdmin);
+        presale.endPresale();
+        vm.stopPrank();
+        _;
+    }
+
     function setUp() public {
         vm.startPrank(protocolAdmin);
         usdc = new USDCMockToken("USDC", "USDC", 6);
@@ -88,8 +95,16 @@ abstract contract SafeYieldBaseTest is Test {
         vm.stopPrank();
     }
 
+    /*//////////////////////////////////////////////////////////////
+                                HELPERS
+    //////////////////////////////////////////////////////////////*/
     function _mintUsdc2Users() internal {
         usdc.mint(ALICE, 110_000e6);
         usdc.mint(BOB, 110_000e6);
+    }
+
+    function _transferSafeTokens(address user, uint128 amount) internal {
+        vm.prank(address(distributor));
+        safeToken.transfer(user, amount);
     }
 }
