@@ -13,7 +13,7 @@ import { PreSaleState, Stake, StakingEmissionState } from "./types/SafeTypes.sol
 import { ISafeYieldStaking } from "./interfaces/ISafeYieldStaking.sol";
 import { ISafeYieldPreSale } from "./interfaces/ISafeYieldPreSale.sol";
 import { ISafeYieldRewardDistributor } from "./interfaces/ISafeYieldRewardDistributor.sol";
-import { console } from "forge-std/Test.sol";
+//import { console } from "forge-std/Test.sol";
 
 /**
  * @title SafeYieldStaking contract
@@ -79,7 +79,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step {
      * If the presale is live, only the presale contract can call the function.
      */
     modifier lockStaking() {
-        if (presale.preSaleState() != PreSaleState.Ended) {
+        if (presale.currentPreSaleState() != PreSaleState.Ended) {
             if (msg.sender != address(presale)) {
                 revert SAFE_YIELD_STAKING_LOCKED();
             }
@@ -200,8 +200,6 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step {
 
         (uint128 pendingUsdcRewards, uint128 pendingSafeRewards) = calculatePendingRewards(_msgSender());
 
-        console.log("pendingUsdcRewards", pendingUsdcRewards);
-        console.log("pendingSafeRewards", pendingSafeRewards);
         /**
          * @dev If the user has pending rewards, the rewards are transferred to the user.
          * If the staking emissions are live, the rewards are transferred in SafeToken.

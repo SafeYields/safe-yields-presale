@@ -4,7 +4,7 @@ pragma solidity 0.8.26;
 import { PreSaleState } from "../types/SafeTypes.sol";
 
 interface ISafeYieldPreSale {
-    function preSaleState() external view returns (PreSaleState);
+    function currentPreSaleState() external view returns (PreSaleState);
 
     function deposit(uint128 usdcAmount, bytes32 referrerId) external;
 

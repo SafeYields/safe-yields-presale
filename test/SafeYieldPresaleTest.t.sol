@@ -52,7 +52,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
     }
 
     function testPresaleNotStarted() public view {
-        assertEq(uint8(presale.preSaleState()), uint8(PreSaleState.NotStarted));
+        assertEq(uint8(presale.currentPreSaleState()), uint8(PreSaleState.NotStarted));
     }
 
     function testCreateReferrerId() public startPresale {
@@ -212,6 +212,37 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         assertEq(presale.getTotalSafeTokensOwed(ALICE), 100_000e18);
     }
 
+    function testBuyTokensWhenBuyerWantsToBuySameNumberOfTokensAvailable() public startPresale {
+        test_mintUsdcAndDepositMultipleAddresses(20);
+
+        console.log("Safe Tokens Remaining After selling to 19 users", presale.safeTokensAvailable());
+        //100_000 00 00 00 00 00 00 00 00 00
+        vm.startPrank(ALICE);
+        usdc.approve(address(presale), 1_000e6);
+
+        presale.deposit(1_000e6, bytes32(0));
+
+        //create a referrer ID
+        bytes32 refId = presale.createReferrerId();
+
+        console.log("Safe Tokens Remaining After selling to 19 users", presale.safeTokensAvailable());
+
+        vm.stopPrank();
+
+        vm.startPrank(BOB);
+        usdc.approve(address(presale), 100_000e6);
+
+        //103_950 00 00 00 00 00 00 00 00 00
+        //4_950 00 00 00 00 00 00 00 00 00
+        //99_000 00 00 00 00 00 00 00 00 00
+
+        uint256 bobUsdcBalancePrior = usdc.balanceOf(BOB);
+        presale.deposit(99_000e6, refId);
+        uint256 bobUsdcBalanceAfter = usdc.balanceOf(BOB);
+
+        console.log("Safe Tokens Remaining After selling to 19 users", presale.safeTokensAvailable());
+    }
+
     function testBuyTokensWhenBuyerWantsToBuyMoreThanMaxPerWalletWithReferrer() public startPresale {
         vm.startPrank(ALICE);
         usdc.approve(address(presale), 1_000e6);
@@ -229,10 +260,6 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         uint256 bobUsdcBalancePrior = usdc.balanceOf(BOB);
         presale.deposit(110_000e6, refId);
         uint256 bobUsdcBalanceAfter = usdc.balanceOf(BOB);
-
-        //95_238 09 52 38 09 52 38 09 52 38
-        //4_761 90 47 61 90 47 61 90 47 61
-        //5000 00 00 00 00 00 00 00 00 00
 
         // assertEq(bobUsdcBalanceAfter, bobUsdcBalancePrior - 100_000e6);
         // assertEq(usdc.balanceOf(address(presale)), 101_000e6);
