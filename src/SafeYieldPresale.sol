@@ -255,7 +255,6 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
      * @param amount The amount of tokens to recover
      */
     function recoverSafeTokens(uint256 amount) external onlyOwner {
-        //! allow only when sale has ended
         if (currentPreSaleState != PreSaleState.Ended) revert SAFE_YIELD_PRESALE_NOT_ENDED();
 
         safeToken.transfer(owner(), amount);
