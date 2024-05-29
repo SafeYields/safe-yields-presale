@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
+import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { Ownable2Step } from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-
-import { IsSafeToken } from "./interfaces/IsSafeToken.sol";
 import { PreSaleState, Stake, StakingEmissionState } from "./types/SafeTypes.sol";
 import { ISafeYieldStaking } from "./interfaces/ISafeYieldStaking.sol";
 import { ISafeYieldPreSale } from "./interfaces/ISafeYieldPreSale.sol";
@@ -20,7 +19,7 @@ import { ISafeYieldRewardDistributor } from "./interfaces/ISafeYieldRewardDistri
  * users receive sSafeToken as receipt tokens.
  * Users can earn SafeToken and USDC as rewards.
  */
-contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step {
+contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20 {
     using Math for uint256;
     using Math for int256;
     using Math for uint128;
@@ -32,7 +31,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step {
     uint128 public constant PRECISION = 1e18;
     IERC20 public immutable safeToken;
     IERC20 public immutable usdc;
-    IsSafeToken public immutable sSafeToken;
+
     /*//////////////////////////////////////////////////////////////
                         STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
@@ -66,6 +65,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step {
     error SAFE_YIELD_INVALID_STAKE_AMOUNT();
     error SAFE_YIELD_INSUFFICIENT_STAKE();
     error SAFE_YIELD_INVALID_ADDRESS();
+    error SAFE_YIELD__TRANSFER_NOT_ALLOWED();
 
     /*//////////////////////////////////////////////////////////////
                                MODIFIERS
@@ -83,13 +83,15 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step {
         _;
     }
 
-    constructor(address _safeToken, address _sSafeToken, address _usdc, address _admin) Ownable(_admin) {
-        if (_safeToken == address(0) || _sSafeToken == address(0) || _usdc == address(0) || _admin == address(0)) {
+    constructor(address _safeToken, address _usdc, address _admin)
+        Ownable(_admin)
+        ERC20("SafeYield Staked SafeToken", "sSafeToken")
+    {
+        if (_safeToken == address(0) || _usdc == address(0) || _admin == address(0)) {
             revert SAFE_YIELD_INVALID_ADDRESS();
         }
 
         safeToken = IERC20(_safeToken);
-        sSafeToken = IsSafeToken(_sSafeToken);
         usdc = IERC20(_usdc);
     }
 
@@ -169,7 +171,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step {
 
         totalStaked -= amount;
 
-        sSafeToken.burn(user, amount);
+        _burn(user, amount);
 
         safeToken.safeTransfer(user, amount);
 
@@ -273,6 +275,15 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step {
 
         totalStaked += amount;
 
-        sSafeToken.mint(_user, amount);
+        _mint(_user, amount);
+    }
+
+    function _update(address from, address to, uint256 value) internal override {
+        if (from != address(0)) {
+            if (to != address(0)) {
+                revert SAFE_YIELD__TRANSFER_NOT_ALLOWED();
+            }
+        }
+        super._update(from, to, value);
     }
 }
