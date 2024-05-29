@@ -47,7 +47,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
     uint128 public totalRedeemableReferrerUsdc;
     address public protocolAdmin;
     uint128 public totalUsdcRaised; //total usdc raised in the presale minus the referrer commission
-
+    uint128 public totalUsdcToWithdraw; //To be reset after withdrawal
     mapping(address userAddress => uint128 safeTokensAllocation) public investorAllocations;
     mapping(bytes32 referrerId => ReferrerInfo referrerInfo) public referrerInfo;
     mapping(address referrer => ReferrerRecipient[]) public referrerRecipients;
@@ -260,9 +260,13 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
      * @dev Withdraw USDC from the contract
      */
     function withdrawUSDC() external override onlyOwner {
-        if (totalUsdcRaised != 0) usdcToken.safeTransfer(owner(), totalUsdcRaised);
+        uint128 amountToWithdraw = totalUsdcToWithdraw;
 
-        emit UsdcWithdrawn(owner(), totalUsdcRaised);
+        totalUsdcToWithdraw = 0;
+
+        if (amountToWithdraw != 0) usdcToken.safeTransfer(owner(), amountToWithdraw);
+
+        emit UsdcWithdrawn(owner(), amountToWithdraw);
     }
 
     /**
@@ -479,6 +483,8 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
          * This is the total amount of USDC raised in the presale minus the referrer commission.
          */
         totalUsdcRaised += usdcAmount - referrerUsdcCommission;
+
+        totalUsdcToWithdraw = totalUsdcRaised;
 
         investorAllocations[investor] += safeTokensBought;
 
