@@ -20,10 +20,6 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         assertEq(address(safeToken), address(staking.safeToken()));
     }
 
-    function testIfsSafeTokensAreSetCorrectly() public view {
-        assertEq(address(sToken), address(staking.sSafeToken()));
-    }
-
     function testIfUsdcTokensAreSetCorrectly() public view {
         assertEq(address(usdc), address(staking.usdc()));
     }
@@ -234,9 +230,9 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         assertEq(aliceUsdcBalanceAfter, aliceUsdcBalanceBefore + pendingUsdcRewardsAlice);
         assertEq(bobUsdcBalanceAfter, bobUsdcBalanceBefore + pendingUsdcRewardsBob);
         assertEq(staking.getUserStake(address(ALICE)).stakeAmount, 1_000e18);
-        assertEq(sToken.balanceOf(address(ALICE)), 1_000e18);
+        assertEq(staking.balanceOf(address(ALICE)), 1_000e18);
         assertEq(staking.getUserStake(address(BOB)).stakeAmount, 400e18);
-        assertEq(sToken.balanceOf(address(BOB)), 400e18);
+        assertEq(staking.balanceOf(address(BOB)), 400e18);
     }
 
     function testStakeSafeTokensGetUsdcRewards() public startEndPresale {
@@ -391,10 +387,10 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         assertEq(staking.totalStaked(), amount + (amount / 2));
         assertEq(staking.getUserStake(userA).stakeAmount, amount);
         assertEq(staking.getUserStake(userB).stakeAmount, amount / 2);
-        assertEq(sToken.balanceOf(userA), amount);
-        assertEq(sToken.balanceOf(userB), amount / 2);
-        assertEq(sToken.totalSupply(), amount + (amount / 2));
-        assertEq(sToken.totalSupply(), sToken.balanceOf(userA) + sToken.balanceOf(userB));
+        assertEq(staking.balanceOf(userA), amount);
+        assertEq(staking.balanceOf(userB), amount / 2);
+        assertEq(staking.totalSupply(), amount + (amount / 2));
+        assertEq(staking.totalSupply(), staking.balanceOf(userA) + staking.balanceOf(userB));
     }
 
     function testFuzz_UnStakeTokensWithNoRewardsAvailable(address userA, address userB, uint256 amount)
@@ -440,9 +436,9 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         assertEq(staking.totalStaked(), 0);
         assertEq(staking.getUserStake(userA).stakeAmount, 0);
         assertEq(staking.getUserStake(userB).stakeAmount, 0);
-        assertEq(sToken.balanceOf(userA), 0);
-        assertEq(sToken.balanceOf(userB), 0);
-        assertEq(sToken.totalSupply(), 0);
+        assertEq(staking.balanceOf(userA), 0);
+        assertEq(staking.balanceOf(userB), 0);
+        assertEq(staking.totalSupply(), 0);
     }
 
     function testFuzz_UnStakeTokensWithUSDCRewardsAvailable(address userA, address userB, uint256 amount)

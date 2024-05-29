@@ -6,7 +6,6 @@ import { Test, console } from "forge-std/Test.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeMockToken } from "./mocks/SafeMockToken.sol";
 import { SafeToken } from "src/SafeToken.sol";
-import { sSafeToken } from "src/sSafeToken.sol";
 import { USDCMockToken } from "./mocks/USDCMockToken.sol";
 import { SafeYieldRewardDistributor } from "src/SafeYieldRewardDistributor.sol";
 import { SafeYieldPresale } from "src/SafeYieldPresale.sol";
@@ -30,7 +29,6 @@ abstract contract SafeYieldBaseTest is Test {
     SafeYieldStaking public staking;
     SafeToken public safeToken;
     USDCMockToken public usdc;
-    sSafeToken public sToken;
 
     error AccessControlUnauthorizedAccount(address account, bytes32 neededRole);
     error OwnableUnauthorizedAccount(address account);
@@ -55,21 +53,11 @@ abstract contract SafeYieldBaseTest is Test {
         vm.startPrank(protocolAdmin);
         usdc = new USDCMockToken("USDC", "USDC", 6);
         safeToken = new SafeToken("SafeToken", "SAFE", protocolAdmin);
-        sToken = new sSafeToken("sSafeToken", "sSAFE", protocolAdmin);
 
-        staking = new SafeYieldStaking(address(safeToken), address(sToken), address(usdc), protocolAdmin);
+        staking = new SafeYieldStaking(address(safeToken), address(usdc), protocolAdmin);
 
         presale = new SafeYieldPresale(
-            address(safeToken),
-            address(sToken),
-            address(usdc),
-            address(staking),
-            1_000e18,
-            100_000e18,
-            1e18,
-            5_00,
-            5_00,
-            protocolAdmin
+            address(safeToken), address(usdc), address(staking), 1_000e18, 100_000e18, 1e18, 5_00, 5_00, protocolAdmin
         );
 
         distributor = new SafeYieldRewardDistributor(
@@ -82,9 +70,6 @@ abstract contract SafeYieldBaseTest is Test {
         staking.setPresale(address(presale));
 
         staking.setRewardDistributor(address(distributor));
-
-        sToken.grantRole(sToken.MINTER_ROLE(), address(staking));
-        sToken.grantRole(sToken.BURNER_ROLE(), address(staking));
 
         //mint
         presale.mintAllAllocations();

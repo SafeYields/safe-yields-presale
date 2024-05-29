@@ -367,7 +367,6 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
 
         //claim safe tokens
         vm.startPrank(ALICE);
-        sToken.approve(address(staking), safeTokens);
         presale.claimSafeTokens();
         vm.stopPrank();
     }
