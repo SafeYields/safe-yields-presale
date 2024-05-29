@@ -21,6 +21,7 @@ abstract contract SafeYieldBaseTest is Test {
     address public protocolAdmin = makeAddr("protocolAdmin");
     address public ALICE = makeAddr("alice");
     address public BOB = makeAddr("bob");
+    address public CHARLIE = makeAddr("charlie");
     address public NOT_ADMIN = makeAddr("notAdmin");
     address public NOT_MINTER = makeAddr("notMinter");
 
@@ -101,6 +102,7 @@ abstract contract SafeYieldBaseTest is Test {
     function _mintUsdc2Users() internal {
         usdc.mint(ALICE, 110_000e6);
         usdc.mint(BOB, 110_000e6);
+        usdc.mint(CHARLIE, 110_000e6);
     }
 
     function _transferSafeTokens(address user, uint128 amount) internal {

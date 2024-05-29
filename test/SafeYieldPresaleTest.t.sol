@@ -330,9 +330,8 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
     function testBuySafeTokensWithNoReferrer() public startPresale {
         vm.startPrank(ALICE);
         usdc.approve(address(presale), 1_500e6);
-        console.logBytes32(bytes32(0));
-        console.log(1500e6);
-        presale.deposit(1_500e6, 0x0000000000000000000000000000000000000000000000000000000000000000);
+
+        presale.deposit(1_500e6, bytes32(0));
     }
     //1500000000
 
@@ -370,6 +369,49 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         vm.startPrank(ALICE);
         sToken.approve(address(staking), safeTokens);
         presale.claimSafeTokens();
+        vm.stopPrank();
+    }
+
+    function testBuySafeWithMultipleReferrers() public startPresale {
+        vm.startPrank(ALICE);
+        usdc.approve(address(presale), 10_000e6);
+
+        presale.deposit(1_000e6, bytes32(0));
+
+        //create a referrer ID
+        bytes32 refId = presale.createReferrerId();
+
+        vm.stopPrank();
+
+        vm.startPrank(BOB);
+        usdc.approve(address(presale), 10_000e6);
+
+        presale.deposit(1_000e6, refId);
+
+        bytes32 bobRefId = presale.createReferrerId();
+
+        vm.stopPrank();
+
+        vm.startPrank(CHARLIE);
+        usdc.approve(address(presale), 10_000e6);
+
+        console.log("Charlie bought");
+        presale.deposit(1_000e6, refId);
+        console.log("Charlie bought again");
+        presale.deposit(1_000e6, refId);
+
+        vm.stopPrank();
+
+        vm.startPrank(BOB);
+
+        presale.deposit(1_000e6, refId);
+
+        vm.stopPrank();
+
+        vm.startPrank(ALICE);
+
+        presale.deposit(1_000e6, bobRefId);
+
         vm.stopPrank();
     }
 
