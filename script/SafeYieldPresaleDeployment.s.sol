@@ -4,7 +4,6 @@ pragma solidity ^0.8.13;
 import { Script, console } from "forge-std/Script.sol";
 import { SafeYieldPresale } from "src/SafeYieldPresale.sol";
 import { SafeYieldStaking } from "src/SafeYieldStaking.sol";
-import { sSafeToken } from "src/sSafeToken.sol";
 import { SafeToken } from "src/SafeToken.sol";
 import { USDCMockToken } from "test/mocks/USDCMockToken.sol";
 
@@ -15,7 +14,6 @@ contract SafeYieldPresaleDeployment is Script {
     SafeYieldPresale public presale;
     SafeYieldStaking public staking;
     SafeToken public safe;
-    sSafeToken public sSafe;
     USDCMockToken usdc;
 
     function run() public {
@@ -24,21 +22,11 @@ contract SafeYieldPresaleDeployment is Script {
 
         usdc = new USDCMockToken("USDC", "USDC", 6);
         safe = new SafeToken("SafeToken", "SAFE", SAFE_YIELD_ADMIN);
-        sSafe = new sSafeToken("sSafeToken", "sSAFE", SAFE_YIELD_ADMIN);
 
-        staking = new SafeYieldStaking(address(safe), address(sSafe), address(usdc), SAFE_YIELD_ADMIN);
+        staking = new SafeYieldStaking(address(safe), address(usdc), SAFE_YIELD_ADMIN);
 
         presale = new SafeYieldPresale(
-            address(safe),
-            address(sSafe),
-            address(usdc),
-            address(staking),
-            1_000e18,
-            100_000e18,
-            1e18,
-            5_00,
-            5_00,
-            SAFE_YIELD_ADMIN
+            address(safe), address(usdc), address(staking), 1_000e18, 100_000e18, 1e18, 5_00, 5_00, SAFE_YIELD_ADMIN
         );
 
         vm.stopBroadcast();
@@ -46,8 +34,6 @@ contract SafeYieldPresaleDeployment is Script {
         //configurations
         vm.startBroadcast(deployerPrivateKey);
         safe.grantRole(safe.MINTER_ROLE(), address(presale));
-
-        sSafe.grantRole(sSafe.MINTER_ROLE(), address(staking));
 
         safe.setAllocationLimit(address(presale), PRE_SALE_MAX_SUPPLY);
 
@@ -63,7 +49,6 @@ contract SafeYieldPresaleDeployment is Script {
     function logAddresses() public view {
         console.log("USDC", address(usdc));
         console.log("Safe Token", address(safe));
-        console.log("sSafe Tokens", address(sSafe));
         console.log("Staking", address(staking));
         console.log("Presale", address(presale));
     }

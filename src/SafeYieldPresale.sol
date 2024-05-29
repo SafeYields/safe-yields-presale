@@ -31,7 +31,6 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
     ISafeYieldStaking public immutable safeYieldStaking;
     ISafeToken public immutable safeToken;
     IERC20 public immutable usdcToken;
-    IERC20 public immutable sSafeToken;
 
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
@@ -109,7 +108,6 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
 
     constructor(
         address _safeToken,
-        address _sSafeToken,
         address _usdcToken,
         address _safeYieldStaking,
         uint128 _minAllocationPerWallet,
@@ -128,14 +126,12 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
         }
 
         if (_tokenPrice == 0) revert SAFE_YIELD_INVALID_TOKEN_PRICE();
-        if (
-            _safeToken == address(0) || _usdcToken == address(0) || _sSafeToken == address(0)
-                || _safeYieldStaking == address(0)
-        ) revert SAFE_YIELD_INVALID_ADDRESS();
+        if (_safeToken == address(0) || _usdcToken == address(0) || _safeYieldStaking == address(0)) {
+            revert SAFE_YIELD_INVALID_ADDRESS();
+        }
 
         safeToken = ISafeToken(_safeToken);
         usdcToken = IERC20(_usdcToken);
-        sSafeToken = IERC20(_sSafeToken);
 
         safeYieldStaking = ISafeYieldStaking(_safeYieldStaking);
 
