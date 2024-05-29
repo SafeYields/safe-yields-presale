@@ -109,7 +109,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20 {
              * Any other state, rewards are distributed in USDC.(60% USDC)
              */
             uint256 shareableRewards = distributor.distributeToContract(address(this));
-
+            //! track the last balance of the safe token and usdc to calculate the rewards.
             if (shareableRewards != 0) {
                 uint128 rewardsPerTokenStaked = SafeCast.toUint128(shareableRewards.mulDiv(PRECISION, totalStaked));
 
@@ -217,7 +217,8 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20 {
 
             //safe rewards
             safeToken.safeTransfer(_msgSender(), pendingSafeRewards);
-        } else if (pendingUsdcRewards != 0) {
+        }
+        if (pendingUsdcRewards != 0) {
             userStake[_msgSender()].usdcRewardsDebt = SafeCast.toInt128(SafeCast.toInt256(pendingUsdcRewards));
 
             //usdc rewards
@@ -229,6 +230,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20 {
 
     function calculatePendingRewards(address user)
         public
+        view
         override
         returns (uint128 pendingUsdcRewards, uint128 pendingSafeRewards)
     {
@@ -236,7 +238,9 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20 {
             return (0, 0);
         }
 
-        updateRewards();
+        //! use pending rewards from distributor to calculate the pending rewards. Must be a view function
+
+        //updateRewards();
 
         int128 accumulateUsdcRewards = SafeCast.toInt128(
             SafeCast.toInt256(
@@ -279,11 +283,10 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20 {
     }
 
     function _update(address from, address to, uint256 value) internal override {
-        if (from != address(0)) {
-            if (to != address(0)) {
-                revert SAFE_YIELD__TRANSFER_NOT_ALLOWED();
-            }
+        if (from != address(0) && to != address(0)) {
+            revert SAFE_YIELD__TRANSFER_NOT_ALLOWED();
         }
+
         super._update(from, to, value);
     }
 }
