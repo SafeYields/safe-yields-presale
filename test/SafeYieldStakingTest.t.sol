@@ -37,14 +37,14 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
     function testStakeForShouldFailIfStakeAmountIsLessThanMin() public startEndPresale {
         vm.expectRevert(SafeYieldStaking.SAFE_YIELD_INVALID_STAKE_AMOUNT.selector);
         vm.startPrank(ALICE);
-        staking.stakeFor(ALICE, 9e17);
+        staking.stakeFor(ALICE, 0);
         vm.stopPrank();
     }
 
     function testUnStakeForShouldFailIfUnStakeAmountIsLessThanMin() public startEndPresale {
         vm.expectRevert(SafeYieldStaking.SAFE_YIELD_INVALID_STAKE_AMOUNT.selector);
         vm.startPrank(ALICE);
-        staking.unStake(ALICE, 9e17);
+        staking.unStake(ALICE, 0);
         vm.stopPrank();
     }
 

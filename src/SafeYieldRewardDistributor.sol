@@ -35,7 +35,7 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
     address public teamOperations;
     address public usdcBuyback;
     address public safeStaking;
-    uint256 public safeMinted;
+    uint256 public safeTransferred;
 
     uint256 public totalUsdcFromSafeMinting;
     uint256 public accumulatedUsdcPerContract;
@@ -187,7 +187,7 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
         uint256 index = contractIndex[contract_];
 
         ///@dev cannot remove the first two contracts
-        if (index < 2) revert SYRD__INVALID_CONTRACT();
+        if (index < 3) revert SYRD__INVALID_CONTRACT();
 
         _distributeToAllContracts();
         distributeToContract(contract_);
@@ -254,6 +254,8 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
     function withdrawStakingUsdc() external override onlyOwner {
         usdcToken.safeTransfer(owner(), totalUsdcFromSafeMinting);
 
+        totalUsdcFromSafeMinting = 0;
+
         emit UsdcWithdrawn(owner(), totalUsdcFromSafeMinting);
     }
 
@@ -313,13 +315,13 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
             }
         }
 
-        if (currentStakingState == StakingEmissionState.Live && safeMinted < MAX_STAKING_EMISSIONS) {
+        if (currentStakingState == StakingEmissionState.Live && safeTransferred < MAX_STAKING_EMISSIONS) {
             if (contract_ == safeStaking) {
                 uint256 tokensToMint = ((usdcDistributed * 1e30) / _getCurrentTokenPrice());
 
                 safeToken.transfer(contract_, tokensToMint);
 
-                safeMinted += tokensToMint;
+                safeTransferred += tokensToMint;
 
                 totalUsdcFromSafeMinting += usdcDistributed;
 
@@ -344,10 +346,8 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
      * 30% for team operations, and 10% for USDC buybacks.
      */
     function switchSharesPerPhase() public override {
-        //!note no issues with share debt?
-
         ContractShare[] memory _contractShares = new ContractShare[](3);
-        if (currentStakingState == StakingEmissionState.Live && safeMinted < MAX_STAKING_EMISSIONS) {
+        if (currentStakingState != StakingEmissionState.Ended) {
             _contractShares[0] = ContractShare(0, teamOperations, 3_000);
             _contractShares[1] = ContractShare(0, safeStaking, 3_500);
             _contractShares[2] = ContractShare(0, usdcBuyback, 3_500);
@@ -386,9 +386,9 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
 
     /// @dev Ends the staking emissions.
     function endStakingEmissions() public override onlyOwner {
-        //!note keep this?
-        // if (safeMinted < MAX_STAKING_EMISSIONS)
-        //     revert SYRD__MAX_SUPPLY_NOT_EXCEEDED();
+        if (safeTransferred < MAX_STAKING_EMISSIONS) {
+            revert SYRD__MAX_SUPPLY_NOT_EXCEEDED();
+        }
         currentStakingState = StakingEmissionState.Ended;
 
         switchSharesPerPhase();
@@ -427,9 +427,7 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
 
     /// @dev Removes excess USDC from the contract.
     function removeExcessUsdc(uint256 amount) public override onlyOwner {
-        if (!usdcToken.transfer(owner(), amount)) {
-            revert SYRD__TRANSFER_FAILED();
-        }
+        usdcToken.safeTransfer(owner(), amount);
     }
 
     /// @dev Returns the pending rewards for a contract.
@@ -502,6 +500,6 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
 
     /// @dev Internal function to get the current token price.
     function _getCurrentTokenPrice() internal pure returns (uint256) {
-        return 1e18; //@note : implement logic to get the current token price
+        return 1e18; //!note : implement logic to get the current token price
     }
 }

@@ -17,7 +17,6 @@ import { ISafeYieldRewardDistributor } from "./interfaces/ISafeYieldRewardDistri
 
 /**
  * @title SafeYieldStaking contract
- * @author @raiyanmook27
  * @dev This contract is used for staking SafeToken.
  * users receive sSafeToken as receipt tokens.
  * Users can earn SafeToken and USDC as rewards.
@@ -51,13 +50,14 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step {
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
-    event Staked(address indexed user, uint128 amount);
+    event Staked(address indexed user, uint128 indexed amount);
     event StakedFor(
         address indexed investor, uint128 indexed investorAmount, address indexed referrer, uint128 referrerAmount
     );
-    event UnStaked(address indexed user, uint128 amount);
-    event RewardsClaimed(address indexed user, uint128 amount);
-    event PresaleSet(address presale);
+    event UnStaked(address indexed user, uint128 indexed amount);
+    event RewardsClaimed(address indexed user, uint128 indexed safeRewards, uint128 indexed usdcRewards);
+    event RewardDistributorSet(address indexed distributor);
+    event PresaleSet(address indexed presale);
     /*//////////////////////////////////////////////////////////////
                                  ERRORS
     //////////////////////////////////////////////////////////////*/
@@ -85,6 +85,10 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step {
     }
 
     constructor(address _safeToken, address _sSafeToken, address _usdc, address _admin) Ownable(_admin) {
+        if (_safeToken == address(0) || _sSafeToken == address(0) || _usdc == address(0) || _admin == address(0)) {
+            revert SAFE_YIELD_INVALID_ADDRESS();
+        }
+
         safeToken = IERC20(_safeToken);
         sSafeToken = IsSafeToken(_sSafeToken);
         usdc = IERC20(_usdc);
@@ -120,11 +124,11 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step {
     }
 
     function stakeFor(address user, uint128 amount) public override lockStaking {
-        if (amount < 1e18) revert SAFE_YIELD_INVALID_STAKE_AMOUNT();
-
-        updateRewards();
+        if (amount == 0) revert SAFE_YIELD_INVALID_STAKE_AMOUNT();
 
         safeToken.safeTransferFrom(msg.sender, address(this), amount);
+
+        updateRewards();
 
         _stake(user, amount);
 
@@ -139,6 +143,8 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step {
     ) external override lockStaking {
         safeToken.safeTransferFrom(msg.sender, address(this), recipientAmount + referrerAmount);
 
+        updateRewards();
+
         _stake(recipient, recipientAmount);
 
         _stake(referrer, referrerAmount);
@@ -147,7 +153,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step {
     }
 
     function unStake(address user, uint128 amount) external override lockStaking {
-        if (amount < 1e18) revert SAFE_YIELD_INVALID_STAKE_AMOUNT();
+        if (amount == 0) revert SAFE_YIELD_INVALID_STAKE_AMOUNT();
         if (userStake[user].stakeAmount < amount) revert SAFE_YIELD_INSUFFICIENT_STAKE();
 
         claimRewards();
@@ -185,6 +191,8 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step {
     function setRewardDistributor(address _distributor) external override onlyOwner {
         if (_distributor == address(0)) revert SAFE_YIELD_INVALID_ADDRESS();
         distributor = ISafeYieldRewardDistributor(_distributor);
+
+        emit RewardDistributorSet(_distributor);
     }
 
     function getUserStake(address _user) external view override returns (Stake memory) {
@@ -208,22 +216,14 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step {
 
             //safe rewards
             safeToken.safeTransfer(_msgSender(), pendingSafeRewards);
-
-            emit RewardsClaimed(_msgSender(), pendingSafeRewards);
-
-            return;
-        }
-
-        if (pendingUsdcRewards != 0) {
+        } else if (pendingUsdcRewards != 0) {
             userStake[_msgSender()].usdcRewardsDebt = SafeCast.toInt128(SafeCast.toInt256(pendingUsdcRewards));
 
             //usdc rewards
             usdc.safeTransfer(_msgSender(), pendingUsdcRewards);
-
-            emit RewardsClaimed(_msgSender(), pendingUsdcRewards);
-
-            return;
         }
+
+        emit RewardsClaimed(_msgSender(), pendingSafeRewards, pendingUsdcRewards);
     }
 
     function calculatePendingRewards(address user)
