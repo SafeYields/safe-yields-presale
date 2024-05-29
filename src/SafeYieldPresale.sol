@@ -325,7 +325,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
     function claimSafeTokens() external override whenNotPaused preSaleNotEnded {
         uint128 safeTokens = safeYieldStaking.getUserStake(msg.sender).stakeAmount;
 
-        if (safeTokens == 0) revert SAFE_YIELD_ZERO_BALANCE(); //!note revert or return?
+        if (safeTokens == 0) revert SAFE_YIELD_ZERO_BALANCE();
 
         investorAllocations[msg.sender] = 0;
 
@@ -377,17 +377,13 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
          */
         safeTokensBought = calculateSafeTokens(usdcAmount);
 
-        /**
-         * @dev check if the safe tokens bought is less than
-         * the min allocation per wallet
-         * @!note : Is this check necessary?
-         */
+        /// @dev check if the safe tokens bought is less than the minimum allocation per wallet.
         if (safeTokensBought < minAllocationPerWallet) revert SAFE_YIELD_BELOW_MIN_ALLOCATION();
 
         uint128 safeTokensAvailableForPurchase = safeTokensAvailable();
         uint128 usdcToRefund;
 
-        uint128 safeTokensToBuy = safeTokensBought;
+        //uint128 safeTokensToBuy = safeTokensBought;
 
         if (safeTokensBought >= safeTokensAvailableForPurchase) {
             safeTokensBought = safeTokensAvailableForPurchase;
@@ -399,8 +395,10 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
              * say tokenPrice is 1e18
              * usdcToRefund = 110_000e6 - (99_000e18 * 1e6) / 1e18 = 110_000e6 - 99_000e6 = 11_000e6
              */
-            usdcToRefund = usdcAmount
-                - SafeCast.toUint128((safeTokensBought.mulDiv(USDC_PRECISION, tokenPrice, Math.Rounding.Floor)));
+            uint128 valueOfAvailableTokens =
+                SafeCast.toUint128((safeTokensBought.mulDiv(USDC_PRECISION, tokenPrice, Math.Rounding.Ceil)));
+
+            usdcToRefund = usdcAmount - valueOfAvailableTokens;
 
             if (referrerId != bytes32(0)) {
                 /**
@@ -411,7 +409,6 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
 
                 /**
                  * @dev say safeTokensAvailableForPurchase is 500
-                 * total left: 500.
                  * buyer wants 600 and has a referrer who gets 10% of the buyer's purchase from protocol
                  * we're going to split 500 tokens between the buyer and the referrer allowing 10% of the buyer's purchase to be available for the referrer
                  * 100% + 10% = 110%  = 500 tokens
@@ -419,7 +416,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
                  * proportional amount for the referrer = 500 - 454.545454545454545454 = 45.454545454545454545
                  */
                 safeTokensBought =
-                    SafeCast.toUint128(safeTokensBought.mulDiv(BPS_MAX, totalShareBps, Math.Rounding.Floor));
+                    SafeCast.toUint128(safeTokensBought.mulDiv(BPS_MAX, totalShareBps, Math.Rounding.Ceil));
             }
         }
 
@@ -431,18 +428,19 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
             safeTokensBought = maxAllocationPerWallet - investorAllocations[investor];
 
             usdcToRefund = usdcAmount
-                - SafeCast.toUint128((safeTokensBought.mulDiv(USDC_PRECISION, tokenPrice, Math.Rounding.Floor)));
+                - SafeCast.toUint128((safeTokensBought.mulDiv(USDC_PRECISION, tokenPrice, Math.Rounding.Ceil)));
         }
-        //@dev actual usdc amount used for purchase.
+
+        ///@dev actual usdc amount used for purchase.
         usdcAmount -= usdcToRefund;
-        /**
-         * @dev used to event purposes.
-         */
+
+        /// @dev used to event purposes.
         usdcPurchaseAmount = usdcAmount;
 
+        /// @dev refund the remaining usdc to the user
         usdcToken.safeTransfer(investor, usdcToRefund);
 
-        //referral commissions
+        ///@notice referral commissions
         address referrerInvestor;
         //!note move to internal function??
         if (referrerId != bytes32(0)) {
@@ -462,12 +460,12 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
             referrerUsdcCommission =
                 SafeCast.toUint128(usdcAmount.mulDiv(referrerCommissionUsdcBps, BPS_MAX, Math.Rounding.Floor));
 
-            if (safeTokensToBuy >= safeTokensAvailableForPurchase) {
+            referrerSafeTokenCommission = SafeCast.toUint128(
+                safeTokensBought.mulDiv(referrerCommissionSafeTokenBps, BPS_MAX, Math.Rounding.Floor)
+            );
+
+            if (safeTokensBought + referrerSafeTokenCommission > safeTokensAvailableForPurchase) {
                 referrerSafeTokenCommission = safeTokensAvailableForPurchase - safeTokensBought;
-            } else {
-                referrerSafeTokenCommission = SafeCast.toUint128(
-                    safeTokensBought.mulDiv(referrerCommissionSafeTokenBps, BPS_MAX, Math.Rounding.Floor)
-                );
             }
 
             totalRedeemableReferrerUsdc += referrerUsdcCommission;
@@ -572,7 +570,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
             _referrerInfo.usdcVolume += referrerUsdcCommission;
             _referrerInfo.safeTokenVolume += referrerSafeTokenCommission;
 
-            console.log("Index Investor", referrerIndex[referrerInvestor][investor]);
+            //console.log("Index Investor", referrerIndex[referrerInvestor][investor]);
             if (referrerRecipients[referrerInvestor].length == 0) {
                 referrerRecipients[referrerInvestor].push(
                     ReferrerRecipient({ referrerRecipient: investor, usdcAmountInvested: usdcAmount })
@@ -582,12 +580,12 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
                     referrerRecipients[referrerInvestor][referrerIndex[referrerInvestor][investor]].referrerRecipient
                         != investor
                 ) {
-                    console.log("Add new Investor");
+                    //console.log("Add new Investor");
                     referrerRecipients[referrerInvestor].push(
                         ReferrerRecipient({ referrerRecipient: investor, usdcAmountInvested: usdcAmount })
                     );
                 } else {
-                    console.log("Update usdc");
+                    //console.log("Update usdc");
                     referrerRecipients[referrerInvestor][referrerIndex[referrerInvestor][investor]].usdcAmountInvested
                     += usdcAmount;
                 }
