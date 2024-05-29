@@ -20,7 +20,7 @@ import { ISafeYieldRewardDistributor } from "./interfaces/ISafeYieldRewardDistri
  * @author @raiyanmook27
  * @dev This contract is used for staking SafeToken.
  * users receive sSafeToken as receipt tokens.
- * Users can stake SafeToken and USDC to earn rewards.
+ * Users can earn SafeToken and USDC as rewards.
  */
 contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step {
     using Math for uint256;
@@ -35,16 +35,13 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step {
     IERC20 public immutable safeToken;
     IERC20 public immutable usdc;
     IsSafeToken public immutable sSafeToken;
-
     /*//////////////////////////////////////////////////////////////
                         STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
     ISafeYieldPreSale public presale;
     ISafeYieldRewardDistributor public distributor;
-
     uint128 public usdcAccumulatedRewardsPerStake; //@dev accumulated usdc per safe staked.
     uint128 public safeAccumulatedRewardsPerStake; //@dev accumulated safe per safe staked.
-
     uint128 public totalStaked;
     uint48 public lastUpdateRewardsTimestamp;
     uint256 public lastSafeTokenBalance;
@@ -61,10 +58,10 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step {
     event UnStaked(address indexed user, uint128 amount);
     event RewardsClaimed(address indexed user, uint128 amount);
     event PresaleSet(address presale);
-
     /*//////////////////////////////////////////////////////////////
                                  ERRORS
     //////////////////////////////////////////////////////////////*/
+
     error SAFE_YIELD_STAKING_LOCKED();
     error SAFE_YIELD_ONLY_PRESALE();
     error SAFE_YIELD_INVALID_STAKE_AMOUNT();
@@ -103,6 +100,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step {
             /**
              * @dev Distribute rewards to the staking contract.
              * if its during stake emission, rewards are distributed in SafeToken.
+             * (35% of the value of safe tokens are minted)
              * Any other state, rewards are distributed in USDC.(60% USDC)
              */
             uint256 shareableRewards = distributor.distributeToContract(address(this));

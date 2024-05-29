@@ -482,9 +482,11 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
          * @dev update the total usdc raised
          * This is the total amount of USDC raised in the presale minus the referrer commission.
          */
-        totalUsdcRaised += usdcAmount - referrerUsdcCommission;
+        uint128 amountRaised = (usdcAmount - referrerUsdcCommission);
 
-        totalUsdcToWithdraw = totalUsdcRaised;
+        totalUsdcRaised += amountRaised;
+
+        totalUsdcToWithdraw += amountRaised;
 
         investorAllocations[investor] += safeTokensBought;
 
