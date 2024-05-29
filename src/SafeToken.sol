@@ -6,7 +6,6 @@ import { ERC20Burnable } from "@openzeppelin/contracts/token/ERC20/extensions/ER
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
 import { ISafeToken } from "./interfaces/ISafeToken.sol";
-//import { console } from "forge-std/Test.sol";
 
 contract SafeToken is ISafeToken, ERC20, AccessControl {
     /*//////////////////////////////////////////////////////////////

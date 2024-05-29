@@ -9,7 +9,6 @@ import { ISafeYieldPreSale } from "./interfaces/ISafeYieldPreSale.sol";
 import { ISafeToken } from "./interfaces/ISafeToken.sol";
 import { StakingEmissionState, PreSaleState, ContractShare } from "./types/SafeTypes.sol";
 import { ISafeYieldRewardDistributor } from "./interfaces/ISafeYieldRewardDistributor.sol";
-//import { console } from "forge-std/Test.sol";
 
 contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step {
     using SafeERC20 for IERC20;
