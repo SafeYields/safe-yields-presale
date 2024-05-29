@@ -44,8 +44,8 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
     uint128 public tokenPrice;
     uint128 public referrerCommissionUsdcBps;
     uint128 public referrerCommissionSafeTokenBps;
-    address public protocolAdmin;
     uint128 public totalRedeemableReferrerUsdc;
+    address public protocolAdmin;
     uint128 public totalUsdcRaised; //total usdc raised in the presale minus the referrer commission
 
     mapping(address userAddress => uint128 safeTokensAllocation) public investorAllocations;
@@ -63,7 +63,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
         uint128 referrerCommissionSafeTokenBps,
         bytes32 referrerId
     );
-    event ReferrerCommissionSet(
+    event ReferrerCommissionBpsSet(
         uint128 indexed referrerCommissionUsdcBps, uint128 indexed referrerCommissionSafeTokenBps
     );
     event ReferrerIdCreated(address indexed referrer, bytes32 indexed referrerId);
@@ -71,10 +71,10 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
     event SafeTokensClaimed(address indexed investor, uint128 indexed safeTokens);
     event UsdcWithdrawn(address indexed receiver, uint256 indexed amount);
     event TokenPriceSet(uint128 indexed tokenPrice);
-    event PreSaleStarted();
-    event PreSaleEnded();
+    event PreSaleStarted(PreSaleState indexed currentState);
+    event PreSaleEnded(PreSaleState indexed currentState);
     event SafeTokensRecovered(uint256 indexed amount);
-    event AllocationSet(uint128 indexed minAllocationPerWallet, uint128 indexed maxAllocationPerWallet);
+    event AllocationsPerWalletSet(uint128 indexed minAllocationPerWallet, uint128 indexed maxAllocationPerWallet);
 
     /*//////////////////////////////////////////////////////////////
                                  ERRORS
@@ -87,6 +87,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
     error SAFE_YIELD_NO_MORE_TOKENS_LEFT();
     error SAFE_YIELD_MAX_SUPPLY_EXCEEDED();
     error SAFE_YIELD_INVALID_USDC_AMOUNT();
+    error SAFE_YIELD_INVALID_AMOUNT();
     error SAFE_YIELD_INVALID_TOKEN_PRICE();
     error SAFE_YIELD_INVALID_MAX_SUPPLY();
     error SAFE_YIELD_INVALID_ALLOCATION();
@@ -97,6 +98,14 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
     error SAFE_YIELD_INVALID_ADDRESS();
     error SAFE_YIELD_INVALID_USER();
     error SAFE_YIELD_ZERO_BALANCE();
+
+    /*//////////////////////////////////////////////////////////////
+                               MODIFIERS
+    //////////////////////////////////////////////////////////////*/
+    modifier preSaleNotEnded() {
+        if (currentPreSaleState != PreSaleState.Ended) revert SAFE_YIELD_PRESALE_NOT_ENDED();
+        _;
+    }
 
     constructor(
         address _safeToken,
@@ -114,7 +123,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
             revert SAFE_YIELD_INVALID_ALLOCATION();
         }
 
-        if (_referrerCommissionUsdcBps > BPS_MAX || _referrerCommissionSafeTokenBps > BPS_MAX) {
+        if (_referrerCommissionUsdcBps >= BPS_MAX || _referrerCommissionSafeTokenBps >= BPS_MAX) {
             revert SAFE_YIELD_INVALID_REFER_COMMISSION_PERCENTAGE();
         }
 
@@ -163,7 +172,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
      */
     function startPresale() external override onlyOwner {
         currentPreSaleState = PreSaleState.Live;
-        emit PreSaleStarted();
+        emit PreSaleStarted(currentPreSaleState);
     }
 
     /**
@@ -172,7 +181,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
      */
     function endPresale() external override onlyOwner {
         currentPreSaleState = PreSaleState.Ended;
-        emit PreSaleEnded();
+        emit PreSaleEnded(currentPreSaleState);
     }
 
     /**
@@ -202,19 +211,23 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
 
     /**
      * @dev Set the referrer commission
-     * @param _commissionUsdc The referrer commission in USDC
-     * @param _commissionSafe The referrer commission in safeTokens
+     * @param _commissionUsdcBps The referrer commission in USDC
+     * @param _commissionSafeBps The referrer commission in safeTokens
      * referrer commission is not more than 100%
      */
-    function setReferrerCommission(uint128 _commissionUsdc, uint128 _commissionSafe) external override onlyOwner {
-        if (_commissionUsdc > BPS_MAX || _commissionSafe > BPS_MAX) {
+    function setReferrerCommissionBps(uint128 _commissionUsdcBps, uint128 _commissionSafeBps)
+        external
+        override
+        onlyOwner
+    {
+        if (_commissionUsdcBps >= BPS_MAX || _commissionSafeBps >= BPS_MAX) {
             revert SAFE_YIELD_INVALID_REFER_COMMISSION_PERCENTAGE();
         }
 
-        referrerCommissionUsdcBps = _commissionUsdc;
-        referrerCommissionSafeTokenBps = _commissionSafe;
+        referrerCommissionUsdcBps = _commissionUsdcBps;
+        referrerCommissionSafeTokenBps = _commissionSafeBps;
 
-        emit ReferrerCommissionSet(_commissionUsdc, _commissionSafe);
+        emit ReferrerCommissionBpsSet(_commissionUsdcBps, _commissionSafeBps);
     }
 
     /**
@@ -223,6 +236,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
      */
     function setTokenPrice(uint128 _price) external override onlyOwner {
         if (_price == 0) revert SAFE_YIELD_INVALID_TOKEN_PRICE();
+
         tokenPrice = _price;
 
         emit TokenPriceSet(_price);
@@ -233,19 +247,20 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
      * @param _min The minimum allocation per wallet
      * @param _max The maximum allocation per wallet
      */
-    function setAllocations(uint128 _min, uint128 _max) external override onlyOwner {
+    function setAllocationsPerWallet(uint128 _min, uint128 _max) external override onlyOwner {
         if (_min >= _max) revert SAFE_YIELD_INVALID_ALLOCATION();
+
         minAllocationPerWallet = _min;
         maxAllocationPerWallet = _max;
 
-        emit AllocationSet(_min, _max);
+        emit AllocationsPerWalletSet(_min, _max);
     }
 
     /**
      * @dev Withdraw USDC from the contract
      */
     function withdrawUSDC() external override onlyOwner {
-        if (totalUsdcRaised != 0) usdcToken.transfer(owner(), totalUsdcRaised);
+        if (totalUsdcRaised != 0) usdcToken.safeTransfer(owner(), totalUsdcRaised);
 
         emit UsdcWithdrawn(owner(), totalUsdcRaised);
     }
@@ -254,8 +269,8 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
      * @dev Recover tokens sent to the contract
      * @param amount The amount of tokens to recover
      */
-    function recoverSafeTokens(uint256 amount) external onlyOwner {
-        if (currentPreSaleState != PreSaleState.Ended) revert SAFE_YIELD_PRESALE_NOT_ENDED();
+    function recoverSafeTokens(uint256 amount) external onlyOwner preSaleNotEnded {
+        if (amount == 0) revert SAFE_YIELD_INVALID_AMOUNT();
 
         safeToken.transfer(owner(), amount);
 
@@ -303,14 +318,13 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
      * @dev Claim safe tokens
      * @notice This function can only be called when the presale has ended
      */
-    function claimSafeTokens() external override whenNotPaused {
-        if (currentPreSaleState != PreSaleState.Ended) revert SAFE_YIELD_PRESALE_NOT_ENDED();
-
+    function claimSafeTokens() external override whenNotPaused preSaleNotEnded {
         uint128 safeTokens = safeYieldStaking.getUserStake(msg.sender).stakeAmount;
 
-        if (safeTokens == 0) revert SAFE_YIELD_ZERO_BALANCE();
+        if (safeTokens == 0) revert SAFE_YIELD_ZERO_BALANCE(); //!note revert or return?
 
         investorAllocations[msg.sender] = 0;
+
         referrerInfo[keccak256(abi.encodePacked(msg.sender))].safeTokenVolume = 0;
 
         safeYieldStaking.unStake(msg.sender, safeTokens);
@@ -368,6 +382,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
 
         uint128 safeTokensAvailableForPurchase = safeTokensAvailable();
         uint128 usdcToRefund;
+
         uint128 safeTokensToBuy = safeTokensBought;
 
         if (safeTokensBought >= safeTokensAvailableForPurchase) {
@@ -381,7 +396,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
              * usdcToRefund = 110_000e6 - (99_000e18 * 1e6) / 1e18 = 110_000e6 - 99_000e6 = 11_000e6
              */
             usdcToRefund = usdcAmount
-                - SafeCast.toUint128((safeTokensBought.mulDiv(USDC_PRECISION, tokenPrice, Math.Rounding.Ceil)));
+                - SafeCast.toUint128((safeTokensBought.mulDiv(USDC_PRECISION, tokenPrice, Math.Rounding.Floor)));
 
             if (referrerId != bytes32(0)) {
                 /**
@@ -400,7 +415,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
                  * proportional amount for the referrer = 500 - 454.545454545454545454 = 45.454545454545454545
                  */
                 safeTokensBought =
-                    SafeCast.toUint128(safeTokensBought.mulDiv(BPS_MAX, totalShareBps, Math.Rounding.Ceil));
+                    SafeCast.toUint128(safeTokensBought.mulDiv(BPS_MAX, totalShareBps, Math.Rounding.Floor));
             }
         }
 
@@ -411,9 +426,10 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
         if (investorAllocations[investor] + safeTokensBought > maxAllocationPerWallet) {
             safeTokensBought = maxAllocationPerWallet - investorAllocations[investor];
 
-            usdcToRefund = usdcAmount - SafeCast.toUint128((safeTokensBought.mulDiv(USDC_PRECISION, tokenPrice)));
+            usdcToRefund = usdcAmount
+                - SafeCast.toUint128((safeTokensBought.mulDiv(USDC_PRECISION, tokenPrice, Math.Rounding.Floor)));
         }
-
+        //@dev actual usdc amount used for purchase.
         usdcAmount -= usdcToRefund;
         /**
          * @dev used to event purposes.
@@ -434,8 +450,9 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
             if (referrerInvestor == investor) revert SAFE_YIELD_REFERRAL_TO_SELF();
 
             /**
-             * @dev calculate the referrer commission
-             * in both USDC and SafeToken
+             * @dev calculate the referrer commission in both USDC and SafeToken
+             * @notice To prevent rounding issues if user is buying remaining safe tokens, we
+             * subtract instead re-calculating the commissions
              */
             referrerUsdcCommission =
                 SafeCast.toUint128(usdcAmount.mulDiv(referrerCommissionUsdcBps, BPS_MAX, Math.Rounding.Floor));
@@ -463,12 +480,13 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
          */
         totalUsdcRaised += usdcAmount - referrerUsdcCommission;
 
-        uint128 totalSafeTokensToMint = safeTokensBought + referrerSafeTokenCommission;
-
-        totalSold += totalSafeTokensToMint;
         investorAllocations[investor] += safeTokensBought;
 
-        safeToken.approve(address(safeYieldStaking), totalSafeTokensToMint);
+        uint128 totalSafeTokensToStake = safeTokensBought + referrerSafeTokenCommission;
+
+        totalSold += totalSafeTokensToStake;
+
+        safeToken.approve(address(safeYieldStaking), totalSafeTokensToStake);
 
         /**
          * @dev check if the referrer is not address(0)
@@ -480,7 +498,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
                 investor, safeTokensBought, referrerInvestor, referrerSafeTokenCommission
             );
         } else {
-            safeYieldStaking.stakeFor(investor, totalSafeTokensToMint);
+            safeYieldStaking.stakeFor(investor, totalSafeTokensToStake);
         }
     }
 

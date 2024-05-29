@@ -20,7 +20,7 @@ interface ISafeYieldPreSale {
 
     function setTokenPrice(uint128 _price) external;
 
-    function setReferrerCommission(uint128 _commissionUsdc, uint128 _commissionSafe) external;
+    function setReferrerCommissionBps(uint128 _commissionUsdc, uint128 _commissionSafe) external;
 
     function calculateSafeTokens(uint128 usdcAmount) external view returns (uint128);
 
@@ -36,5 +36,5 @@ interface ISafeYieldPreSale {
 
     function getTotalSafeTokensOwed(address user) external view returns (uint128);
 
-    function setAllocations(uint128 _min, uint128 _max) external;
+    function setAllocationsPerWallet(uint128 _min, uint128 _max) external;
 }
