@@ -333,6 +333,8 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
             }
         }
 
+        isSafeRewardsDistributed = false;
+
         usdcToken.safeTransfer(contract_, usdcDistributed);
 
         emit RewardDistributed(contract_, usdcDistributed);
@@ -345,8 +347,7 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
      * If the staking emissions have ended, the shares will be updated to 60% for $SAFE stakers,
      * 30% for team operations, and 10% for USDC buybacks.
      */
-    //! restrict access to owner
-    function switchSharesPerPhase() public override {
+    function switchSharesPerPhase() public override onlyOwner {
         ContractShare[] memory _contractShares = new ContractShare[](3);
         if (currentStakingState != StakingEmissionState.Ended) {
             _contractShares[0] = ContractShare(0, teamOperations, 3_000);

@@ -240,11 +240,17 @@ contract SafeYieldRewardDistributorTest is SafeYieldBaseTest {
 
         console.log("Initial usdcBuyback usdc balance: ", initialUsdcBuybacksUsdcBalance);
 
+        assertEq(distributor.isSafeRewardsDistributed(), false);
+
         uint256 safeTokenMinted = distributor.distributeToContract(address(staking));
+
+        assertEq(distributor.isSafeRewardsDistributed(), true);
 
         console.log("SafeToken minted: ", safeTokenMinted);
 
         uint256 usdcDistributedToTeamOperations = distributor.distributeToContract(address(teamOperations));
+
+        assertEq(distributor.isSafeRewardsDistributed(), false);
 
         console.log("USDC distributed to teamOperations: ", usdcDistributedToTeamOperations);
 
