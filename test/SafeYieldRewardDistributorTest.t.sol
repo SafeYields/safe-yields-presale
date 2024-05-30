@@ -296,7 +296,7 @@ contract SafeYieldRewardDistributorTest is SafeYieldBaseTest {
 
         uint256 expectedTeamOperationsUsdcDistributed = (1_000e6 * uint256(teamOperationsShare)) / distributor.BPS_MAX();
 
-        uint256 pendingRewards = distributor.pendingRewards(address(teamOperations));
+        (uint256 pendingRewards,) = distributor.pendingRewards(address(teamOperations));
 
         assertEq(
             pendingRewards,
@@ -323,7 +323,7 @@ contract SafeYieldRewardDistributorTest is SafeYieldBaseTest {
 
         uint256 pendingSafeToken = (expectedSafeStakingRewards * 1e18) / 1e6;
 
-        uint256 pendingRewards = distributor.pendingRewards(address(staking));
+        (, uint256 pendingRewards) = distributor.pendingRewards(address(staking));
 
         assertEq(pendingRewards, pendingSafeToken, "Should return the expected amount of pending rewards");
     }

@@ -9,6 +9,7 @@ import { ISafeYieldPreSale } from "./interfaces/ISafeYieldPreSale.sol";
 import { ISafeToken } from "./interfaces/ISafeToken.sol";
 import { StakingEmissionState, PreSaleState, ContractShare } from "./types/SafeTypes.sol";
 import { ISafeYieldRewardDistributor } from "./interfaces/ISafeYieldRewardDistributor.sol";
+//import { console } from "forge-std/Test.sol";
 
 contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step {
     using SafeERC20 for IERC20;
@@ -431,9 +432,9 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
     }
 
     /// @dev Returns the pending rewards for a contract.
-    function pendingRewards(address contract_) public view override returns (uint256) {
+    function pendingRewards(address contract_) public view override returns (uint256, uint256) {
         if (contract_ != approvedContracts[contractIndex[contract_]].contract_) {
-            return 0;
+            return (0, 0);
         }
 
         uint256 accUsdc = accumulatedUsdcPerContract;
@@ -453,15 +454,17 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
         uint256 pendingContractUsdc = SafeCast.toUint256(accumulatedContractUsdc - contractDetails.shareDebt);
 
         uint256 pendingContractRewards = pendingContractUsdc + outStandingContractRewards[contract_];
+        uint256 pendingSafeRewards;
 
         if (currentStakingState == StakingEmissionState.Live) {
             if (contract_ == safeStaking) {
-                pendingContractRewards = ((pendingContractRewards * 1e30) / _getCurrentTokenPrice());
-                return pendingContractRewards;
+                pendingSafeRewards = ((pendingContractRewards * 1e30) / _getCurrentTokenPrice());
+
+                return (0, pendingSafeRewards);
             }
         }
 
-        return pendingContractRewards;
+        return (pendingContractRewards, 0);
     }
 
     /// @dev Distributes rewards to all contracts.

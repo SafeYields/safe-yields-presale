@@ -26,7 +26,7 @@ interface ISafeYieldRewardDistributor {
 
     function switchSharesPerPhase() external;
 
-    function pendingRewards(address contract_) external view returns (uint256);
+    function pendingRewards(address contract_) external view returns (uint256, uint256);
 
     function updateAllocations() external;
 
