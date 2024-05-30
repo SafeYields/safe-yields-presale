@@ -118,7 +118,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         /**
          * Safe Tokens sold to 19 users = 1_900_000e18
          */
-        test_mintUsdcAndDepositMultipleAddresses(20);
+        test_mintUsdcAndDepositMultipleAddresses(20, 100_000e6, false);
 
         /**
          * After minting to 19 users, 100_000e6 USDC is left to fill the presale cap
@@ -171,7 +171,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
     }
 
     function testBuyTokensWhenBuyerWantsToBuyMoreThanPresaleCapAndAlsoMoreThanMaxWalletAlloc() public startPresale {
-        test_mintUsdcAndDepositMultipleAddresses(19);
+        test_mintUsdcAndDepositMultipleAddresses(19, 100_000e6, false);
 
         /**
          * After minting to 19 users, 200_000e6 USDC is left to fill the presale cap
@@ -213,7 +213,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
     }
 
     function testBuyTokensWhenBuyerWantsToBuySameNumberOfTokensAvailable() public startPresale {
-        test_mintUsdcAndDepositMultipleAddresses(20);
+        test_mintUsdcAndDepositMultipleAddresses(20, 100_000e6, false);
 
         console.log("Safe Tokens Remaining After selling to 19 users", presale.safeTokensAvailable());
         //100_000 00 00 00 00 00 00 00 00 00
@@ -282,35 +282,6 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         vm.expectRevert(abi.encodeWithSelector(SafeYieldPresale.SAFE_YIELD_PRESALE_NOT_ENDED.selector));
         presale.claimSafeTokens();
     }
-
-    // function testBuyTokensShouldFailIfReferrersInvestmentPlusCommissionsExceedMaxTokenAllocation()
-    //     public
-    //     startPresale
-    // {
-    //     vm.startPrank(ALICE);
-    //     usdc.approve(address(presale), 100_000e6);
-
-    //     presale.deposit( 100_000e6, bytes32(0));
-
-    //     //create a referrer ID
-    //     bytes32 refId = presale.createReferrerId();
-
-    //     vm.stopPrank();
-
-    //     vm.startPrank(BOB);
-    //     usdc.approve(address(presale), 100_000e6);
-
-    //     vm.expectRevert(
-    //         abi.encodeWithSelector(
-    //             SafeYieldPresale
-    //                 .SAFE_YIELD_REFERRER_MAX_WALLET_ALLOCATION_EXCEEDED
-    //                 .selector
-    //         )
-    //     );
-
-    //     presale.deposit( 100_000e6, refId);
-    //     vm.stopPrank();
-    // }
 
     function testBuyTokensShouldFailIfPresaleIsPaused() public pause {
         vm.startPrank(ALICE);
@@ -414,6 +385,70 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         vm.stopPrank();
     }
 
+    function testWithdrawUsdcRaised_WithReferrers() public startPresale {
+        vm.startPrank(ALICE);
+        usdc.approve(address(presale), 10_000e6);
+
+        presale.deposit(1_000e6, bytes32(0));
+
+        //create a referrer ID
+        bytes32 refId = presale.createReferrerId();
+
+        vm.stopPrank();
+
+        vm.startPrank(BOB);
+        usdc.approve(address(presale), 10_000e6);
+
+        presale.deposit(1_000e6, refId);
+
+        bytes32 bobRefId = presale.createReferrerId();
+
+        vm.stopPrank();
+
+        vm.startPrank(CHARLIE);
+        usdc.approve(address(presale), 10_000e6);
+
+        presale.deposit(1_000e6, refId);
+
+        presale.deposit(1_000e6, refId);
+
+        vm.stopPrank();
+
+        vm.startPrank(BOB);
+
+        presale.deposit(1_000e6, refId);
+
+        vm.stopPrank();
+
+        vm.startPrank(ALICE);
+
+        presale.deposit(1_000e6, bobRefId);
+
+        vm.stopPrank();
+
+        uint256 presaleUsdcBalanceBefore = usdc.balanceOf(address(presale));
+
+        skip(5 minutes);
+
+        vm.prank(protocolAdmin);
+        presale.withdrawUSDC();
+        uint256 presaleUsdcBalanceAfter = usdc.balanceOf(address(presale));
+
+        assertEq(presaleUsdcBalanceAfter, presale.totalRedeemableReferrerUsdc());
+
+        //referrers claim
+        vm.prank(ALICE);
+        presale.redeemUsdcCommission();
+
+        vm.prank(BOB);
+        presale.redeemUsdcCommission();
+
+        uint256 presaleUsdcBalanceAfterBothRedeem = usdc.balanceOf(address(presale));
+
+        assertEq(presale.totalRedeemableReferrerUsdc(), 0);
+        assertEq(presaleUsdcBalanceAfterBothRedeem, 0);
+    }
+
     /*//////////////////////////////////////////////////////////////
                                FUZZ TESTS
     //////////////////////////////////////////////////////////////*/
@@ -482,22 +517,73 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         assertEq(safeToken.balanceOf(ALICE), aliceOwedSafeTokens);
     }
 
-    function test_mintUsdcAndDepositMultipleAddresses(uint256 numberOfAddress) internal {
+    function testFuzz_WithUsdcRaisedNoReferrers(uint256 numberOfUsers, uint256 usdcAmount) public startPresale {
+        usdcAmount = bound(usdcAmount, 10_000e6, 100_000e6);
+        numberOfUsers = bound(numberOfUsers, 10, 22);
+
+        test_mintUsdcAndDepositMultipleAddresses(numberOfUsers, usdcAmount, false);
+
+        console.log("Total Usdc Raised", presale.totalUsdcRaised());
+        assertEq(presale.totalUsdcRaised(), presale.totalUsdcToWithdraw());
+
+        vm.prank(protocolAdmin);
+        presale.withdrawUSDC();
+        assertEq(presale.totalUsdcToWithdraw(), 0);
+    }
+
+    function testFuzz_WithUsdcRaisedWithReferrers(uint256 numberOfUsers, uint256 usdcAmount) public startPresale {
+        usdcAmount = bound(usdcAmount, 10_000e6, 100_000e6);
+        numberOfUsers = bound(numberOfUsers, 10, 21);
+
+        test_mintUsdcAndDepositMultipleAddresses(numberOfUsers, usdcAmount, true);
+        console.log("Total Usdc Raised", presale.totalUsdcRaised());
+
+        assertEq(presale.totalUsdcRaised(), presale.totalUsdcToWithdraw());
+
+        console.log("Total Usdc Raised", presale.totalUsdcRaised());
+        console.log("Total Redeemable Usdc", presale.totalRedeemableReferrerUsdc());
+
+        vm.prank(protocolAdmin);
+        presale.withdrawUSDC();
+        assertEq(presale.totalUsdcToWithdraw(), 0);
+
+        assertEq(usdc.balanceOf(address(presale)), presale.totalRedeemableReferrerUsdc());
+    }
+
+    function test_mintUsdcAndDepositMultipleAddresses(uint256 numberOfAddress, uint256 amount, bool isSwitchRef)
+        internal
+    {
         /**
          * so say numberOfAddress is 20 then we will mint 100_000e6 USDC to each address(ie 19 addresses)
          * and deposit 100_000e6 USDC to the presale contract , so the total USDC deposited
          * will be 1_900_000e6 USDC , 100_000e6 will be left to fill the presale cap.
          * fill the Presale cap we can numberOfAddresses should be 21.(ie 20 users).
          */
-        console.log("Safe Tokens Available", presale.safeTokensAvailable());
+        uint256 counter;
         for (uint256 i = 1; i < numberOfAddress; i++) {
             vm.prank(protocolAdmin);
-            usdc.mint(address(uint160(i)), 100_000e6);
+            usdc.mint(address(uint160(i)), amount);
+            /**
+             * so we can sell out the tokens
+             */
+            if (presale.safeTokensAvailable() == 0) return;
 
+            bytes32 refId = bytes32(0);
+
+            if (isSwitchRef) {
+                if (counter == 10) {
+                    //create a referrer ID
+                    vm.prank(address(uint160(i - 1)));
+                    refId = presale.createReferrerId();
+
+                    counter = 0;
+                }
+            }
             vm.startPrank(address(uint160(i)));
-            usdc.approve(address(presale), 100_000e6);
-            presale.deposit(uint128(100_000e6), bytes32(0));
+            usdc.approve(address(presale), amount);
+            presale.deposit(uint128(amount), refId);
             vm.stopPrank();
+            counter++;
         }
     }
 }
