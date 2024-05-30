@@ -12,6 +12,7 @@ import { ISafeYieldStaking } from "./interfaces/ISafeYieldStaking.sol";
 import { ISafeYieldPreSale } from "./interfaces/ISafeYieldPreSale.sol";
 import { ISafeToken } from "./interfaces/ISafeToken.sol";
 import { PreSaleState, ReferrerInfo, ReferrerRecipient } from "./types/SafeTypes.sol";
+//import { console } from "forge-std/Test.sol";
 
 contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
     using Math for uint128;
@@ -260,7 +261,9 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
 
         totalUsdcToWithdraw = 0;
 
-        if (amountToWithdraw != 0) usdcToken.safeTransfer(owner(), amountToWithdraw);
+        if (amountToWithdraw == 0) return;
+
+        usdcToken.safeTransfer(owner(), amountToWithdraw);
 
         emit UsdcWithdrawn(owner(), amountToWithdraw);
     }
@@ -287,6 +290,8 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
         ReferrerInfo storage _referrerInfo = referrerInfo[referrerId];
 
         uint256 usdcToRedeem = _referrerInfo.usdcVolume;
+
+        totalRedeemableReferrerUsdc -= uint128(usdcToRedeem);
 
         _referrerInfo.usdcVolume = 0;
 
@@ -377,8 +382,12 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
         if (safeTokensBought < minAllocationPerWallet) revert SAFE_YIELD_BELOW_MIN_ALLOCATION();
 
         uint128 safeTokensAvailableForPurchase = safeTokensAvailable();
+
         uint128 usdcToRefund;
 
+        if (safeTokensAvailableForPurchase == 0) revert SAFE_YIELD_NO_MORE_TOKENS_LEFT();
+
+        //!note keep??
         //uint128 safeTokensToBuy = safeTokensBought;
 
         if (safeTokensBought >= safeTokensAvailableForPurchase) {
@@ -522,71 +531,6 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
             );
         } else {
             safeYieldStaking.stakeFor(investor, totalSafeTokensToStake);
-        }
-    }
-
-    function _handleReferring(
-        uint128 usdcAmount,
-        uint128 safeTokensToBuy,
-        bytes32 referrerId,
-        uint128 safeTokensAvailableForPurchase,
-        uint128 safeTokensBought,
-        address investor
-    )
-        internal
-        returns (address referrerInvestor, uint128 referrerUsdcCommission, uint128 referrerSafeTokenCommission)
-    {
-        if (referrerId != bytes32(0)) {
-            ReferrerInfo storage _referrerInfo = referrerInfo[referrerId];
-
-            referrerInvestor = _referrerInfo.referrer;
-
-            if (referrerInvestor == address(0)) revert SAFE_YIELD_UNKNOWN_REFERRER();
-
-            if (referrerInvestor == investor) revert SAFE_YIELD_REFERRAL_TO_SELF();
-
-            /**
-             * @dev calculate the referrer commission in both USDC and SafeToken
-             * @notice To prevent rounding issues if user is buying remaining safe tokens, we
-             * subtract instead re-calculating the commissions
-             */
-            referrerUsdcCommission =
-                SafeCast.toUint128(usdcAmount.mulDiv(referrerCommissionUsdcBps, BPS_MAX, Math.Rounding.Floor));
-
-            if (safeTokensToBuy >= safeTokensAvailableForPurchase) {
-                referrerSafeTokenCommission = safeTokensAvailableForPurchase - safeTokensBought;
-            } else {
-                referrerSafeTokenCommission = SafeCast.toUint128(
-                    safeTokensBought.mulDiv(referrerCommissionSafeTokenBps, BPS_MAX, Math.Rounding.Floor)
-                );
-            }
-
-            totalRedeemableReferrerUsdc += referrerUsdcCommission;
-
-            _referrerInfo.usdcVolume += referrerUsdcCommission;
-            _referrerInfo.safeTokenVolume += referrerSafeTokenCommission;
-
-            //console.log("Index Investor", referrerIndex[referrerInvestor][investor]);
-            if (referrerRecipients[referrerInvestor].length == 0) {
-                referrerRecipients[referrerInvestor].push(
-                    ReferrerRecipient({ referrerRecipient: investor, usdcAmountInvested: usdcAmount })
-                );
-            } else {
-                if (
-                    referrerRecipients[referrerInvestor][referrerIndex[referrerInvestor][investor]].referrerRecipient
-                        != investor
-                ) {
-                    //console.log("Add new Investor");
-                    referrerRecipients[referrerInvestor].push(
-                        ReferrerRecipient({ referrerRecipient: investor, usdcAmountInvested: usdcAmount })
-                    );
-                } else {
-                    //console.log("Update usdc");
-                    referrerRecipients[referrerInvestor][referrerIndex[referrerInvestor][investor]].usdcAmountInvested
-                    += usdcAmount;
-                }
-            }
-            referrerIndex[referrerInvestor][investor] = uint128(referrerRecipients[referrerInvestor].length) - 1;
         }
     }
 
