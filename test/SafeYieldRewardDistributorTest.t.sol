@@ -446,6 +446,16 @@ contract SafeYieldRewardDistributorTest is SafeYieldBaseTest {
         (uint256 usdcBuyBackPendingUSDC, uint256 usdcBuyBackPendingSafeRewards) =
             distributor.pendingRewards(usdcBuyback);
 
+        uint256 amountToDistribute_ = amountToDistribute;
+
+        uint256 calculateStakingPendingRewards = (6_000 * amountToDistribute_) / 10_000;
+        uint256 calculateTeamOpPendingRewards = (3_000 * amountToDistribute_) / 10_000;
+        uint256 calculateUsdcBuyBackPendingRewards = (1_000 * amountToDistribute_) / 10_000;
+
+        assertApproxEqAbs(stakingPendingUSDC, calculateStakingPendingRewards, 1e4);
+        assertApproxEqAbs(teamOperationsPendingUSDC, calculateTeamOpPendingRewards, 1e4);
+        assertApproxEqAbs(usdcBuyBackPendingUSDC, calculateUsdcBuyBackPendingRewards, 1e4);
+
         console.log("Staking Pending Safe Rewards", stakingPendingSafeRewards);
         console.log("Staking Pending USDC Rewards", stakingPendingUSDC);
 
@@ -459,7 +469,7 @@ contract SafeYieldRewardDistributorTest is SafeYieldBaseTest {
         distributor.startStakingEmissions();
         vm.stopPrank();
 
-        usdc.mint(address(distributor), amountToDistribute);
+        usdc.mint(address(distributor), amountToDistribute_);
 
         skip(5 minutes);
 
@@ -468,6 +478,8 @@ contract SafeYieldRewardDistributorTest is SafeYieldBaseTest {
         console.log("Switching To Staking Emissions-Safe Rewards");
         console.log("Total Revenue", usdc.balanceOf(address(distributor)));
         console.log();
+
+        uint256 newBalance = usdc.balanceOf(address(distributor));
 
         (uint256 stakingPendingUSDC2, uint256 stakingPendingSafeRewards2) = distributor.pendingRewards(address(staking));
         (uint256 teamOperationsPendingUSDC2, uint256 teamOperationsPendingSafeRewards2) =
@@ -481,16 +493,24 @@ contract SafeYieldRewardDistributorTest is SafeYieldBaseTest {
         console.log("teamOperations Pending Safe Rewards", teamOperationsPendingSafeRewards2);
         console.log("teamOperations Pending USDC Rewards", teamOperationsPendingUSDC2);
 
-        console.log("usdcBuyback Pending Safe Rewards", usdcBuyBackPendingSafeRewards2);
+        // console.log("usdcBuyback Pending Safe Rewards", usdcBuyBackPendingSafeRewards2);
         console.log("usdcBuyback Pending USDC Rewards", usdcBuyBackPendingUSDC2);
 
-        vm.startPrank(protocolAdmin);
-        //vm.assume(distributor.MAX_STAKING_EMISSIONS() == 0);
+        uint256 calculateStakingPendingRewards2 = (6_000 * newBalance) / 10_000;
+        uint256 calculateTeamOpPendingRewards2 = (3_000 * newBalance) / 10_000;
+        uint256 calculateUsdcBuyBackPendingRewards2 = (3_500 * newBalance) / 10_000;
 
+        console.log("calculateTeamOpPendingRewards2", calculateTeamOpPendingRewards2);
+        console.log("calculateUsdcBuyBackPendingRewards2", calculateUsdcBuyBackPendingRewards2);
+
+        //vm.assume(distributor.MAX_STAKING_EMISSIONS() == 0);
+        vm.startPrank(protocolAdmin);
         distributor.endStakingEmissions();
         vm.stopPrank();
 
-        usdc.mint(address(distributor), amountToDistribute);
+        uint256 amountToDistribute__ = amountToDistribute_;
+
+        usdc.mint(address(distributor), amountToDistribute__);
 
         console.log();
         console.log("Switching To Staking Emissions-USDC Rewards");
