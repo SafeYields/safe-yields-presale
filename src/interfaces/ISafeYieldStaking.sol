@@ -15,9 +15,11 @@ interface ISafeYieldStaking {
         uint128 referrerAmount
     ) external;
 
-    function unStake(address user, uint128 amount) external;
+    function unStake(uint128 amount) external;
 
-    function claimRewards() external;
+    function unStakeFor(address user, uint128 amount) external;
+
+    function claimRewards(address user) external;
 
     function calculatePendingRewards(address user)
         external

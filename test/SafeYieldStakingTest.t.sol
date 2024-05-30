@@ -24,6 +24,18 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         assertEq(address(usdc), address(staking.usdc()));
     }
 
+    function testAutoStakeForShouldFailIfCallerIsNotPresale() public {
+        vm.prank(ALICE);
+        vm.expectRevert(SafeYieldStaking.SAFE_YIELD_ONLY_PRESALE.selector);
+        staking.autoStakeForBothReferrerAndRecipient(ALICE, 100e6, BOB, 100e6);
+    }
+
+    function testStakeShouldFailIfDuringPresale() public {
+        vm.prank(ALICE);
+        vm.expectRevert(SafeYieldStaking.SAFE_YIELD_STAKING_LOCKED.selector);
+        staking.stakeFor(ALICE, 100e6);
+    }
+
     function testStakeForShouldFailIfPresaleIsLiveAndCallerIsNotPresale() public startPresale {
         vm.expectRevert(SafeYieldStaking.SAFE_YIELD_STAKING_LOCKED.selector);
         vm.prank(ALICE);
@@ -40,14 +52,14 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
     function testUnStakeForShouldFailIfUnStakeAmountIsLessThanMin() public startEndPresale {
         vm.expectRevert(SafeYieldStaking.SAFE_YIELD_INVALID_STAKE_AMOUNT.selector);
         vm.startPrank(ALICE);
-        staking.unStake(ALICE, 0);
+        staking.unStake(0);
         vm.stopPrank();
     }
 
     function testUnStakeShouldFailIfUserHasNoStake() public startEndPresale {
         vm.expectRevert(SafeYieldStaking.SAFE_YIELD_INSUFFICIENT_STAKE.selector);
         vm.startPrank(ALICE);
-        staking.unStake(ALICE, 1_000e18);
+        staking.unStake(1_000e18);
         vm.stopPrank();
     }
 
@@ -96,12 +108,12 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
 
         uint256 aliceUsdcBalanceBefore = usdc.balanceOf(address(ALICE));
         vm.prank(ALICE);
-        staking.claimRewards();
+        staking.claimRewards(ALICE);
         uint256 aliceUsdcBalanceAfter = usdc.balanceOf(address(ALICE));
 
         uint256 bobUsdcBalanceBefore = usdc.balanceOf(address(BOB));
         vm.prank(BOB);
-        staking.claimRewards();
+        staking.claimRewards(BOB);
         uint256 bobUsdcBalanceAfter = usdc.balanceOf(address(BOB));
 
         (uint128 pendingUsdcRewardsAliceAfter,) = staking.calculatePendingRewards(address(ALICE));
@@ -171,12 +183,12 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
 
         uint256 aliceSafeBalanceBefore = safeToken.balanceOf(address(ALICE));
         vm.prank(ALICE);
-        staking.claimRewards();
+        staking.claimRewards(ALICE);
         uint256 aliceSafeBalanceAfter = safeToken.balanceOf(address(ALICE));
 
         uint256 bobSafeBalanceBefore = safeToken.balanceOf(address(BOB));
         vm.prank(BOB);
-        staking.claimRewards();
+        staking.claimRewards(BOB);
         uint256 bobSafeBalanceAfter = safeToken.balanceOf(address(BOB));
 
         /**
@@ -211,12 +223,12 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
 
         uint256 aliceSafeBalanceBefore2 = safeToken.balanceOf(address(ALICE));
         vm.prank(ALICE);
-        staking.claimRewards();
+        staking.claimRewards(ALICE);
         uint256 aliceSafeBalanceAfter2 = safeToken.balanceOf(address(ALICE));
 
         uint256 bobSafeBalanceBefore2 = safeToken.balanceOf(address(BOB));
         vm.prank(BOB);
-        staking.claimRewards();
+        staking.claimRewards(BOB);
         uint256 bobSafeBalanceAfter2 = safeToken.balanceOf(address(BOB));
 
         assertNotEq(pendingRewardsAlice3, 0);
@@ -262,12 +274,12 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
 
         uint256 aliceUsdcBalanceBefore = usdc.balanceOf(address(ALICE));
         vm.prank(ALICE);
-        staking.unStake(ALICE, 1_000e18);
+        staking.unStake(1_000e18);
         uint256 aliceUsdcBalanceAfter = usdc.balanceOf(address(ALICE));
 
         uint256 bobUsdcBalanceBefore = usdc.balanceOf(address(BOB));
         vm.prank(BOB);
-        staking.unStake(BOB, 600e18);
+        staking.unStake(600e18);
         uint256 bobUsdcBalanceAfter = usdc.balanceOf(address(BOB));
 
         //logs
@@ -476,11 +488,11 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         assertEq(pendingRewardsUserB, 0);
 
         vm.startPrank(userA);
-        staking.unStake(userA, uint128(amount));
+        staking.unStake(uint128(amount));
         vm.stopPrank();
 
         vm.startPrank(userB);
-        staking.unStake(userB, uint128(amount / 2));
+        staking.unStake(uint128(amount / 2));
         vm.stopPrank();
 
         //assertions
@@ -547,10 +559,10 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         console.log("Diff", 6_000e6 - totalPendingRewards);
 
         vm.prank(userA);
-        staking.unStake(userA, uint128(amount));
+        staking.unStake(uint128(amount));
 
         vm.prank(userB);
-        staking.unStake(userB, uint128(userBAmount));
+        staking.unStake(uint128(userBAmount));
 
         // assertEq(pendingRewardsUserA, userAcalculatedPendingRewards);
     }

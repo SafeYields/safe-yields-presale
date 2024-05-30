@@ -332,7 +332,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
 
         referrerInfo[keccak256(abi.encodePacked(msg.sender))].safeTokenVolume = 0;
 
-        safeYieldStaking.unStake(msg.sender, safeTokens);
+        safeYieldStaking.unStakeFor(msg.sender, safeTokens);
 
         emit SafeTokensClaimed(msg.sender, safeTokens);
     }
