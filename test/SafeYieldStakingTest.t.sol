@@ -148,30 +148,81 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         skip(5 minutes);
         (, uint128 pendingRewardsAlice) = staking.calculatePendingRewards(address(ALICE));
 
+        skip(5 minutes);
         (, uint128 pendingRewardsBob) = staking.calculatePendingRewards(address(BOB));
 
-        console.log("Pending rewards Alice: ", pendingRewardsAlice);
-        console.log("Pending rewards Bob: ", pendingRewardsBob);
+        console.log("Pending Safe Rewards for Alice", pendingRewardsAlice);
+        //
+        console.log("Pending Usdc Rewards for Bob", pendingRewardsBob);
 
-        uint256 aliceUsdcBalanceBefore = safeToken.balanceOf(address(ALICE));
+        usdc.mint(address(distributor), 10_000e6);
+
+        skip(1 hours);
+
+        console.log("Second Rewards*********************");
+        console.log("ALice Pending*********");
+        (, uint128 pendingRewardsAlice2) = staking.calculatePendingRewards(address(ALICE));
+
+        console.log("BOB Pending*********");
+        skip(5 minutes);
+        (, uint128 pendingRewardsBob2) = staking.calculatePendingRewards(address(BOB));
+
+        skip(5 minutes);
+
+        uint256 aliceSafeBalanceBefore = safeToken.balanceOf(address(ALICE));
         vm.prank(ALICE);
         staking.claimRewards();
-        uint256 aliceUsdcBalanceAfter = safeToken.balanceOf(address(ALICE));
+        uint256 aliceSafeBalanceAfter = safeToken.balanceOf(address(ALICE));
 
-        uint256 bobUsdcBalanceBefore = safeToken.balanceOf(address(BOB));
+        uint256 bobSafeBalanceBefore = safeToken.balanceOf(address(BOB));
         vm.prank(BOB);
         staking.claimRewards();
-        uint256 bobUsdcBalanceAfter = safeToken.balanceOf(address(BOB));
+        uint256 bobSafeBalanceAfter = safeToken.balanceOf(address(BOB));
 
-        //logs
-        (, uint128 pendingSafeRewardsAliceAfter) = staking.calculatePendingRewards(address(ALICE));
-        (, uint128 pendingSafeRewardsBobAfter) = staking.calculatePendingRewards(address(BOB));
+        /**
+         * Accumulated Rewards become 7_000e18 safe tokens
+         * to calculate user share = amountStaked *  accumulated / totalStaked
+         */
+        uint256 aliceCalculatedRewards = (2_000e18 * 7_000e18);
+        uint256 bobCalculatedRewards = (1_000e18 * 7_000e18);
 
-        //assertions
-        assertEq(aliceUsdcBalanceAfter, aliceUsdcBalanceBefore + pendingRewardsAlice);
-        assertEq(bobUsdcBalanceAfter, bobUsdcBalanceBefore + pendingRewardsBob);
-        assertEq(pendingSafeRewardsAliceAfter, 0);
-        assertEq(pendingSafeRewardsBobAfter, 0);
+        assertApproxEqAbs(pendingRewardsAlice2, (aliceCalculatedRewards) / 3_000e18, 1e4);
+        assertApproxEqAbs(pendingRewardsBob2, (bobCalculatedRewards) / 3_000e18, 1e4);
+        assertEq(aliceSafeBalanceAfter, aliceSafeBalanceBefore + pendingRewardsAlice2);
+        assertEq(bobSafeBalanceAfter, bobSafeBalanceBefore + pendingRewardsBob2);
+
+        usdc.mint(address(distributor), 10_000e6);
+
+        skip(1 hours);
+
+        console.log("Third Rewards*********************");
+        console.log("ALice Pending 3*********");
+        (, uint128 pendingRewardsAlice3) = staking.calculatePendingRewards(address(ALICE));
+
+        console.log("BOB Pending 3*********");
+        skip(5 minutes);
+        (, uint128 pendingRewardsBob3) = staking.calculatePendingRewards(address(BOB));
+
+        skip(5 minutes);
+
+        console.log("Pending Safe Rewards for Alice3", pendingRewardsAlice3);
+        //
+        console.log("Pending Usdc Rewards for Bob3", pendingRewardsBob3);
+
+        uint256 aliceSafeBalanceBefore2 = safeToken.balanceOf(address(ALICE));
+        vm.prank(ALICE);
+        staking.claimRewards();
+        uint256 aliceSafeBalanceAfter2 = safeToken.balanceOf(address(ALICE));
+
+        uint256 bobSafeBalanceBefore2 = safeToken.balanceOf(address(BOB));
+        vm.prank(BOB);
+        staking.claimRewards();
+        uint256 bobSafeBalanceAfter2 = safeToken.balanceOf(address(BOB));
+
+        assertNotEq(pendingRewardsAlice3, 0);
+        assertNotEq(pendingRewardsBob3, 0);
+        assertEq(aliceSafeBalanceAfter2, aliceSafeBalanceBefore2 + pendingRewardsAlice3);
+        assertEq(bobSafeBalanceAfter2, bobSafeBalanceBefore2 + pendingRewardsBob3);
     }
 
     function testStakeSafeTokens() public startEndPresale {

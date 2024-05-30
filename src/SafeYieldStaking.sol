@@ -12,6 +12,7 @@ import { PreSaleState, Stake, StakingEmissionState } from "./types/SafeTypes.sol
 import { ISafeYieldStaking } from "./interfaces/ISafeYieldStaking.sol";
 import { ISafeYieldPreSale } from "./interfaces/ISafeYieldPreSale.sol";
 import { ISafeYieldRewardDistributor } from "./interfaces/ISafeYieldRewardDistributor.sol";
+//import { console } from "forge-std/Test.sol";
 
 /**
  * @title SafeYieldStaking contract
@@ -23,6 +24,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20 {
     using Math for uint256;
     using Math for int256;
     using Math for uint128;
+
     using SafeERC20 for IERC20;
 
     /*//////////////////////////////////////////////////////////////
@@ -201,7 +203,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20 {
     }
 
     function claimRewards() public override lockStaking {
-        if (userStake[msg.sender].stakeAmount == 0) return;
+        if (userStake[_msgSender()].stakeAmount == 0) return;
 
         updateRewards();
 
@@ -234,24 +236,32 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20 {
         override
         returns (uint128 pendingUsdcRewards, uint128 pendingSafeRewards)
     {
-        if (totalStaked == 0 || userStake[user].stakeAmount == 0) {
+        uint128 userStakeAmount = userStake[user].stakeAmount;
+
+        if (totalStaked == 0 || userStakeAmount == 0) {
             return (0, 0);
         }
 
-        //! use pending rewards from distributor to calculate the pending rewards. Must be a view function
+        (uint256 pendingUsdcRewardsToContract, uint256 pendingSafeRewardsToContract) =
+            distributor.pendingRewards(address(this));
 
-        //updateRewards();
+        uint128 stakingAccSafeRewardsPerStake = safeAccumulatedRewardsPerStake;
+        uint128 stakingAccUsdcRewardsPerStake = usdcAccumulatedRewardsPerStake;
+
+        if (pendingUsdcRewardsToContract != 0) {
+            stakingAccUsdcRewardsPerStake += uint128(pendingUsdcRewardsToContract.mulDiv(1e18, totalStaked));
+        }
+
+        if (pendingSafeRewardsToContract != 0) {
+            stakingAccSafeRewardsPerStake += uint128(pendingSafeRewardsToContract.mulDiv(1e18, totalStaked));
+        }
 
         int128 accumulateUsdcRewards = SafeCast.toInt128(
-            SafeCast.toInt256(
-                userStake[user].stakeAmount.mulDiv(usdcAccumulatedRewardsPerStake, PRECISION, Math.Rounding.Floor)
-            )
+            SafeCast.toInt256(userStakeAmount.mulDiv(stakingAccUsdcRewardsPerStake, PRECISION, Math.Rounding.Floor))
         );
 
         int128 accumulateSafeRewards = SafeCast.toInt128(
-            SafeCast.toInt256(
-                userStake[user].stakeAmount.mulDiv(safeAccumulatedRewardsPerStake, PRECISION, Math.Rounding.Floor)
-            )
+            SafeCast.toInt256(userStakeAmount.mulDiv(stakingAccSafeRewardsPerStake, PRECISION, Math.Rounding.Floor))
         );
 
         /**
@@ -259,11 +269,9 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20 {
          * The pending rewards are calculated by subtracting the user's reward debt from the accumulated rewards.
          * users debt is the amount of rewards the user has already claimed.
          */
-        pendingUsdcRewards =
-            SafeCast.toUint128(SafeCast.toUint256(accumulateUsdcRewards - userStake[user].usdcRewardsDebt));
+        pendingUsdcRewards = uint128(int128(int256(accumulateUsdcRewards)) - userStake[user].usdcRewardsDebt);
 
-        pendingSafeRewards =
-            SafeCast.toUint128(SafeCast.toUint256(accumulateSafeRewards - userStake[user].safeRewardsDebt));
+        pendingSafeRewards = uint128(int128(int256(accumulateSafeRewards)) - userStake[user].safeRewardsDebt);
     }
 
     function _stake(address _user, uint128 amount) internal {
