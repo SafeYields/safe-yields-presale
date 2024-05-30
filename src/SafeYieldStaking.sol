@@ -12,7 +12,7 @@ import { PreSaleState, Stake, StakingEmissionState } from "./types/SafeTypes.sol
 import { ISafeYieldStaking } from "./interfaces/ISafeYieldStaking.sol";
 import { ISafeYieldPreSale } from "./interfaces/ISafeYieldPreSale.sol";
 import { ISafeYieldRewardDistributor } from "./interfaces/ISafeYieldRewardDistributor.sol";
-import { console } from "forge-std/Test.sol";
+//import { console } from "forge-std/Test.sol";
 
 /**
  * @title SafeYieldStaking contract
@@ -116,15 +116,19 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20 {
              * Any other state, rewards are distributed in USDC.(60% USDC)
              */
             uint256 shareableRewards = distributor.distributeToContract(address(this));
-            //! track the last balance of the safe token and usdc to calculate the rewards.
-            if (shareableRewards != 0) {
-                uint128 rewardsPerTokenStaked = SafeCast.toUint128(shareableRewards.mulDiv(PRECISION, totalStaked));
 
-                if (distributor.isSafeRewardsDistributed()) {
-                    safeAccumulatedRewardsPerStake += rewardsPerTokenStaked;
-                } else {
-                    usdcAccumulatedRewardsPerStake += rewardsPerTokenStaked;
-                }
+            uint256 contractUsdcBalance = usdc.balanceOf(address(this));
+
+            uint256 usdcDiff = contractUsdcBalance - lastUsdcBalance;
+
+            if (usdcDiff != 0) {
+                usdcAccumulatedRewardsPerStake += SafeCast.toUint128(usdcDiff.mulDiv(PRECISION, totalStaked));
+
+                lastUsdcBalance = contractUsdcBalance;
+            }
+
+            if (shareableRewards != 0 && distributor.isSafeRewardsDistributed()) {
+                safeAccumulatedRewardsPerStake += SafeCast.toUint128(shareableRewards.mulDiv(PRECISION, totalStaked));
             }
 
             lastUpdateRewardsTimestamp = uint48(block.timestamp);
