@@ -315,7 +315,7 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
             }
         }
 
-        if (currentStakingState == StakingEmissionState.Live && safeTransferred < MAX_STAKING_EMISSIONS) {
+        if (currentStakingState == StakingEmissionState.Live || safeTransferred < MAX_STAKING_EMISSIONS) {
             if (contract_ == safeStaking) {
                 uint256 tokensToMint = ((usdcDistributed * 1e30) / _getCurrentTokenPrice());
 
@@ -358,7 +358,7 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
             _contractShares[1] = ContractShare(0, safeStaking, 6_000);
             _contractShares[2] = ContractShare(0, usdcBuyback, 1_000);
         }
-
+        //!note transfer out staking.
         updateContractShares(_contractShares);
     }
 
@@ -388,9 +388,10 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
 
     /// @dev Ends the staking emissions.
     function endStakingEmissions() public override onlyOwner {
-        if (safeTransferred < MAX_STAKING_EMISSIONS) {
-            revert SYRD__MAX_SUPPLY_NOT_EXCEEDED();
-        }
+        //!note should this be added??
+        // if (safeTransferred < MAX_STAKING_EMISSIONS) {
+        //     revert SYRD__MAX_SUPPLY_NOT_EXCEEDED();
+        // }
         currentStakingState = StakingEmissionState.Ended;
 
         switchSharesPerPhase();
@@ -484,7 +485,19 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
 
             if (usdcDistributed != 0) {
                 approvedContracts[i].shareDebt = accumulatedContractUsdc;
-                outStandingContractRewards[contractDetails.contract_] += usdcDistributed;
+
+                if (contractDetails.contract_ == address(safeStaking)) {
+                    if (currentStakingState == StakingEmissionState.Live) {
+                        usdcToken.safeTransfer(
+                            address(safeStaking), outStandingContractRewards[contractDetails.contract_]
+                        );
+                    } else {
+                        uint256 safeToTransfer = ((usdcDistributed * 1e30) / _getCurrentTokenPrice());
+                        safeToken.transfer(address(safeStaking), safeToTransfer);
+                    }
+                } else {
+                    outStandingContractRewards[contractDetails.contract_] += usdcDistributed;
+                }
             }
         }
     }

@@ -430,6 +430,93 @@ contract SafeYieldRewardDistributorTest is SafeYieldBaseTest {
         // assertEq(usdc.balanceOf(address(distributor)), 0);
     }
 
+    function test_Fuzz_ContractShouldReceiveUSdcRewardsAfterSwitchingToSafeRewards(uint256 amountToDistribute) public {
+        amountToDistribute = bound(amountToDistribute, 10_000e6, 100_000e6);
+        usdc.mint(address(distributor), amountToDistribute);
+        console.log();
+        console.log("USDC Rewards");
+        console.log("Total Revenue", usdc.balanceOf(address(distributor)));
+        console.log();
+        skip(5 minutes);
+
+        (uint256 stakingPendingUSDC, uint256 stakingPendingSafeRewards) = distributor.pendingRewards(address(staking));
+        (uint256 teamOperationsPendingUSDC, uint256 teamOperationsPendingSafeRewards) =
+            distributor.pendingRewards(teamOperations);
+
+        (uint256 usdcBuyBackPendingUSDC, uint256 usdcBuyBackPendingSafeRewards) =
+            distributor.pendingRewards(usdcBuyback);
+
+        console.log("Staking Pending Safe Rewards", stakingPendingSafeRewards);
+        console.log("Staking Pending USDC Rewards", stakingPendingUSDC);
+
+        console.log("teamOperations Pending Safe Rewards", teamOperationsPendingSafeRewards);
+        console.log("teamOperations Pending USDC Rewards", teamOperationsPendingUSDC);
+
+        console.log("usdcBuyback Pending Safe Rewards", usdcBuyBackPendingSafeRewards);
+        console.log("usdcBuyback Pending USDC Rewards", usdcBuyBackPendingUSDC);
+
+        vm.startPrank(protocolAdmin);
+        distributor.startStakingEmissions();
+        vm.stopPrank();
+
+        usdc.mint(address(distributor), amountToDistribute);
+
+        skip(5 minutes);
+
+        console.log();
+
+        console.log("Switching To Staking Emissions-Safe Rewards");
+        console.log("Total Revenue", usdc.balanceOf(address(distributor)));
+        console.log();
+
+        (uint256 stakingPendingUSDC2, uint256 stakingPendingSafeRewards2) = distributor.pendingRewards(address(staking));
+        (uint256 teamOperationsPendingUSDC2, uint256 teamOperationsPendingSafeRewards2) =
+            distributor.pendingRewards(teamOperations);
+        (uint256 usdcBuyBackPendingUSDC2, uint256 usdcBuyBackPendingSafeRewards2) =
+            distributor.pendingRewards(usdcBuyback);
+
+        console.log("Staking Pending Safe Rewards", stakingPendingSafeRewards2);
+        console.log("Staking Pending USDC Rewards", stakingPendingUSDC2);
+
+        console.log("teamOperations Pending Safe Rewards", teamOperationsPendingSafeRewards2);
+        console.log("teamOperations Pending USDC Rewards", teamOperationsPendingUSDC2);
+
+        console.log("usdcBuyback Pending Safe Rewards", usdcBuyBackPendingSafeRewards2);
+        console.log("usdcBuyback Pending USDC Rewards", usdcBuyBackPendingUSDC2);
+
+        vm.startPrank(protocolAdmin);
+        //vm.assume(distributor.MAX_STAKING_EMISSIONS() == 0);
+
+        distributor.endStakingEmissions();
+        vm.stopPrank();
+
+        usdc.mint(address(distributor), amountToDistribute);
+
+        console.log();
+        console.log("Switching To Staking Emissions-USDC Rewards");
+        console.log("Total Revenue", usdc.balanceOf(address(distributor)));
+        console.log();
+
+        skip(5 minutes);
+
+        (uint256 stakingPendingUSDC3, uint256 stakingPendingSafeRewards3) = distributor.pendingRewards(address(staking));
+        (uint256 teamOperationsPendingUSDC3, uint256 teamOperationsPendingSafeRewards3) =
+            distributor.pendingRewards(teamOperations);
+        (uint256 usdcBuyBackPendingUSDC3, uint256 usdcBuyBackPendingSafeRewards3) =
+            distributor.pendingRewards(usdcBuyback);
+
+        console.log("Staking Pending Safe Rewards", stakingPendingSafeRewards3);
+        console.log("Staking Pending USDC Rewards", stakingPendingUSDC3);
+
+        console.log("teamOperations Pending Safe Rewards", teamOperationsPendingSafeRewards3);
+        console.log("teamOperations Pending USDC Rewards", teamOperationsPendingUSDC3);
+
+        console.log("usdcBuyback Pending Safe Rewards", usdcBuyBackPendingSafeRewards3);
+        console.log("usdcBuyback Pending USDC Rewards", usdcBuyBackPendingUSDC3);
+
+        //assertions
+    }
+
     /*//////////////////////////////////////////////////////////////
                                FUZZ TESTS
     //////////////////////////////////////////////////////////////*/
