@@ -2,6 +2,7 @@
 pragma solidity 0.8.26;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 import { Ownable2Step, Ownable } from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -9,8 +10,8 @@ import { ISafeYieldPreSale } from "./interfaces/ISafeYieldPreSale.sol";
 import { ISafeToken } from "./interfaces/ISafeToken.sol";
 import { StakingEmissionState, PreSaleState, ContractShare } from "./types/SafeTypes.sol";
 import { ISafeYieldRewardDistributor } from "./interfaces/ISafeYieldRewardDistributor.sol";
-import { console } from "forge-std/Test.sol";
-//import { SafeYieldTWAP } from "./SafeYieldTWAP.sol";
+import { SafeYieldTWAP } from "./SafeYieldTWAP.sol";
+//import { console } from "forge-std/Test.sol";
 
 contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step {
     using SafeERC20 for IERC20;
@@ -491,12 +492,12 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
 
                 if (contractDetails.contract_ == address(safeStaking)) {
                     if (currentStakingState == StakingEmissionState.Live) {
-                        console.log("Live");
+                        //console.log("Live");
                         usdcToken.safeTransfer(
                             address(safeStaking), outStandingContractRewards[contractDetails.contract_]
                         );
                     } else {
-                        console.log("Not live");
+                        //console.log("Not live");
                         uint256 safeToTransfer = ((usdcDistributed * 1e30) / _getCurrentTokenPrice());
                         safeToken.transfer(address(safeStaking), safeToTransfer);
                     }
