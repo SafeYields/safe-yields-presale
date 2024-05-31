@@ -2,7 +2,6 @@
 pragma solidity 0.8.26;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
 import { Ownable2Step, Ownable } from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -11,6 +10,7 @@ import { ISafeToken } from "./interfaces/ISafeToken.sol";
 import { StakingEmissionState, PreSaleState, ContractShare } from "./types/SafeTypes.sol";
 import { ISafeYieldRewardDistributor } from "./interfaces/ISafeYieldRewardDistributor.sol";
 import { SafeYieldTWAP } from "./SafeYieldTWAP.sol";
+import { ISafeYieldStaking } from "./interfaces/ISafeYieldStaking.sol";
 //import { console } from "forge-std/Test.sol";
 
 contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step {
@@ -31,18 +31,21 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
     ContractShare[] public approvedContracts;
     ISafeYieldPreSale public safePresale;
     StakingEmissionState public currentStakingState;
+    SafeYieldTWAP public safeYieldTWAP;
 
     bool public isSafeRewardsDistributed;
 
     address public teamOperations;
     address public usdcBuyback;
     address public safeStaking;
-    uint256 public safeTransferred;
+    address public safeYieldPool;
 
+    uint256 public safeTransferred;
     uint256 public totalUsdcFromSafeMinting;
     uint256 public accumulatedUsdcPerContract;
     uint256 public lastBalance;
     uint48 public lastUpdatedTimestamp;
+    uint32 public twapInterval = 1800 seconds; // 30 minutes
 
     mapping(address contract_ => uint256 index) public contractIndex;
     mapping(address contract_ => uint256 outstanding) public outStandingContractRewards;
@@ -66,7 +69,7 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
     //////////////////////////////////////////////////////////////*/
 
     error SYRD__NOT_ADMIN_OR_VALID_CONTRACT();
-    error SYRD__MAX_SUPPLY_NOT_EXCEEDED();
+    error SYRD__STAKING_EMISSION_NOT_EXHAUSTED();
     error SYRD__ARRAY_LENGTH_MISMATCH();
     error SYRD__DUPLICATE_CONTRACT();
     error SYRD__INVALID_CONTRACT();
@@ -74,6 +77,7 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
     error SYRD__INVALID_SHARE();
     error SYRD__ZERO_ADDRESS();
     error SYRD__INVALID_BPS();
+    error SYRD__INVALID_TWAP_PERIOD();
 
     /**
      * Three Phase :
@@ -98,7 +102,8 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
         address _teamOperations,
         address _usdcBuyback,
         address _safeStaking,
-        address _protocolAdmin
+        address _protocolAdmin,
+        address _safeYieldTWAP
     ) Ownable(_protocolAdmin) {
         if (
             _usdcToken == address(0) || _safeToken == address(0) || _teamOperations == address(0)
@@ -109,6 +114,7 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
 
         safeToken = ISafeToken(_safeToken);
         usdcToken = IERC20(_usdcToken);
+        safeYieldTWAP = SafeYieldTWAP(_safeYieldTWAP);
 
         teamOperations = _teamOperations;
         usdcBuyback = _usdcBuyback;
@@ -261,26 +267,33 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
         emit UsdcWithdrawn(owner(), totalUsdcFromSafeMinting);
     }
 
-    function mintAllAllocations() external override onlyOwner {
+    function mintStakingAllocation() external override onlyOwner {
         safeToken.mint(MAX_STAKING_EMISSIONS);
 
         emit AllAllocationsMinted(MAX_STAKING_EMISSIONS);
     }
 
-    /**
-     * @notice returns all the contracts that are eligible for rewards.
-     * @return all the contracts that are eligible for rewards.
-     */
+    function updateTwapInterval(uint32 newInterval) external override onlyOwner {
+        if (newInterval == 0) revert SYRD__INVALID_TWAP_PERIOD();
+        twapInterval = newInterval;
+    }
+
+    function updateSafePool(address newSafeYieldPool) external override onlyOwner {
+        if (newSafeYieldPool == address(0)) revert SYRD__ZERO_ADDRESS();
+        safeYieldPool = newSafeYieldPool;
+    }
+
+    /// @return all the contracts that are eligible for rewards.
     function getAllContracts() external view override returns (ContractShare[] memory) {
         return approvedContracts;
     }
 
     /**
-     * @notice returns reward details for a contract.
+     * @notice transfers rewards to an approved contract. Callable by the contract itself or the owner.
      * @param contract_ the address of the contract to get details for.
-     * @return usdcDistributed rewards distributed to the contract.
+     * @return rewardsDistributed which is the amount of rewards distributed either in $SAFE or USDC.
      */
-    function distributeToContract(address contract_) public override returns (uint256 usdcDistributed) {
+    function distributeToContract(address contract_) public override returns (uint256 rewardsDistributed) {
         if (msg.sender != owner() && msg.sender != contract_) {
             revert SYRD__NOT_ADMIN_OR_VALID_CONTRACT();
         }
@@ -294,33 +307,33 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
 
         int256 accumulatedContractUsdc = SafeCast.toInt256(contractDetails.share * (accumulatedUsdcPerContract));
 
-        usdcDistributed = SafeCast.toUint256(accumulatedContractUsdc - contractDetails.shareDebt);
-
+        uint256 usdcDistributed = SafeCast.toUint256(accumulatedContractUsdc - contractDetails.shareDebt);
         usdcDistributed += outStandingContractRewards[contract_];
         outStandingContractRewards[contract_] = 0;
 
         if (usdcDistributed != 0) {
             approvedContracts[contractIndex[contract_]].shareDebt = accumulatedContractUsdc;
 
-            /**
-             * @dev If the Staking emissions are live, the last balance will be the current balance.
-             * since the usdc are not distributed out of the contract.
-             * If the Staking emissions have ended, the last balance will be the current balance
-             * minus the usdc distributed since rewards are distributed out of the contract immediately.
-             */
-            if (currentStakingState == StakingEmissionState.Live) {
-                if (contract_ == safeStaking) {
-                    lastBalance = usdcToken.balanceOf(address(this));
-                }
-            } else {
-                lastBalance = usdcToken.balanceOf(address(this)) - usdcDistributed;
-            }
-        }
+            if (contract_ == safeStaking && currentStakingState == StakingEmissionState.Live) {
+                if (safeTransferred < MAX_STAKING_EMISSIONS) {
+                    uint256 safeTokenPrice = _getTokenPrice();
+                    uint256 tokensToMint = ((usdcDistributed * 1e30) / safeTokenPrice);
 
-        if (currentStakingState == StakingEmissionState.Live) {
-            if (safeTransferred < MAX_STAKING_EMISSIONS) {
-                if (contract_ == safeStaking) {
-                    uint256 tokensToMint = ((usdcDistributed * 1e30) / _getCurrentTokenPrice());
+                    if (safeTransferred + tokensToMint > MAX_STAKING_EMISSIONS) {
+                        tokensToMint = MAX_STAKING_EMISSIONS - safeTransferred;
+
+                        uint256 valueOfTokenToMint = (tokensToMint * safeTokenPrice) / 1e30;
+                        uint256 excessSafeUsdc = usdcDistributed - valueOfTokenToMint;
+
+                        outStandingContractRewards[contract_] += excessSafeUsdc;
+
+                        usdcDistributed = valueOfTokenToMint;
+
+                        ///@dev update the state of the staking emissions
+                        currentStakingState = StakingEmissionState.Ended;
+
+                        emit StakingEmissionsEnded();
+                    }
 
                     safeToken.transfer(contract_, tokensToMint);
 
@@ -332,16 +345,20 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
 
                     emit RewardDistributed(contract_, tokensToMint);
 
-                    return tokensToMint;
+                    return rewardsDistributed = tokensToMint;
                 }
             }
+
+            isSafeRewardsDistributed = false;
+
+            usdcToken.safeTransfer(contract_, usdcDistributed);
+
+            emit RewardDistributed(contract_, usdcDistributed);
+
+            return rewardsDistributed = usdcDistributed;
         }
 
-        isSafeRewardsDistributed = false;
-
-        usdcToken.safeTransfer(contract_, usdcDistributed);
-
-        emit RewardDistributed(contract_, usdcDistributed);
+        rewardsDistributed = usdcDistributed;
     }
 
     /**
@@ -362,7 +379,7 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
             _contractShares[1] = ContractShare(0, safeStaking, 6_000);
             _contractShares[2] = ContractShare(0, usdcBuyback, 1_000);
         }
-        //!note transfer out staking.
+
         updateContractShares(_contractShares);
     }
 
@@ -392,10 +409,10 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
 
     /// @dev Ends the staking emissions.
     function endStakingEmissions() public override onlyOwner {
-        //!note should this be added??
-        // if (safeTransferred < MAX_STAKING_EMISSIONS) {
-        //     revert SYRD__MAX_SUPPLY_NOT_EXCEEDED();
-        // }
+        if (safeTransferred < MAX_STAKING_EMISSIONS) {
+            revert SYRD__STAKING_EMISSION_NOT_EXHAUSTED();
+        }
+
         currentStakingState = StakingEmissionState.Ended;
 
         switchSharesPerPhase();
@@ -432,11 +449,6 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
         if (totalShare != BPS_MAX) revert SYRD__INVALID_BPS();
     }
 
-    /// @dev Removes excess USDC from the contract.
-    function removeExcessUsdc(uint256 amount) public override onlyOwner {
-        usdcToken.safeTransfer(owner(), amount);
-    }
-
     /// @dev Returns the pending rewards for a contract.
     function pendingRewards(address contract_) public view override returns (uint256, uint256) {
         if (contract_ != approvedContracts[contractIndex[contract_]].contract_) {
@@ -464,7 +476,7 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
 
         if (currentStakingState == StakingEmissionState.Live) {
             if (contract_ == safeStaking) {
-                pendingSafeRewards = ((pendingContractRewards * 1e30) / _getCurrentTokenPrice());
+                pendingSafeRewards = ((pendingContractRewards * 1e30) / _getTokenPrice());
 
                 return (0, pendingSafeRewards);
             }
@@ -490,19 +502,9 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
             if (usdcDistributed != 0) {
                 approvedContracts[i].shareDebt = accumulatedContractUsdc;
 
-                if (contractDetails.contract_ == address(safeStaking)) {
-                    if (currentStakingState == StakingEmissionState.Live) {
-                        //console.log("Live");
-                        usdcToken.safeTransfer(
-                            address(safeStaking), outStandingContractRewards[contractDetails.contract_]
-                        );
-                    } else {
-                        //console.log("Not live");
-                        uint256 safeToTransfer = ((usdcDistributed * 1e30) / _getCurrentTokenPrice());
-                        safeToken.transfer(address(safeStaking), safeToTransfer);
-                    }
-                } else {
-                    outStandingContractRewards[contractDetails.contract_] += usdcDistributed;
+                if (contractDetails.contract_ == safeStaking) {
+                    ///@dev let staking contract handle the pulling of rewards
+                    ISafeYieldStaking(safeStaking).updateRewards();
                 }
             }
         }
@@ -521,8 +523,10 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
         delete contractIndex[oldAddress];
     }
 
-    /// @dev Internal function to get the current token price.
-    function _getCurrentTokenPrice() internal pure returns (uint256) {
-        return 1e18; //!note : implement logic to get the current token price
+    /// @dev Internal function to get the TWAP $SAFE token price from uniV3.
+    function _getTokenPrice() internal view returns (uint256) {
+        if (safeYieldPool == address(0)) return 1e18;
+
+        return safeYieldTWAP.getTwap(safeYieldPool, twapInterval);
     }
 }
