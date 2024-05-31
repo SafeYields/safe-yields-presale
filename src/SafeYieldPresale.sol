@@ -387,9 +387,6 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
 
         if (safeTokensAvailableForPurchase == 0) revert SAFE_YIELD_NO_MORE_TOKENS_LEFT();
 
-        //!note keep??
-        //uint128 safeTokensToBuy = safeTokensBought;
-
         if (safeTokensBought >= safeTokensAvailableForPurchase) {
             safeTokensBought = safeTokensAvailableForPurchase;
 
@@ -447,7 +444,6 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
 
         ///@notice referral commissions
         address referrerInvestor;
-        //!note move to internal function??
         if (referrerId != bytes32(0)) {
             ReferrerInfo storage _referrerInfo = referrerInfo[referrerId];
 
@@ -491,10 +487,11 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
                     referrerRecipients[referrerInvestor][referrerIndex[referrerInvestor][investor]].referrerRecipient
                         != investor
                 ) {
+                    referrerIndex[referrerInvestor][investor] = uint128(referrerRecipients[referrerInvestor].length);
+
                     referrerRecipients[referrerInvestor].push(
                         ReferrerRecipient({ referrerRecipient: investor, usdcAmountInvested: usdcAmount })
                     );
-                    referrerIndex[referrerInvestor][investor] = uint128(referrerRecipients[referrerInvestor].length) - 1;
                 } else {
                     referrerRecipients[referrerInvestor][referrerIndex[referrerInvestor][investor]].usdcAmountInvested
                     += usdcAmount;
@@ -534,7 +531,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
         }
     }
 
-    function mintAllAllocations() external override onlyOwner {
+    function mintStakingAllocation() external override onlyOwner {
         safeToken.mint(PRE_SALE_CAP);
     }
 }
