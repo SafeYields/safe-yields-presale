@@ -10,6 +10,7 @@ import { USDCMockToken } from "./mocks/USDCMockToken.sol";
 import { SafeYieldRewardDistributor } from "src/SafeYieldRewardDistributor.sol";
 import { SafeYieldPresale } from "src/SafeYieldPresale.sol";
 import { SafeYieldStaking } from "src/SafeYieldStaking.sol";
+import { SafeYieldTWAP } from "src/SafeYieldTWAP.sol";
 
 abstract contract SafeYieldBaseTest is Test {
     uint256 public constant PRE_SALE_MAX_SUPPLY = 2_000_000e18;
@@ -27,6 +28,7 @@ abstract contract SafeYieldBaseTest is Test {
     SafeYieldRewardDistributor public distributor;
     SafeYieldPresale public presale;
     SafeYieldStaking public staking;
+    SafeYieldTWAP public twap;
     SafeToken public safeToken;
     USDCMockToken public usdc;
 
@@ -56,12 +58,20 @@ abstract contract SafeYieldBaseTest is Test {
 
         staking = new SafeYieldStaking(address(safeToken), address(usdc), protocolAdmin);
 
+        twap = new SafeYieldTWAP();
+
         presale = new SafeYieldPresale(
             address(safeToken), address(usdc), address(staking), 1_000e18, 100_000e18, 1e18, 5_00, 5_00, protocolAdmin
         );
 
         distributor = new SafeYieldRewardDistributor(
-            address(safeToken), address(usdc), teamOperations, usdcBuyback, address(staking), protocolAdmin
+            address(safeToken),
+            address(usdc),
+            teamOperations,
+            usdcBuyback,
+            address(staking),
+            protocolAdmin,
+            address(twap)
         );
 
         safeToken.setAllocationLimit(address(distributor), STAKING_MAX_SUPPLY);
