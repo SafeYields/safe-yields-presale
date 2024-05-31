@@ -479,12 +479,12 @@ contract SafeYieldRewardDistributorTest is SafeYieldBaseTest {
         console.log("Total Revenue", usdc.balanceOf(address(distributor)));
         console.log();
 
-        uint256 newBalance = usdc.balanceOf(address(distributor));
+        // uint256 newBalance = usdc.balanceOf(address(distributor));
 
         (uint256 stakingPendingUSDC2, uint256 stakingPendingSafeRewards2) = distributor.pendingRewards(address(staking));
         (uint256 teamOperationsPendingUSDC2, uint256 teamOperationsPendingSafeRewards2) =
             distributor.pendingRewards(teamOperations);
-        (uint256 usdcBuyBackPendingUSDC2, uint256 usdcBuyBackPendingSafeRewards2) =
+        (uint256 usdcBuyBackPendingUSDC2, /*uint256 usdcBuyBackPendingSafeRewards2*/ ) =
             distributor.pendingRewards(usdcBuyback);
 
         console.log("Staking Pending Safe Rewards", stakingPendingSafeRewards2);
@@ -496,12 +496,12 @@ contract SafeYieldRewardDistributorTest is SafeYieldBaseTest {
         // console.log("usdcBuyback Pending Safe Rewards", usdcBuyBackPendingSafeRewards2);
         console.log("usdcBuyback Pending USDC Rewards", usdcBuyBackPendingUSDC2);
 
-        uint256 calculateStakingPendingRewards2 = (6_000 * newBalance) / 10_000;
-        uint256 calculateTeamOpPendingRewards2 = (3_000 * newBalance) / 10_000;
-        uint256 calculateUsdcBuyBackPendingRewards2 = (3_500 * newBalance) / 10_000;
+        // uint256 calculateStakingPendingRewards2 = (6_000 * newBalance) / 10_000;
+        // uint256 calculateTeamOpPendingRewards2 = (3_000 * newBalance) / 10_000;
+        // uint256 calculateUsdcBuyBackPendingRewards2 = (3_500 * newBalance) / 10_000;
 
-        console.log("calculateTeamOpPendingRewards2", calculateTeamOpPendingRewards2);
-        console.log("calculateUsdcBuyBackPendingRewards2", calculateUsdcBuyBackPendingRewards2);
+        // console.log("calculateTeamOpPendingRewards2", calculateTeamOpPendingRewards2);
+        // console.log("calculateUsdcBuyBackPendingRewards2", calculateUsdcBuyBackPendingRewards2);
 
         //vm.assume(distributor.MAX_STAKING_EMISSIONS() == 0);
         vm.startPrank(protocolAdmin);
