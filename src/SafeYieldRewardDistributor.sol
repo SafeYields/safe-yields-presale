@@ -9,7 +9,8 @@ import { ISafeYieldPreSale } from "./interfaces/ISafeYieldPreSale.sol";
 import { ISafeToken } from "./interfaces/ISafeToken.sol";
 import { StakingEmissionState, PreSaleState, ContractShare } from "./types/SafeTypes.sol";
 import { ISafeYieldRewardDistributor } from "./interfaces/ISafeYieldRewardDistributor.sol";
-//import { console } from "forge-std/Test.sol";
+import { console } from "forge-std/Test.sol";
+//import { SafeYieldTWAP } from "./SafeYieldTWAP.sol";
 
 contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step {
     using SafeERC20 for IERC20;
@@ -315,21 +316,23 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
             }
         }
 
-        if (currentStakingState == StakingEmissionState.Live || safeTransferred < MAX_STAKING_EMISSIONS) {
-            if (contract_ == safeStaking) {
-                uint256 tokensToMint = ((usdcDistributed * 1e30) / _getCurrentTokenPrice());
+        if (currentStakingState == StakingEmissionState.Live) {
+            if (safeTransferred < MAX_STAKING_EMISSIONS) {
+                if (contract_ == safeStaking) {
+                    uint256 tokensToMint = ((usdcDistributed * 1e30) / _getCurrentTokenPrice());
 
-                safeToken.transfer(contract_, tokensToMint);
+                    safeToken.transfer(contract_, tokensToMint);
 
-                safeTransferred += tokensToMint;
+                    safeTransferred += tokensToMint;
 
-                totalUsdcFromSafeMinting += usdcDistributed;
+                    totalUsdcFromSafeMinting += usdcDistributed;
 
-                isSafeRewardsDistributed = true;
+                    isSafeRewardsDistributed = true;
 
-                emit RewardDistributed(contract_, tokensToMint);
+                    emit RewardDistributed(contract_, tokensToMint);
 
-                return tokensToMint;
+                    return tokensToMint;
+                }
             }
         }
 
@@ -488,10 +491,12 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
 
                 if (contractDetails.contract_ == address(safeStaking)) {
                     if (currentStakingState == StakingEmissionState.Live) {
+                        console.log("Live");
                         usdcToken.safeTransfer(
                             address(safeStaking), outStandingContractRewards[contractDetails.contract_]
                         );
                     } else {
+                        console.log("Not live");
                         uint256 safeToTransfer = ((usdcDistributed * 1e30) / _getCurrentTokenPrice());
                         safeToken.transfer(address(safeStaking), safeToTransfer);
                     }

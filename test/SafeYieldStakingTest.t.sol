@@ -103,9 +103,6 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
 
         (uint128 pendingUsdcRewardsBob,) = staking.calculatePendingRewards(address(BOB));
 
-        console.log("Pending rewards Alice: ", pendingUsdcRewardsAlice);
-        console.log("Pending rewards Bob: ", pendingUsdcRewardsBob);
-
         uint256 aliceUsdcBalanceBefore = usdc.balanceOf(address(ALICE));
         vm.prank(ALICE);
         staking.claimRewards(ALICE);
