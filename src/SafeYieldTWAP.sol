@@ -36,12 +36,22 @@ contract SafeYieldTWAP {
 
         (int56[] memory tickCumulativeArray,) = IUniswapV3Pool(_pool).observe(elapsedSecondsArray);
 
-        uint256 _priceAverage = TickMath.getSqrtRatioAtTick(
-            int24(int256(uint256(int256(tickCumulativeArray[1] - tickCumulativeArray[0])) / elapsedSeconds))
+        return TickMath.getSqrtRatioAtTick(
+            int24(int256(tickCumulativeArray[1] - tickCumulativeArray[0]) / int256(uint256(elapsedSeconds)))
         );
-        //!Note verify if no issues
-        // uint256 _priceAverage =
-        //     TickMath.getSqrtRatioAtTick(int24((tickCumulativeArray[1] - tickCumulativeArray[0]) / elapsedSeconds));
-        return _priceAverage;
+    }
+
+    function getTwap(address uniV3Pool, uint32 elapsedSeconds) public view returns (uint256) {
+        if (elapsedSeconds < 60) revert("Seconds too low");
+
+        uint32[] memory elapsedSecondsArray = new uint32[](2);
+        elapsedSecondsArray[0] = 0; // now
+        elapsedSecondsArray[1] = elapsedSeconds; // from (before)
+
+        (int56[] memory tickCumulativeArray,) = IUniswapV3Pool(uniV3Pool).observe(elapsedSecondsArray);
+
+        return TickMath.getSqrtRatioAtTick(
+            int24(int256(tickCumulativeArray[0] - tickCumulativeArray[1]) / int256(uint256(elapsedSeconds)))
+        );
     }
 }
