@@ -67,7 +67,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20 {
     error SAFE_YIELD_INVALID_STAKE_AMOUNT();
     error SAFE_YIELD_INSUFFICIENT_STAKE();
     error SAFE_YIELD_INVALID_ADDRESS();
-    error SAFE_YIELD__TRANSFER_NOT_ALLOWED();
+    error SAFE_YIELD_STAKED_SAFE_TRANSFER_NOT_ALLOWED();
 
     /*//////////////////////////////////////////////////////////////
                                MODIFIERS
@@ -125,16 +125,10 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20 {
                 usdcAccumulatedRewardsPerStake += SafeCast.toUint128(usdcDiff.mulDiv(PRECISION, totalStaked));
 
                 lastUsdcBalance = contractUsdcBalance;
-
-                console.log("USDC Rewards here");
             }
 
-            console.log("Is Safe Rewards?", distributor.isSafeRewardsDistributed());
-            
             if (distributor.isSafeRewardsDistributed()) {
                 if (shareableRewards != 0) {
-                    console.log("Safe Rewards here");
-
                     safeAccumulatedRewardsPerStake +=
                         SafeCast.toUint128(shareableRewards.mulDiv(PRECISION, totalStaked));
                 }
@@ -179,7 +173,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20 {
 
         claimRewards(user);
 
-        unStake(user, amount);
+        _unStake(user, amount);
 
         safeToken.safeTransfer(user, amount);
 
@@ -192,7 +186,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20 {
 
         claimRewards(msg.sender);
 
-        unStake(msg.sender, amount);
+        _unStake(msg.sender, amount);
 
         safeToken.safeTransfer(msg.sender, amount);
 
@@ -221,18 +215,17 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20 {
         return userStake[_user];
     }
 
-    /**
-     * @dev used user instead of msg.sender because the
-     * presale calls unstake which means msg.sender will be
-     * be the pre-sale instead of the contract.
-     * !note alternative??
-     */
-    function claimRewards(address user) public override lockStaking {
+    function claimRewards(address user) public override {
         if (userStake[user].stakeAmount == 0) return;
 
         updateRewards();
 
-        (uint128 pendingUsdcRewards, uint128 pendingSafeRewards) = calculatePendingRewards(user);
+        (
+            uint128 pendingUsdcRewards,
+            uint128 pendingSafeRewards,
+            int128 accumulateUsdcRewards,
+            int128 accumulateSafeRewards
+        ) = calculatePendingRewards(user);
 
         /**
          * @dev If the user has pending rewards, the rewards are transferred to the user.
@@ -240,14 +233,15 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20 {
          * If any other state, the rewards are transferred in USDC.
          */
         if (pendingSafeRewards != 0) {
-            userStake[user].safeRewardsDebt = SafeCast.toInt128(SafeCast.toInt256(pendingSafeRewards));
+            userStake[user].safeRewardsDebt = accumulateSafeRewards;
 
             //safe rewards
             safeToken.safeTransfer(user, pendingSafeRewards);
         }
         if (pendingUsdcRewards != 0) {
-            userStake[user].usdcRewardsDebt = SafeCast.toInt128(SafeCast.toInt256(pendingUsdcRewards));
+            userStake[user].usdcRewardsDebt = accumulateUsdcRewards;
 
+            lastUsdcBalance -= pendingUsdcRewards;
             //usdc rewards
             usdc.safeTransfer(user, pendingUsdcRewards);
         }
@@ -259,12 +253,18 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20 {
         public
         view
         override
-        returns (uint128 pendingUsdcRewards, uint128 pendingSafeRewards)
+        returns (
+            uint128 pendingUsdcRewards,
+            uint128 pendingSafeRewards,
+            int128 accumulateUsdcRewards,
+            int128 accumulateSafeRewards
+        )
     {
-        uint128 userStakeAmount = userStake[user].stakeAmount;
+        Stake memory _userStake = userStake[user];
+        uint128 _totalStaked = totalStaked;
 
-        if (totalStaked == 0 || userStakeAmount == 0) {
-            return (0, 0);
+        if (_totalStaked == 0 || _userStake.stakeAmount == 0) {
+            return (0, 0, 0, 0);
         }
 
         (uint256 pendingUsdcRewardsToContract, uint256 pendingSafeRewardsToContract) =
@@ -274,29 +274,34 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20 {
         uint128 stakingAccUsdcRewardsPerStake = usdcAccumulatedRewardsPerStake;
 
         if (pendingUsdcRewardsToContract != 0) {
-            stakingAccUsdcRewardsPerStake += uint128(pendingUsdcRewardsToContract.mulDiv(1e18, totalStaked));
+            stakingAccUsdcRewardsPerStake += uint128(pendingUsdcRewardsToContract.mulDiv(1e18, _totalStaked));
         }
 
         if (pendingSafeRewardsToContract != 0) {
-            stakingAccSafeRewardsPerStake += uint128(pendingSafeRewardsToContract.mulDiv(1e18, totalStaked));
+            stakingAccSafeRewardsPerStake += uint128(pendingSafeRewardsToContract.mulDiv(1e18, _totalStaked));
         }
 
-        int128 accumulateUsdcRewards = SafeCast.toInt128(
-            SafeCast.toInt256(userStakeAmount.mulDiv(stakingAccUsdcRewardsPerStake, PRECISION, Math.Rounding.Floor))
+        accumulateUsdcRewards = SafeCast.toInt128(
+            SafeCast.toInt256(
+                _userStake.stakeAmount.mulDiv(stakingAccUsdcRewardsPerStake, PRECISION, Math.Rounding.Floor)
+            )
         );
 
-        int128 accumulateSafeRewards = SafeCast.toInt128(
-            SafeCast.toInt256(userStakeAmount.mulDiv(stakingAccSafeRewardsPerStake, PRECISION, Math.Rounding.Floor))
+        accumulateSafeRewards = SafeCast.toInt128(
+            SafeCast.toInt256(
+                _userStake.stakeAmount.mulDiv(stakingAccSafeRewardsPerStake, PRECISION, Math.Rounding.Floor)
+            )
         );
 
         /**
          * @dev Calculate the pending rewards for the user.
          * The pending rewards are calculated by subtracting the user's reward debt from the accumulated rewards.
-         * users debt is the amount of rewards the user has already claimed.
+         * Users debt is the amount of rewards the user has already claimed or,
+         * the user ineligible to claim because were distributed before they had a stake.
          */
-        pendingUsdcRewards = uint128(int128(int256(accumulateUsdcRewards)) - userStake[user].usdcRewardsDebt);
+        pendingUsdcRewards = uint128(int128(int256(accumulateUsdcRewards)) - _userStake.usdcRewardsDebt);
 
-        pendingSafeRewards = uint128(int128(int256(accumulateSafeRewards)) - userStake[user].safeRewardsDebt);
+        pendingSafeRewards = uint128(int128(int256(accumulateSafeRewards)) - _userStake.safeRewardsDebt);
     }
 
     function _stake(address _user, uint128 amount) internal {
@@ -315,11 +320,15 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20 {
         _mint(_user, amount);
     }
 
-    function unStake(address _user, uint128 amount) internal {
+    function _unStake(address _user, uint128 amount) internal {
         userStake[_user].stakeAmount -= amount;
 
         userStake[_user].usdcRewardsDebt -= SafeCast.toInt128(
             SafeCast.toInt256(amount.mulDiv(usdcAccumulatedRewardsPerStake, PRECISION, Math.Rounding.Floor))
+        );
+
+        userStake[_user].safeRewardsDebt -= SafeCast.toInt128(
+            SafeCast.toInt256(amount.mulDiv(safeAccumulatedRewardsPerStake, PRECISION, Math.Rounding.Floor))
         );
 
         int256 virtualAccumUsdc = int256(userStake[_user].stakeAmount.mulDiv(usdcAccumulatedRewardsPerStake, 1e18));
@@ -334,18 +343,15 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20 {
             userStake[_user].safeRewardsDebt = int128(virtualAccumSafe);
         }
 
-        userStake[_user].safeRewardsDebt -= SafeCast.toInt128(
-            SafeCast.toInt256(amount.mulDiv(safeAccumulatedRewardsPerStake, PRECISION, Math.Rounding.Floor))
-        );
-
         totalStaked -= amount;
 
         _burn(_user, amount);
     }
 
+    ///@dev disable sSafeToken transfer
     function _update(address from, address to, uint256 value) internal override {
         if (from != address(0) && to != address(0)) {
-            revert SAFE_YIELD__TRANSFER_NOT_ALLOWED();
+            revert SAFE_YIELD_STAKED_SAFE_TRANSFER_NOT_ALLOWED();
         }
 
         super._update(from, to, value);

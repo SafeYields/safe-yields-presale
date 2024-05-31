@@ -23,7 +23,12 @@ interface ISafeYieldStaking {
 
     function calculatePendingRewards(address user)
         external
-        returns (uint128 pendingUsdcRewards, uint128 pendingSafeRewards);
+        returns (
+            uint128 pendingUsdcRewards,
+            uint128 pendingSafeRewards,
+            int128 accumulateUsdcRewards,
+            int128 accumulateSafeRewards
+        );
 
     function setPresale(address _presale) external;
 
