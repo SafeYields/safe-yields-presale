@@ -72,9 +72,9 @@ abstract contract SafeYieldBaseTest is Test {
         staking.setRewardDistributor(address(distributor));
 
         //mint
-        presale.mintAllAllocations();
+        presale.mintStakingAllocation();
 
-        distributor.mintAllAllocations();
+        distributor.mintStakingAllocation();
 
         _mintUsdc2Users();
 

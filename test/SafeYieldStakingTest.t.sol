@@ -99,9 +99,9 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         vm.stopPrank();
 
         skip(5 minutes);
-        (uint128 pendingUsdcRewardsAlice,) = staking.calculatePendingRewards(address(ALICE));
+        (uint128 pendingUsdcRewardsAlice,,,) = staking.calculatePendingRewards(address(ALICE));
 
-        (uint128 pendingUsdcRewardsBob,) = staking.calculatePendingRewards(address(BOB));
+        (uint128 pendingUsdcRewardsBob,,,) = staking.calculatePendingRewards(address(BOB));
 
         uint256 aliceUsdcBalanceBefore = usdc.balanceOf(address(ALICE));
         vm.prank(ALICE);
@@ -113,8 +113,8 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         staking.claimRewards(BOB);
         uint256 bobUsdcBalanceAfter = usdc.balanceOf(address(BOB));
 
-        (uint128 pendingUsdcRewardsAliceAfter,) = staking.calculatePendingRewards(address(ALICE));
-        (uint128 pendingUsdcRewardsBobAfter,) = staking.calculatePendingRewards(address(BOB));
+        (uint128 pendingUsdcRewardsAliceAfter,,,) = staking.calculatePendingRewards(address(ALICE));
+        (uint128 pendingUsdcRewardsBobAfter,,,) = staking.calculatePendingRewards(address(BOB));
 
         //assertions
         assertEq(aliceUsdcBalanceAfter, aliceUsdcBalanceBefore + pendingUsdcRewardsAlice);
@@ -155,10 +155,10 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
          * Bob gets 1_000e18 / 3_000e18 * 3_500e18 = 1_166e18
          */
         skip(5 minutes);
-        (, uint128 pendingRewardsAlice) = staking.calculatePendingRewards(address(ALICE));
+        (, uint128 pendingRewardsAlice,,) = staking.calculatePendingRewards(address(ALICE));
 
         skip(5 minutes);
-        (, uint128 pendingRewardsBob) = staking.calculatePendingRewards(address(BOB));
+        (, uint128 pendingRewardsBob,,) = staking.calculatePendingRewards(address(BOB));
 
         console.log("Pending Safe Rewards for Alice", pendingRewardsAlice);
         //
@@ -170,11 +170,11 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
 
         console.log("Second Rewards*********************");
         console.log("ALice Pending*********");
-        (, uint128 pendingRewardsAlice2) = staking.calculatePendingRewards(address(ALICE));
+        (, uint128 pendingRewardsAlice2,,) = staking.calculatePendingRewards(address(ALICE));
 
         console.log("BOB Pending*********");
         skip(5 minutes);
-        (, uint128 pendingRewardsBob2) = staking.calculatePendingRewards(address(BOB));
+        (, uint128 pendingRewardsBob2,,) = staking.calculatePendingRewards(address(BOB));
 
         skip(5 minutes);
 
@@ -206,11 +206,11 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
 
         console.log("Third Rewards*********************");
         console.log("ALice Pending 3*********");
-        (, uint128 pendingRewardsAlice3) = staking.calculatePendingRewards(address(ALICE));
+        (, uint128 pendingRewardsAlice3,,) = staking.calculatePendingRewards(address(ALICE));
 
         console.log("BOB Pending 3*********");
         skip(5 minutes);
-        (, uint128 pendingRewardsBob3) = staking.calculatePendingRewards(address(BOB));
+        (, uint128 pendingRewardsBob3,,) = staking.calculatePendingRewards(address(BOB));
 
         skip(5 minutes);
 
@@ -262,9 +262,9 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
 
         skip(5 minutes);
 
-        (uint128 pendingUsdcRewardsAlice,) = staking.calculatePendingRewards(address(ALICE));
+        (uint128 pendingUsdcRewardsAlice,,,) = staking.calculatePendingRewards(address(ALICE));
 
-        (uint128 pendingUsdcRewardsBob,) = staking.calculatePendingRewards(address(BOB));
+        (uint128 pendingUsdcRewardsBob,,,) = staking.calculatePendingRewards(address(BOB));
 
         console.log("Pending rewards Alice: ", pendingUsdcRewardsAlice);
         console.log("Pending rewards Bob: ", pendingUsdcRewardsBob);
@@ -319,9 +319,9 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
 
         skip(5 minutes);
 
-        (, uint128 pendingSafeRewardsAlice) = staking.calculatePendingRewards(address(ALICE));
+        (, uint128 pendingSafeRewardsAlice,,) = staking.calculatePendingRewards(address(ALICE));
 
-        (, uint128 pendingSafeRewardsBOB) = staking.calculatePendingRewards(address(BOB));
+        (, uint128 pendingSafeRewardsBOB,,) = staking.calculatePendingRewards(address(BOB));
 
         console.log("First Pending rewards Alice: ", pendingSafeRewardsAlice);
         console.log("First Pending rewards Bob: ", pendingSafeRewardsBOB);
@@ -341,9 +341,9 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
 
         skip(5 minutes);
 
-        (, uint128 pendingSafeRewardsAlice2) = staking.calculatePendingRewards(address(ALICE));
+        (, uint128 pendingSafeRewardsAlice2,,) = staking.calculatePendingRewards(address(ALICE));
 
-        (, uint128 pendingSafeRewardsBOB2) = staking.calculatePendingRewards(address(BOB));
+        (, uint128 pendingSafeRewardsBOB2,,) = staking.calculatePendingRewards(address(BOB));
 
         console.log("Second Pending rewards Alice: ", pendingSafeRewardsAlice2);
         console.log("Second Pending rewards Bob: ", pendingSafeRewardsBOB2);
@@ -379,9 +379,9 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
 
         skip(5 minutes);
 
-        (, uint128 pendingRewardsAlice) = staking.calculatePendingRewards(address(ALICE));
+        (, uint128 pendingRewardsAlice,,) = staking.calculatePendingRewards(address(ALICE));
 
-        (, uint128 pendingRewardsBob) = staking.calculatePendingRewards(address(BOB));
+        (, uint128 pendingRewardsBob,,) = staking.calculatePendingRewards(address(BOB));
 
         console.log("First Pending rewards Alice: ", pendingRewardsAlice);
         console.log("First Pending rewards Bob: ", pendingRewardsBob);
@@ -404,9 +404,9 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
 
         skip(5 minutes);
 
-        (, uint128 pendingRewardsAlice2) = staking.calculatePendingRewards(address(ALICE));
+        (, uint128 pendingRewardsAlice2,,) = staking.calculatePendingRewards(address(ALICE));
 
-        (, uint128 pendingRewardsBob2) = staking.calculatePendingRewards(address(BOB));
+        (, uint128 pendingRewardsBob2,,) = staking.calculatePendingRewards(address(BOB));
 
         console.log("Second Pending rewards Alice: ", pendingRewardsAlice2);
         console.log("Second Pending rewards Bob: ", pendingRewardsBob2);
@@ -478,8 +478,8 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
 
         skip(5 minutes);
 
-        (uint128 pendingRewardsUserA,) = staking.calculatePendingRewards(userA);
-        (uint128 pendingRewardsUserB,) = staking.calculatePendingRewards(userB);
+        (uint128 pendingRewardsUserA,,,) = staking.calculatePendingRewards(userA);
+        (uint128 pendingRewardsUserB,,,) = staking.calculatePendingRewards(userB);
 
         assertEq(pendingRewardsUserA, 0);
         assertEq(pendingRewardsUserB, 0);
@@ -530,10 +530,10 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         vm.stopPrank();
 
         skip(5 minutes);
-        (uint128 pendingRewardsUserA,) = staking.calculatePendingRewards(userA);
+        (uint128 pendingRewardsUserA,,,) = staking.calculatePendingRewards(userA);
 
         skip(5 minutes);
-        (uint128 pendingRewardsUserB,) = staking.calculatePendingRewards(userB);
+        (uint128 pendingRewardsUserB,,,) = staking.calculatePendingRewards(userB);
 
         //uint256 userAcalculatedPendingRewards = (amount * 6_000e6) / (amount + (amount / 2));
         uint256 userAcalculatedPendingRewards = amount.mulDiv(6_000e6, staking.totalStaked());
