@@ -352,6 +352,8 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
 
             usdcToken.safeTransfer(contract_, usdcDistributed);
 
+            lastBalance -= usdcDistributed;
+
             emit RewardDistributed(contract_, usdcDistributed);
 
             return rewardsDistributed = usdcDistributed;
@@ -458,6 +460,7 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
 
         if (uint48(block.timestamp) > lastUpdatedTimestamp) {
             uint256 contractBalance = usdcToken.balanceOf(address(this));
+
             uint256 diff = contractBalance - lastBalance;
 
             if (diff != 0) {
@@ -468,9 +471,11 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
         ContractShare memory contractDetails = approvedContracts[contractIndex[contract_]];
 
         int256 accumulatedContractUsdc = SafeCast.toInt256(contractDetails.share * accUsdc);
+
         uint256 pendingContractUsdc = SafeCast.toUint256(accumulatedContractUsdc - contractDetails.shareDebt);
 
         uint256 pendingContractRewards = pendingContractUsdc + outStandingContractRewards[contract_];
+
         uint256 pendingSafeRewards;
 
         if (currentStakingState == StakingEmissionState.Live) {
@@ -526,6 +531,6 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
     function _getTokenPrice() internal view returns (uint256) {
         if (safeYieldPool == address(0)) return 1e18;
 
-        return safeYieldTWAP.getTwap(safeYieldPool, twapInterval);
+        return safeYieldTWAP.getEstimateAmountOut(safeYieldPool, address(safeToken), 1e18, 1800);
     }
 }
