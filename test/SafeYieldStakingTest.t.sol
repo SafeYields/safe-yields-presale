@@ -317,36 +317,29 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         staking.stakeFor(BOB, 1_000e18);
         vm.stopPrank();
 
+        console.log("First Rewards***************************");
         skip(5 minutes);
 
-        (, uint128 pendingSafeRewardsAlice,,) = staking.calculatePendingRewards(address(ALICE));
+        (uint128 pendingUsdcRewardsAlice,,,) = staking.calculatePendingRewards(address(ALICE));
+        console.log("Pending rewards Alice: ", pendingUsdcRewardsAlice);
 
-        (, uint128 pendingSafeRewardsBOB,,) = staking.calculatePendingRewards(address(BOB));
+        skip(5 minutes);
+        (uint128 pendingUsdcRewardsBOB,,,) = staking.calculatePendingRewards(address(BOB));
+        console.log("Pending rewards Bob: ", pendingUsdcRewardsBOB);
 
-        console.log("First Pending rewards Alice: ", pendingSafeRewardsAlice);
-        console.log("First Pending rewards Bob: ", pendingSafeRewardsBOB);
-
+        skip(5 minutes);
         vm.prank(protocolAdmin);
         usdc.mint(address(distributor), 10_000e6);
 
-        skip(5 minutes);
-
-        vm.prank(ALICE);
-        staking.stakeFor(ALICE, 1_000e18);
+        console.log("Second Rewards***************************");
 
         skip(5 minutes);
-
-        vm.prank(BOB);
-        staking.stakeFor(BOB, 1_000e18);
+        (uint128 pendingUsdcRewardsAlice2,,,) = staking.calculatePendingRewards(address(ALICE));
+        console.log("Pending rewards Alice: ", pendingUsdcRewardsAlice2);
 
         skip(5 minutes);
-
-        (, uint128 pendingSafeRewardsAlice2,,) = staking.calculatePendingRewards(address(ALICE));
-
-        (, uint128 pendingSafeRewardsBOB2,,) = staking.calculatePendingRewards(address(BOB));
-
-        console.log("Second Pending rewards Alice: ", pendingSafeRewardsAlice2);
-        console.log("Second Pending rewards Bob: ", pendingSafeRewardsBOB2);
+        (uint128 pendingUsdcRewardsBOB2,,,) = staking.calculatePendingRewards(address(BOB));
+        console.log("Pending rewards Bob: ", pendingUsdcRewardsBOB2);
     }
 
     function testStakeSafeTokensGetSafeRewards() public startEndPresale {
