@@ -21,7 +21,7 @@ contract SafeYieldPresaleDeployment is Script {
         vm.startBroadcast(deployerPrivateKey);
 
         usdc = new USDCMockToken("USDC", "USDC", 6);
-        safe = new SafeToken("SafeToken", "SAFE", SAFE_YIELD_ADMIN);
+        safe = new SafeToken(SAFE_YIELD_ADMIN);
 
         staking = new SafeYieldStaking(address(safe), address(usdc), SAFE_YIELD_ADMIN);
 

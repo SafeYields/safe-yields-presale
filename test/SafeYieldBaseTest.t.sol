@@ -54,7 +54,7 @@ abstract contract SafeYieldBaseTest is Test {
     function setUp() public {
         vm.startPrank(protocolAdmin);
         usdc = new USDCMockToken("USDC", "USDC", 6);
-        safeToken = new SafeToken("SafeToken", "SAFE", protocolAdmin);
+        safeToken = new SafeToken(protocolAdmin);
 
         staking = new SafeYieldStaking(address(safeToken), address(usdc), protocolAdmin);
 
