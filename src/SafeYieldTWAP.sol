@@ -2,56 +2,35 @@
 pragma solidity ^0.8.20;
 
 import { IUniswapV3Pool } from "./uniswapV3/interfaces/IUniswapV3Pool.sol";
-import { IUniswapV3Factory } from "./uniswapV3/interfaces/IUniswapV3Factory.sol";
-import { PoolAddress } from "./uniswapV3/PoolAddress.sol";
-import { TickMath } from "./uniswapV3/TickMath.sol";
+import { OracleLibrary } from "./uniswapV3/OracleLibrary.sol";
 
 contract SafeYieldTWAP {
-    IUniswapV3Factory public constant UNISWAP_V3_FACTORY = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
-
-    function isPairSupported(address _tokenA, address _tokenB, uint24 _fee) internal pure returns (bool) {
-        address _pool =
-            PoolAddress.computeAddress(address(UNISWAP_V3_FACTORY), PoolAddress.getPoolKey(_tokenA, _tokenB, _fee));
-        if (_pool != address(0)) {
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    function getTwap(address _tokenIn, address _tokenOut, uint32 elapsedSeconds, uint24 _fee)
-        public
+    function getEstimateAmountOut(address uniswapV3Pool, address tokenIn, uint128 amountIn, uint32 secondsAgo)
+        external
         view
-        returns (uint256)
+        returns (uint256 amountOut)
     {
-        require(isPairSupported(_tokenIn, _tokenOut, _fee), "Pair not supported");
-        require(elapsedSeconds <= 900, "Seconds too high");
+        address _token0 = IUniswapV3Pool(uniswapV3Pool).token0();
+        address _token1 = IUniswapV3Pool(uniswapV3Pool).token1();
 
-        address _pool =
-            PoolAddress.computeAddress(address(UNISWAP_V3_FACTORY), PoolAddress.getPoolKey(_tokenIn, _tokenOut, _fee));
+        require(tokenIn == _token0 || tokenIn == _token1, "invalid token");
 
-        uint32[] memory elapsedSecondsArray = new uint32[](2);
-        elapsedSecondsArray[0] = elapsedSeconds; // from (before)
-        elapsedSecondsArray[1] = 0; // to (now)
+        address tokenOut = tokenIn == _token0 ? _token1 : _token0;
 
-        (int56[] memory tickCumulativeArray,) = IUniswapV3Pool(_pool).observe(elapsedSecondsArray);
+        uint32[] memory secondsAgos = new uint32[](2);
+        secondsAgos[0] = secondsAgo;
+        secondsAgos[1] = 0;
 
-        return TickMath.getSqrtRatioAtTick(
-            int24(int256(tickCumulativeArray[1] - tickCumulativeArray[0]) / int256(uint256(elapsedSeconds)))
-        );
-    }
+        (int56[] memory tickCumulatives,) = IUniswapV3Pool(uniswapV3Pool).observe(secondsAgos);
 
-    function getTwap(address uniV3Pool, uint32 elapsedSeconds) public view returns (uint256) {
-        if (elapsedSeconds < 60) revert("Seconds too low");
+        int56 tickCumulativesDelta = tickCumulatives[1] - tickCumulatives[0];
 
-        uint32[] memory elapsedSecondsArray = new uint32[](2);
-        elapsedSecondsArray[0] = 0; // now
-        elapsedSecondsArray[1] = elapsedSeconds; // from (before)
+        int24 tick = int24(int256(uint256(int256(tickCumulativesDelta)) / uint256(secondsAgo)));
 
-        (int56[] memory tickCumulativeArray,) = IUniswapV3Pool(uniV3Pool).observe(elapsedSecondsArray);
+        if (tickCumulativesDelta < 0 && (uint256(int256(tickCumulativesDelta)) % secondsAgo != 0)) {
+            tick--;
+        }
 
-        return TickMath.getSqrtRatioAtTick(
-            int24(int256(tickCumulativeArray[0] - tickCumulativeArray[1]) / int256(uint256(elapsedSeconds)))
-        );
+        amountOut = OracleLibrary.getQuoteAtTick(tick, amountIn, tokenIn, tokenOut);
     }
 }
