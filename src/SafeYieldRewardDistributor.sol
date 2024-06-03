@@ -348,7 +348,6 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
                     return rewardsDistributed = tokensToMint;
                 }
             }
-
             isSafeRewardsDistributed = false;
 
             usdcToken.safeTransfer(contract_, usdcDistributed);
@@ -398,7 +397,7 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
         }
     }
 
-    /// @dev Starts the staking emissions.
+    /// @dev Starts the staking emissions of $SAFE tokens.
     function startStakingEmissions() public override onlyOwner {
         currentStakingState = StakingEmissionState.Live;
 
