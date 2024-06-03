@@ -232,10 +232,6 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         vm.startPrank(BOB);
         usdc.approve(address(presale), 100_000e6);
 
-        //103_950 00 00 00 00 00 00 00 00 00
-        //4_950 00 00 00 00 00 00 00 00 00
-        //99_000 00 00 00 00 00 00 00 00 00
-
         uint256 bobUsdcBalancePrior = usdc.balanceOf(BOB);
         presale.deposit(99_000e6, refId);
         uint256 bobUsdcBalanceAfter = usdc.balanceOf(BOB);
