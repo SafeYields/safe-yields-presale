@@ -49,7 +49,7 @@ contract SafeToken is ISafeToken, ERC20, AccessControl {
     error SAFE_YIELD__ONLY_BURNER_ROLE();
     error SAFE_YIELD__ONLY_ADMIN_ROLE();
 
-    constructor(string memory name, string memory symbol, address admin) ERC20(name, symbol) {
+    constructor(address admin) ERC20("Safe Yield", "SAY") {
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
 
         _mint(TEAM_OPERATIONS, 2_000_000e18);
