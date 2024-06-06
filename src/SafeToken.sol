@@ -23,10 +23,10 @@ contract SafeToken is ISafeToken, ERC20, AccessControl {
      * 2,000,000e18 for early investors rounds
      * 2,000,000e18 for IDO
      */
-    address public constant TEAM_OPERATIONS = address(0x12);
-    address public constant CORE_CONTRIBUTORS = address(0x13);
-    address public constant FUTURE_LIQUIDITY = address(0x14);
-    address public constant EARLY_INVESTORS = address(0x15);
+    address public constant TEAM_OPERATIONS = address(0x12); //!CHANGE
+    address public constant CORE_CONTRIBUTORS = address(0x13); //!CHANGE
+    address public constant FUTURE_LIQUIDITY = address(0x14); //!CHANGE
+    address public constant EARLY_INVESTORS = address(0x15); //!CHANGE
 
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES

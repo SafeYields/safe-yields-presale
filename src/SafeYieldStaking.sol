@@ -39,12 +39,14 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20 {
     //////////////////////////////////////////////////////////////*/
     ISafeYieldPreSale public presale;
     ISafeYieldRewardDistributor public distributor;
+
     uint128 public usdcAccumulatedRewardsPerStake; //@dev accumulated usdc per safe staked.
     uint128 public safeAccumulatedRewardsPerStake; //@dev accumulated safe per safe staked.
     uint128 public totalStaked;
     uint48 public lastUpdateRewardsTimestamp;
     uint256 public lastSafeTokenBalance;
     uint256 public lastUsdcBalance;
+
     mapping(address user => Stake stake) public userStake;
 
     /*//////////////////////////////////////////////////////////////

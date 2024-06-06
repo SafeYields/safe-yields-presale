@@ -102,8 +102,8 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
         address _teamOperations,
         address _usdcBuyback,
         address _safeStaking,
-        address _protocolAdmin,
-        address _safeYieldTWAP
+        address _safeYieldTWAP,
+        address _protocolAdmin
     ) Ownable(_protocolAdmin) {
         if (
             _usdcToken == address(0) || _safeToken == address(0) || _teamOperations == address(0)
@@ -531,6 +531,6 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
     function _getTokenPrice() internal view returns (uint256) {
         if (safeYieldPool == address(0)) return 1e18;
 
-        return safeYieldTWAP.getEstimateAmountOut(safeYieldPool, address(safeToken), 1e18, 1800);
+        return safeYieldTWAP.getEstimateAmountOut(safeYieldPool, address(safeToken), 1e18, twapInterval);
     }
 }
