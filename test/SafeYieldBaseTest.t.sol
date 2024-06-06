@@ -71,9 +71,9 @@ abstract contract SafeYieldBaseTest is Test {
 
         vm.startPrank(protocolAdmin);
         usdc = new USDCMockToken("USDC", "USDC", 6);
-        safeToken = new SafeToken(protocolAdmin);
+        safeToken = new SafeToken();
 
-        staking = new SafeYieldStaking(address(safeToken), address(usdc), protocolAdmin);
+        staking = new SafeYieldStaking(address(safeToken), address(usdc));
 
         twap = new SafeYieldTWAP();
 
@@ -81,14 +81,16 @@ abstract contract SafeYieldBaseTest is Test {
             address(safeToken), address(usdc), address(staking), 1_000e18, 100_000e18, 1e18, 5_00, 5_00, protocolAdmin
         );
 
+        /**
+         * address _safeToken,
+         *     address _usdcToken,
+         *     address _teamOperations,
+         *     address _usdcBuyback,
+         *     address _safeStaking,
+         *     address _safeYieldTWAP
+         */
         distributor = new SafeYieldRewardDistributor(
-            address(safeToken),
-            address(usdc),
-            teamOperations,
-            usdcBuyback,
-            address(staking),
-            protocolAdmin,
-            address(twap)
+            address(safeToken), address(usdc), teamOperations, usdcBuyback, address(staking), address(twap)
         );
 
         safeToken.setAllocationLimit(address(distributor), STAKING_MAX_SUPPLY);
@@ -99,15 +101,15 @@ abstract contract SafeYieldBaseTest is Test {
         staking.setRewardDistributor(address(distributor));
 
         //mint
-        presale.mintStakingAllocation();
+        presale.mintPreSaleAllocation();
 
-        distributor.mintStakingAllocation();
+        distributor.mintStakingEmissionAllocation();
         vm.stopPrank();
 
-        address uniswapV3Pool = _createUniswapV3Pool();
+        //address uniswapV3Pool = _createUniswapV3Pool();
 
         vm.prank(protocolAdmin);
-        distributor.updateSafePool(uniswapV3Pool);
+        distributor.updateSafePool(address(0));
 
         _mintUsdc2Users();
 

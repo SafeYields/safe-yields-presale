@@ -32,9 +32,9 @@ contract SafeYieldPresaleDeployment is Script {
 
         usdc = new USDCMockToken("USDC", "USDC", 6);
 
-        safeToken = new SafeToken(SAFE_YIELD_ADMIN);
+        safeToken = new SafeToken();
 
-        staking = new SafeYieldStaking(address(safeToken), address(usdc), SAFE_YIELD_ADMIN);
+        staking = new SafeYieldStaking(address(safeToken), address(usdc));
 
         presale = new SafeYieldPresale(
             address(safeToken),
@@ -51,13 +51,7 @@ contract SafeYieldPresaleDeployment is Script {
         twap = new SafeYieldTWAP();
 
         distributor = new SafeYieldRewardDistributor(
-            address(safeToken),
-            address(usdc),
-            teamOperations,
-            usdcBuyback,
-            address(staking),
-            address(twap),
-            SAFE_YIELD_ADMIN
+            address(safeToken), address(usdc), teamOperations, usdcBuyback, address(staking), address(twap)
         );
 
         vm.stopBroadcast();
@@ -72,8 +66,8 @@ contract SafeYieldPresaleDeployment is Script {
         staking.setRewardDistributor(address(distributor));
 
         //mint allocations
-        presale.mintStakingAllocation();
-        distributor.mintStakingAllocation();
+        presale.mintPreSaleAllocation();
+        distributor.mintStakingEmissionAllocation();
 
         vm.stopBroadcast();
 

@@ -92,11 +92,11 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20 {
         _;
     }
 
-    constructor(address _safeToken, address _usdc, address _admin)
-        Ownable(_admin)
+    constructor(address _safeToken, address _usdc)
+        Ownable(msg.sender)
         ERC20("SafeYield Staked SafeToken", "sSafeToken")
     {
-        if (_safeToken == address(0) || _usdc == address(0) || _admin == address(0)) {
+        if (_safeToken == address(0) || _usdc == address(0)) {
             revert SAFE_YIELD_INVALID_ADDRESS();
         }
 

@@ -5,5 +5,5 @@ import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { SafeToken } from "../../src/SafeToken.sol";
 
 contract SafeMockToken is SafeToken {
-    constructor(string memory name, string memory symbol, uint8 decimals) SafeToken(msg.sender) { }
+    constructor(string memory name, string memory symbol, uint8 decimals) SafeToken() { }
 }
