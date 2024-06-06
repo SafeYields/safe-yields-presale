@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.26;
 
-import { Test, console } from "forge-std/Test.sol";
+import { Test, console, console2 } from "forge-std/Test.sol";
 import { SafeYieldPresale } from "src/SafeYieldPresale.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeMockToken } from "./mocks/SafeMockToken.sol";
@@ -10,6 +10,9 @@ import { USDCMockToken } from "./mocks/USDCMockToken.sol";
 import { SafeYieldRewardDistributor } from "src/SafeYieldRewardDistributor.sol";
 import { SafeYieldBaseTest } from "./SafeYieldBaseTest.t.sol";
 import { ContractShare } from "src/types/SafeTypes.sol";
+import { IUniswapV3Pool } from "src/uniswapV3/interfaces/IUniswapV3Pool.sol";
+import { ISwapRouter } from "src/uniswapV3/interfaces/ISwapRouter.sol";
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
 contract SafeYieldRewardDistributorTest is SafeYieldBaseTest {
     /**
@@ -474,7 +477,6 @@ contract SafeYieldRewardDistributorTest is SafeYieldBaseTest {
         skip(5 minutes);
 
         console.log();
-
         console.log("Switching To Staking Emissions-Safe Rewards");
         console.log("Total Revenue", usdc.balanceOf(address(distributor)));
         console.log();
@@ -535,6 +537,41 @@ contract SafeYieldRewardDistributorTest is SafeYieldBaseTest {
         console.log("usdcBuyback Pending USDC Rewards", usdcBuyBackPendingUSDC3);
 
         //assertions
+    }
+
+    function test_CheckTWAP() public {
+        console.log("uniswapV3 pool", distributor.safeYieldPool());
+
+        uint160 initialPrice = 1;
+
+        uint256 sqrtPrice = Math.sqrt(initialPrice);
+
+        uint256 QX96 = 2 ** 96;
+
+        uint160 sqrtPriceX96_ = uint160(sqrtPrice * QX96) - 1;
+
+        vm.startPrank(USDC_WHALE);
+
+        safeToken.approve(address(swapRouter), 1_000e18);
+
+        ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
+            tokenIn: address(safeToken),
+            tokenOut: USDC,
+            fee: 500,
+            recipient: USDC_WHALE,
+            deadline: block.timestamp + 100,
+            amountIn: 1_000e18,
+            amountOutMinimum: 1e6,
+            sqrtPriceLimitX96: 0
+        });
+
+        swapRouter.exactInputSingle(params);
+
+        skip(block.number + 1);
+
+        console.log(
+            "Price of Safe", twap.getEstimateAmountOut(distributor.safeYieldPool(), address(safeToken), 1e18, 60)
+        );
     }
 
     /*//////////////////////////////////////////////////////////////
