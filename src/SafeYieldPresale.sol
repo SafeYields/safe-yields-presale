@@ -44,7 +44,6 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
     uint128 public referrerCommissionUsdcBps;
     uint128 public referrerCommissionSafeTokenBps;
     uint128 public totalRedeemableReferrerUsdc;
-    address public protocolAdmin;
     uint128 public totalUsdcRaised; //total usdc raised in the presale minus the referrer commission
     uint128 public totalUsdcToWithdraw; //To be reset after withdrawal
     mapping(address userAddress => uint128 safeTokensAllocation) public investorAllocations;

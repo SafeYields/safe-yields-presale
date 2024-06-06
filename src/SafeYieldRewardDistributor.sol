@@ -29,7 +29,6 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
     ISafeToken public safeToken;
     IERC20 public usdcToken;
     ContractShare[] public approvedContracts;
-    ISafeYieldPreSale public safePresale;
     StakingEmissionState public currentStakingState;
     SafeYieldTWAP public safeYieldTWAP;
 
@@ -38,6 +37,12 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
     address public teamOperations;
     address public usdcBuyback;
     address public safeStaking;
+    /**
+     *
+     * @dev the address of the pool to get the TWAP from.
+     * pool should be SAFE/WETH, since we using safe price
+     * in terms of WETH.
+     */
     address public safeYieldPool;
 
     uint256 public safeTransferred;
