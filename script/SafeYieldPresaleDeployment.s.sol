@@ -22,6 +22,10 @@ contract SafeYieldPresaleDeployment is Script {
     USDCMockToken usdc;
     SafeYieldTWAP twap;
 
+    /**
+     * @dev Run the script
+     * forge script script/SafeYieldPresaleDeployment.so.sol --rpc-url sepolia --etherscan-api-key sepolia --verify --vv
+     */
     function run() public {
         uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PK");
         vm.startBroadcast(deployerPrivateKey);
@@ -118,9 +122,4 @@ contract SafeYieldPresaleDeployment is Script {
         require(distributor.usdcBuyback() == usdcBuyback, "Invalid usdc buyback address");
         require(distributor.safeStaking() == address(staking), "Invalid staking address");
     }
-
-    /**
-     * @dev Run the script
-     * forge script script/SafeYieldPresaleDeployment.so.sol --rpc-url sepolia --etherscan-api-key sepolia --verify --vv
-     */
 }
