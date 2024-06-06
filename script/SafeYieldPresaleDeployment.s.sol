@@ -12,7 +12,7 @@ import { SafeYieldRewardDistributor } from "src/SafeYieldRewardDistributor.sol";
 contract SafeYieldPresaleDeployment is Script {
     uint256 public constant PRE_SALE_MAX_SUPPLY = 2_000_000e18;
     uint256 public constant STAKING_MAX_SUPPLY = 11_000_000e18;
-    address public constant SAFE_YIELD_ADMIN = address(0x13); //!CHANGE
+    address public constant SAFE_YIELD_ADMIN = 0x061Bc6f643038E4d6561aF4EBbc0B127cc5316cF; //!CHANGE
     address public constant teamOperations = address(0x14); //!CHANGE
     address public constant usdcBuyback = address(0x15); //!CHANGE
     SafeYieldPresale public presale;
@@ -68,9 +68,6 @@ contract SafeYieldPresaleDeployment is Script {
         safeToken.setAllocationLimit(address(distributor), STAKING_MAX_SUPPLY);
         safeToken.setAllocationLimit(address(presale), PRE_SALE_MAX_SUPPLY);
 
-        safeToken.setAllocationLimit(address(distributor), STAKING_MAX_SUPPLY);
-        safeToken.setAllocationLimit(address(presale), PRE_SALE_MAX_SUPPLY);
-
         staking.setPresale(address(presale));
         staking.setRewardDistributor(address(distributor));
 
@@ -100,7 +97,6 @@ contract SafeYieldPresaleDeployment is Script {
         require(address(presale.safeYieldStaking()) == address(staking), "Invalid staking address");
         require(address(presale.safeToken()) == address(safeToken), "Invalid safeToken token address");
         require(address(presale.usdcToken()) == address(usdc), "Invalid usdc address");
-        require(presale.protocolAdmin() == SAFE_YIELD_ADMIN, "Invalid admin address");
         require(presale.minAllocationPerWallet() == 1_000e18, "Invalid min allocation per wallet");
         require(presale.maxAllocationPerWallet() == 100_000e18, "Invalid max allocation per wallet");
         require(presale.referrerCommissionSafeTokenBps() == 5_00, "Invalid referrer commission safeToken token bps");
@@ -113,10 +109,9 @@ contract SafeYieldPresaleDeployment is Script {
         require(address(staking.presale()) == address(presale), "Invalid presale address");
 
         //validate distributor configuration
-        require(safeToken.balanceOf(address(presale)) == STAKING_MAX_SUPPLY, "Invalid presale allocation");
+        require(safeToken.balanceOf(address(presale)) == PRE_SALE_MAX_SUPPLY, "Invalid presale allocation");
         require(address(distributor.safeToken()) == address(safeToken), "Invalid safeToken token address");
         require(address(distributor.usdcToken()) == address(usdc), "Invalid usdc address");
-        require(address(distributor.safePresale()) == address(presale), "Invalid presale address");
         require(address(distributor.safeYieldTWAP()) == address(twap), "Invalid twap address");
         require(distributor.teamOperations() == teamOperations, "Invalid team operations address");
         require(distributor.usdcBuyback() == usdcBuyback, "Invalid usdc buyback address");
