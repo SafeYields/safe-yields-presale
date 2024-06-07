@@ -14,6 +14,8 @@ interface ISafeYieldRewardDistributor {
 
     function updateTeamOperations(address newTeamOperations) external;
 
+    function recoverTokens(address token, uint256 amount) external;
+
     function updateUsdcBuyback(address newUsdcBuyback) external;
 
     function addContract(ContractShare memory newContractInfo, ContractShare[] memory updatedAllocations) external;
@@ -36,7 +38,7 @@ interface ISafeYieldRewardDistributor {
 
     function updateContractShares(ContractShare[] memory updatedAllocations) external;
 
-    function mintStakingAllocation() external;
+    function mintStakingEmissionAllocation() external;
 
     function updateTwapInterval(uint32 newInterval) external;
 

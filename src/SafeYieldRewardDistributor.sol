@@ -69,6 +69,7 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
     event UsdcBuybackUpdated(address indexed previousUsdcBuyback, address indexed newUsdcBuyback);
     event UsdcWithdrawn(address indexed recipient, uint256 indexed amount);
     event RewardDistributed(address indexed contract_, uint256 indexed rewardsDistributed);
+    event TokensRecovered(address indexed token, uint256 indexed amount);
     /*//////////////////////////////////////////////////////////////
                                  ERRORS
     //////////////////////////////////////////////////////////////*/
@@ -107,12 +108,11 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
         address _teamOperations,
         address _usdcBuyback,
         address _safeStaking,
-        address _safeYieldTWAP,
-        address _protocolAdmin
-    ) Ownable(_protocolAdmin) {
+        address _safeYieldTWAP
+    ) Ownable(msg.sender) {
         if (
             _usdcToken == address(0) || _safeToken == address(0) || _teamOperations == address(0)
-                || _usdcBuyback == address(0) || _safeStaking == address(0) || _protocolAdmin == address(0)
+                || _usdcBuyback == address(0) || _safeStaking == address(0) || _safeYieldTWAP == address(0)
         ) {
             revert SYRD__ZERO_ADDRESS();
         }
@@ -265,14 +265,27 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
      * during the staking emissions.
      */
     function withdrawStakingUsdc() external override onlyOwner {
-        usdcToken.safeTransfer(owner(), totalUsdcFromSafeMinting);
+        uint256 withdrawalAmount = totalUsdcFromSafeMinting;
+
+        usdcToken.safeTransfer(usdcBuyback, withdrawalAmount);
 
         totalUsdcFromSafeMinting = 0;
 
-        emit UsdcWithdrawn(owner(), totalUsdcFromSafeMinting);
+        emit UsdcWithdrawn(owner(), withdrawalAmount);
     }
 
-    function mintStakingAllocation() external override onlyOwner {
+    /**
+     * @notice allows the owner to recover any token sent to the contract.
+     * @param token the address of the token to recover.
+     * @param amount the amount of the token to recover.
+     */
+    function recoverTokens(address token, uint256 amount) external override onlyOwner {
+        IERC20(token).transfer(owner(), amount);
+
+        emit TokensRecovered(token, amount);
+    }
+
+    function mintStakingEmissionAllocation() external override onlyOwner {
         safeToken.mint(MAX_STAKING_EMISSIONS);
 
         emit AllAllocationsMinted(MAX_STAKING_EMISSIONS);
@@ -284,7 +297,6 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
     }
 
     function updateSafePool(address newSafeYieldPool) external override onlyOwner {
-        if (newSafeYieldPool == address(0)) revert SYRD__ZERO_ADDRESS();
         safeYieldPool = newSafeYieldPool;
     }
 
