@@ -236,9 +236,9 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         vm.startPrank(BOB);
         usdc.approve(address(presale), 100_000e6);
 
-        uint256 bobUsdcBalancePrior = usdc.balanceOf(BOB);
+        //uint256 bobUsdcBalancePrior = usdc.balanceOf(BOB);
         presale.deposit(99_000e6, refId);
-        uint256 bobUsdcBalanceAfter = usdc.balanceOf(BOB);
+        //uint256 bobUsdcBalanceAfter = usdc.balanceOf(BOB);
 
         console.log("Safe Tokens Remaining After selling to 19 users", presale.safeTokensAvailable());
     }
@@ -261,10 +261,10 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         presale.deposit(110_000e6, refId);
         uint256 bobUsdcBalanceAfter = usdc.balanceOf(BOB);
 
-        // assertEq(bobUsdcBalanceAfter, bobUsdcBalancePrior - 100_000e6);
-        // assertEq(usdc.balanceOf(address(presale)), 101_000e6);
-        // assertEq(presale.getTotalSafeTokensOwed(BOB), 100_000e18);
-        // assertEq(presale.getTotalSafeTokensOwed(ALICE), 1_000e18);
+        assertEq(bobUsdcBalanceAfter, bobUsdcBalancePrior - 100_000e6);
+        assertEq(usdc.balanceOf(address(presale)), presale.totalRedeemableReferrerUsdc());
+        assertEq(presale.getTotalSafeTokensOwed(BOB), 100_000e18, "Bob is Owed 100_000e18");
+        assertGt(presale.getTotalSafeTokensOwed(ALICE), 1_000e18, "Alice is Owed 1_000e18 + Safe Commissions");
     }
 
     function testBuySafeTokensWhenBuyerWantsToBuyMoreThanThePreSaleCAPWithReferrer() public startPresale {
@@ -340,6 +340,8 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         vm.startPrank(ALICE);
         presale.claimSafeTokens();
         vm.stopPrank();
+
+        assertEq(safeToken.balanceOf(ALICE), safeTokens);
     }
 
     function testBuySafeWithMultipleReferrers() public startPresale {
@@ -496,6 +498,8 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         assertEq(usdc.balanceOf(address(presale)), presale.totalRedeemableReferrerUsdc());
         assertEq(presale.getTotalSafeTokensOwed(ALICE), safeTokensBought + referrerSafeCommission);
         assertEq(presale.getTotalSafeTokensOwed(BOB), safeTokensBought);
+
+        assertEq(referrerUSdcCommission, presale.totalRedeemableReferrerUsdc());
 
         //referrer claim usdc
         vm.prank(ALICE);

@@ -7,7 +7,7 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeMockToken } from "./mocks/SafeMockToken.sol";
 import { SafeToken } from "src/SafeToken.sol";
 import { USDCMockToken } from "./mocks/USDCMockToken.sol";
-import { SafeYieldRewardDistributor } from "src/SafeYieldRewardDistributor.sol";
+import { SafeYieldRewardDistributorMock } from "./mocks/SafeYieldRewardDistributorMock.sol";
 import { SafeYieldPresale } from "src/SafeYieldPresale.sol";
 import { SafeYieldStaking } from "src/SafeYieldStaking.sol";
 import { SafeYieldTWAP } from "src/SafeYieldTWAP.sol";
@@ -39,7 +39,7 @@ abstract contract SafeYieldBaseTest is Test {
     address public NOT_MINTER = makeAddr("notMinter");
     address public USDC_WHALE = 0x4B16c5dE96EB2117bBE5fd171E4d203624B014aa;
 
-    SafeYieldRewardDistributor public distributor;
+    SafeYieldRewardDistributorMock public distributor;
     SafeYieldPresale public presale;
     SafeYieldStaking public staking;
     SafeYieldTWAP public twap;
@@ -66,8 +66,8 @@ abstract contract SafeYieldBaseTest is Test {
     }
 
     function setUp() public virtual {
-        uint256 ethFork = vm.createFork(vm.envString("MAINNET_RPC_URL"));
-        vm.selectFork(ethFork);
+        // uint256 ethFork = vm.createFork(vm.envString("MAINNET_RPC_URL"));
+        // vm.selectFork(ethFork);
 
         vm.startPrank(protocolAdmin);
         usdc = new USDCMockToken("USDC", "USDC", 6);
@@ -81,15 +81,7 @@ abstract contract SafeYieldBaseTest is Test {
             address(safeToken), address(usdc), address(staking), 1_000e18, 100_000e18, 1e18, 5_00, 5_00, protocolAdmin
         );
 
-        /**
-         * address _safeToken,
-         *     address _usdcToken,
-         *     address _teamOperations,
-         *     address _usdcBuyback,
-         *     address _safeStaking,
-         *     address _safeYieldTWAP
-         */
-        distributor = new SafeYieldRewardDistributor(
+        distributor = new SafeYieldRewardDistributorMock(
             address(safeToken), address(usdc), teamOperations, usdcBuyback, address(staking), address(twap)
         );
 
@@ -126,61 +118,61 @@ abstract contract SafeYieldBaseTest is Test {
     }
 
     function _createUniswapV3Pool() internal returns (address pool) {
-        uint160 initialPrice = 1e18;
+        // uint160 initialPrice = 1e18;
 
-        uint256 sqrtPrice = Math.sqrt(initialPrice);
+        // uint256 sqrtPrice = Math.sqrt(initialPrice);
 
-        uint256 QX96 = 2 ** 96;
+        // uint256 QX96 = 2 ** 96;
 
-        uint160 sqrtPriceX96_ = uint160(sqrtPrice * QX96);
+        // uint160 sqrtPriceX96_ = uint160(sqrtPrice * QX96);
 
-        pool =
-            nonFungiblePositionManager.createAndInitializePoolIfNecessary(address(safeToken), USDC, 500, sqrtPriceX96_);
-        (
-            uint160 sqrtPriceX96,
-            int24 tick,
-            uint16 observationIndex,
-            uint16 observationCardinality,
-            uint16 observationCardinalityNext,
-            uint8 feeProtocol,
-            bool unlocked
-        ) = IUniswapV3Pool(pool).slot0();
+        // pool =
+        //     nonFungiblePositionManager.createAndInitializePoolIfNecessary(address(safeToken), USDC, 500, sqrtPriceX96_);
+        // (
+        //     uint160 sqrtPriceX96,
+        //     int24 tick,
+        //     uint16 observationIndex,
+        //     uint16 observationCardinality,
+        //     uint16 observationCardinalityNext,
+        //     uint8 feeProtocol,
+        //     bool unlocked
+        // ) = IUniswapV3Pool(pool).slot0();
 
-        console.log("Tick", uint256(int256(tick)));
+        // console.log("Tick", uint256(int256(tick)));
 
-        INonFungiblePositionManager.MintParams memory mintParams = INonFungiblePositionManager.MintParams({
-            token0: address(safeToken),
-            token1: USDC,
-            fee: 500,
-            tickLower: 0 - IUniswapV3Pool(pool).tickSpacing() * 10,
-            tickUpper: 0 + IUniswapV3Pool(pool).tickSpacing() * 10,
-            amount0Desired: 5_000e18,
-            amount1Desired: 10_000e6,
-            amount0Min: 0,
-            amount1Min: 0,
-            recipient: USDC_WHALE,
-            deadline: block.timestamp + 100
-        });
+        // INonFungiblePositionManager.MintParams memory mintParams = INonFungiblePositionManager.MintParams({
+        //     token0: address(safeToken),
+        //     token1: USDC,
+        //     fee: 500,
+        //     tickLower: 0 - IUniswapV3Pool(pool).tickSpacing() * 10,
+        //     tickUpper: 0 + IUniswapV3Pool(pool).tickSpacing() * 10,
+        //     amount0Desired: 5_000e18,
+        //     amount1Desired: 10_000e6,
+        //     amount0Min: 0,
+        //     amount1Min: 0,
+        //     recipient: USDC_WHALE,
+        //     deadline: block.timestamp + 100
+        // });
 
-        _transferSafeTokens(USDC_WHALE, 10_000e18);
+        // _transferSafeTokens(USDC_WHALE, 10_000e18);
 
-        vm.startPrank(USDC_WHALE);
+        // vm.startPrank(USDC_WHALE);
 
-        console.log("usdc balance of WHALE", IERC20(USDC).balanceOf(USDC_WHALE));
+        // console.log("usdc balance of WHALE", IERC20(USDC).balanceOf(USDC_WHALE));
 
-        //approve tokens
-        safeToken.approve(address(nonFungiblePositionManager), 5_000e18);
-        IERC20(USDC).approve(address(nonFungiblePositionManager), 10_000e6);
+        // //approve tokens
+        // safeToken.approve(address(nonFungiblePositionManager), 5_000e18);
+        // IERC20(USDC).approve(address(nonFungiblePositionManager), 10_000e6);
 
-        (uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1) =
-            nonFungiblePositionManager.mint(mintParams);
+        // (uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1) =
+        //     nonFungiblePositionManager.mint(mintParams);
 
-        console.log("tokenId", tokenId);
-        console.log("liquidity", liquidity);
-        console.log("amount0", amount0);
-        console.log("amount1", amount1);
+        // console.log("tokenId", tokenId);
+        // console.log("liquidity", liquidity);
+        // console.log("amount0", amount0);
+        // console.log("amount1", amount1);
 
-        vm.stopPrank();
+        // vm.stopPrank();
     }
 
     function _transferSafeTokens(address user, uint128 amount) internal {

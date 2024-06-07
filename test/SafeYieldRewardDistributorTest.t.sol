@@ -505,8 +505,8 @@ contract SafeYieldRewardDistributorTest is SafeYieldBaseTest {
         // console.log("calculateTeamOpPendingRewards2", calculateTeamOpPendingRewards2);
         // console.log("calculateUsdcBuyBackPendingRewards2", calculateUsdcBuyBackPendingRewards2);
 
-        //vm.assume(distributor.MAX_STAKING_EMISSIONS() == 0);
         vm.startPrank(protocolAdmin);
+        distributor.setSafeTransferred(11_000_000e18);
         distributor.endStakingEmissions();
         vm.stopPrank();
 
