@@ -129,7 +129,11 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
         }
 
         if (_tokenPrice == 0) revert SAFE_YIELD_INVALID_TOKEN_PRICE();
-        if (_safeToken == address(0) || _usdcToken == address(0) || _safeYieldStaking == address(0)) {
+
+        if (
+            _safeToken == address(0) || _usdcToken == address(0) || _safeYieldStaking == address(0)
+                || _protocolMultisig == address(0)
+        ) {
             revert SAFE_YIELD_INVALID_ADDRESS();
         }
 
