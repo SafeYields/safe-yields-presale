@@ -12,8 +12,6 @@ interface ISafeYieldPreSale {
 
     function safeTokensAvailable() external view returns (uint128);
 
-    function withdrawUSDC() external;
-
     function redeemUsdcCommission() external;
 
     function createReferrerId() external returns (bytes32 referrerId);
@@ -24,7 +22,7 @@ interface ISafeYieldPreSale {
 
     function calculateSafeTokens(uint128 usdcAmount) external view returns (uint128);
 
-    function mintStakingAllocation() external;
+    function mintPreSaleAllocation() external;
 
     function pause() external;
 

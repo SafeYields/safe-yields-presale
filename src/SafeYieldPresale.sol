@@ -37,6 +37,8 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
     PreSaleState public currentPreSaleState;
+
+    address public protocolMultisig;
     uint128 public totalSold;
     uint128 public minAllocationPerWallet;
     uint128 public maxAllocationPerWallet;
@@ -46,6 +48,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
     uint128 public totalRedeemableReferrerUsdc;
     uint128 public totalUsdcRaised; //total usdc raised in the presale minus the referrer commission
     uint128 public totalUsdcToWithdraw; //To be reset after withdrawal
+
     mapping(address userAddress => uint128 safeTokensAllocation) public investorAllocations;
     mapping(bytes32 referrerId => ReferrerInfo referrerInfo) public referrerInfo;
     mapping(address investor => mapping(address referrer => uint128 index)) public referrerIndex;
@@ -115,8 +118,8 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
         uint128 _tokenPrice,
         uint128 _referrerCommissionUsdcBps,
         uint128 _referrerCommissionSafeTokenBps,
-        address _protocolAdmin
-    ) Ownable(_protocolAdmin) {
+        address _protocolMultisig
+    ) Ownable(msg.sender) {
         if (_minAllocationPerWallet > _maxAllocationPerWallet) {
             revert SAFE_YIELD_INVALID_ALLOCATION();
         }
@@ -129,6 +132,8 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
         if (_safeToken == address(0) || _usdcToken == address(0) || _safeYieldStaking == address(0)) {
             revert SAFE_YIELD_INVALID_ADDRESS();
         }
+
+        protocolMultisig = _protocolMultisig;
 
         safeToken = ISafeToken(_safeToken);
         usdcToken = IERC20(_usdcToken);
@@ -250,21 +255,6 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
         maxAllocationPerWallet = _max;
 
         emit AllocationsPerWalletSet(_min, _max);
-    }
-
-    /**
-     * @dev Withdraw USDC from the contract
-     */
-    function withdrawUSDC() external override onlyOwner {
-        uint128 amountToWithdraw = totalUsdcToWithdraw;
-
-        totalUsdcToWithdraw = 0;
-
-        if (amountToWithdraw == 0) return;
-
-        usdcToken.safeTransfer(owner(), amountToWithdraw);
-
-        emit UsdcWithdrawn(owner(), amountToWithdraw);
     }
 
     /**
@@ -506,7 +496,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
 
         totalUsdcRaised += amountRaised;
 
-        totalUsdcToWithdraw += amountRaised;
+        usdcToken.transfer(protocolMultisig, amountRaised);
 
         investorAllocations[investor] += safeTokensBought;
 
@@ -530,7 +520,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
         }
     }
 
-    function mintStakingAllocation() external override onlyOwner {
+    function mintPreSaleAllocation() external override onlyOwner {
         safeToken.mint(PRE_SALE_CAP);
     }
 }
