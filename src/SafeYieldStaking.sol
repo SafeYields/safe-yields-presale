@@ -12,7 +12,6 @@ import { PreSaleState, Stake, StakingEmissionState } from "./types/SafeTypes.sol
 import { ISafeYieldStaking } from "./interfaces/ISafeYieldStaking.sol";
 import { ISafeYieldPreSale } from "./interfaces/ISafeYieldPreSale.sol";
 import { ISafeYieldRewardDistributor } from "./interfaces/ISafeYieldRewardDistributor.sol";
-import { console } from "forge-std/Test.sol";
 
 /**
  * @title SafeYieldStaking contract

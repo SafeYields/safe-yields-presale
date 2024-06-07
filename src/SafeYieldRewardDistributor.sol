@@ -11,7 +11,6 @@ import { StakingEmissionState, PreSaleState, ContractShare } from "./types/SafeT
 import { ISafeYieldRewardDistributor } from "./interfaces/ISafeYieldRewardDistributor.sol";
 import { SafeYieldTWAP } from "./SafeYieldTWAP.sol";
 import { ISafeYieldStaking } from "./interfaces/ISafeYieldStaking.sol";
-//import { console } from "forge-std/Test.sol";
 
 contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step {
     using SafeERC20 for IERC20;
@@ -262,7 +261,7 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
     /**
      * @notice withdraws the USDC from the contract.
      * @dev this withdraws the USDC meant for staking rewards,
-     * during the staking emissions.
+     * during the staking emissions to the USDC buyback address.
      */
     function withdrawStakingUsdc() external override onlyOwner {
         uint256 withdrawalAmount = totalUsdcFromSafeMinting;
@@ -334,17 +333,17 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
             if (contract_ == safeStaking && currentStakingState == StakingEmissionState.Live) {
                 if (safeTransferred < MAX_STAKING_EMISSIONS) {
                     uint256 safeTokenPrice = _getTokenPrice();
-                    uint256 tokensToMint = ((usdcDistributed * 1e30) / safeTokenPrice);
+                    uint256 tokensToTransfer = ((usdcDistributed * 1e30) / safeTokenPrice);
 
-                    if (safeTransferred + tokensToMint > MAX_STAKING_EMISSIONS) {
-                        tokensToMint = MAX_STAKING_EMISSIONS - safeTransferred;
+                    if (safeTransferred + tokensToTransfer > MAX_STAKING_EMISSIONS) {
+                        tokensToTransfer = MAX_STAKING_EMISSIONS - safeTransferred;
 
-                        uint256 valueOfTokenToMint = (tokensToMint * safeTokenPrice) / 1e30;
-                        uint256 excessSafeUsdc = usdcDistributed - valueOfTokenToMint;
+                        uint256 valueOfTokenToTransfer = (tokensToTransfer * safeTokenPrice) / 1e30;
+                        uint256 excessSafeUsdc = usdcDistributed - valueOfTokenToTransfer;
 
                         outStandingContractRewards[contract_] += excessSafeUsdc;
 
-                        usdcDistributed = valueOfTokenToMint;
+                        usdcDistributed = valueOfTokenToTransfer;
 
                         ///@dev update the state of the staking emissions
                         currentStakingState = StakingEmissionState.Ended;
@@ -352,17 +351,17 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
                         emit StakingEmissionsEnded();
                     }
 
-                    safeToken.transfer(contract_, tokensToMint);
+                    safeToken.transfer(contract_, tokensToTransfer);
 
-                    safeTransferred += tokensToMint;
+                    safeTransferred += tokensToTransfer;
 
                     totalUsdcFromSafeMinting += usdcDistributed;
 
                     isSafeRewardsDistributed = true;
 
-                    emit RewardDistributed(contract_, tokensToMint);
+                    emit RewardDistributed(contract_, tokensToTransfer);
 
-                    return rewardsDistributed = tokensToMint;
+                    return rewardsDistributed = tokensToTransfer;
                 }
             }
             isSafeRewardsDistributed = false;
