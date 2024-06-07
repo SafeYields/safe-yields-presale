@@ -12,7 +12,6 @@ import { ISafeYieldStaking } from "./interfaces/ISafeYieldStaking.sol";
 import { ISafeYieldPreSale } from "./interfaces/ISafeYieldPreSale.sol";
 import { ISafeToken } from "./interfaces/ISafeToken.sol";
 import { PreSaleState, ReferrerInfo, ReferrerRecipient } from "./types/SafeTypes.sol";
-//import { console } from "forge-std/Test.sol";
 
 contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
     using Math for uint128;
@@ -46,8 +45,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
     uint128 public referrerCommissionUsdcBps;
     uint128 public referrerCommissionSafeTokenBps;
     uint128 public totalRedeemableReferrerUsdc;
-    uint128 public totalUsdcRaised; //total usdc raised in the presale minus the referrer commission
-    uint128 public totalUsdcToWithdraw; //To be reset after withdrawal
+    uint128 public totalUsdcRaised; //total usdc raised in the presale minus the referrer commissions
 
     mapping(address userAddress => uint128 safeTokensAllocation) public investorAllocations;
     mapping(bytes32 referrerId => ReferrerInfo referrerInfo) public referrerInfo;
@@ -76,6 +74,8 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
     event PreSaleStarted(PreSaleState indexed currentState);
     event PreSaleEnded(PreSaleState indexed currentState);
     event SafeTokensRecovered(uint256 indexed amount);
+    event ProtocolMultisigSet(address indexed protocolMultisig);
+    event PreSaleAllocationsMinted(uint256 indexed amount);
     event AllocationsPerWalletSet(uint128 indexed minAllocationPerWallet, uint128 indexed maxAllocationPerWallet);
 
     /*//////////////////////////////////////////////////////////////
@@ -259,6 +259,14 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
         maxAllocationPerWallet = _max;
 
         emit AllocationsPerWalletSet(_min, _max);
+    }
+
+    function setProtocolMultisig(address _protocolMultisig) external override onlyOwner {
+        if (_protocolMultisig == address(0)) revert SAFE_YIELD_INVALID_ADDRESS();
+
+        protocolMultisig = _protocolMultisig;
+
+        emit ProtocolMultisigSet(_protocolMultisig);
     }
 
     /**
@@ -446,18 +454,17 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
 
             if (referrerInvestor == investor) revert SAFE_YIELD_REFERRAL_TO_SELF();
 
-            /**
-             * @dev calculate the referrer commission in both USDC and SafeToken
-             * @notice To prevent rounding issues if user is buying remaining safe tokens, we
-             * subtract instead re-calculating the commissions
-             */
             referrerUsdcCommission =
                 SafeCast.toUint128(usdcAmount.mulDiv(referrerCommissionUsdcBps, BPS_MAX, Math.Rounding.Floor));
 
             referrerSafeTokenCommission = SafeCast.toUint128(
                 safeTokensBought.mulDiv(referrerCommissionSafeTokenBps, BPS_MAX, Math.Rounding.Floor)
             );
-
+            /**
+             * @dev calculate the referrer commission in both USDC and SafeToken
+             * @notice To prevent rounding issues if user is buying remaining safe tokens, we
+             * subtract instead re-calculating the commissions
+             */
             if (safeTokensBought + referrerSafeTokenCommission > safeTokensAvailableForPurchase) {
                 referrerSafeTokenCommission = safeTokensAvailableForPurchase - safeTokensBought;
             }
@@ -493,13 +500,16 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
         }
 
         /**
-         * @dev update the total usdc raised
+         * @dev update the usdc raised
          * This is the total amount of USDC raised in the presale minus the referrer commission.
          */
         uint128 amountRaised = (usdcAmount - referrerUsdcCommission);
 
         totalUsdcRaised += amountRaised;
 
+        /**
+         * @dev transfer the USDC raised to the protocol multisig
+         */
         usdcToken.transfer(protocolMultisig, amountRaised);
 
         investorAllocations[investor] += safeTokensBought;
@@ -526,5 +536,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
 
     function mintPreSaleAllocation() external override onlyOwner {
         safeToken.mint(PRE_SALE_CAP);
+
+        emit PreSaleAllocationsMinted(PRE_SALE_CAP);
     }
 }

@@ -18,6 +18,8 @@ interface ISafeYieldPreSale {
 
     function setTokenPrice(uint128 _price) external;
 
+    function setProtocolMultisig(address _protocolMultisig) external;
+
     function setReferrerCommissionBps(uint128 _commissionUsdc, uint128 _commissionSafe) external;
 
     function calculateSafeTokens(uint128 usdcAmount) external view returns (uint128);
