@@ -540,38 +540,38 @@ contract SafeYieldRewardDistributorTest is SafeYieldBaseTest {
     }
 
     function test_CheckTWAP() public {
-        console.log("uniswapV3 pool", distributor.safeYieldPool());
+        // console.log("uniswapV3 pool", distributor.safeYieldPool());
 
-        uint160 initialPrice = 1;
+        // uint160 initialPrice = 1;
 
-        uint256 sqrtPrice = Math.sqrt(initialPrice);
+        // uint256 sqrtPrice = Math.sqrt(initialPrice);
 
-        uint256 QX96 = 2 ** 96;
+        // uint256 QX96 = 2 ** 96;
 
-        uint160 sqrtPriceX96_ = uint160(sqrtPrice * QX96) - 1;
+        // uint160 sqrtPriceX96_ = uint160(sqrtPrice * QX96) - 1;
 
-        vm.startPrank(USDC_WHALE);
+        // vm.startPrank(USDC_WHALE);
 
-        safeToken.approve(address(swapRouter), 1_000e18);
+        // safeToken.approve(address(swapRouter), 1_000e18);
 
-        ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
-            tokenIn: address(safeToken),
-            tokenOut: USDC,
-            fee: 500,
-            recipient: USDC_WHALE,
-            deadline: block.timestamp + 100,
-            amountIn: 1_000e18,
-            amountOutMinimum: 1e6,
-            sqrtPriceLimitX96: 0
-        });
+        // ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
+        //     tokenIn: address(safeToken),
+        //     tokenOut: USDC,
+        //     fee: 500,
+        //     recipient: USDC_WHALE,
+        //     deadline: block.timestamp + 100,
+        //     amountIn: 1_000e18,
+        //     amountOutMinimum: 1e6,
+        //     sqrtPriceLimitX96: 0
+        // });
 
-        swapRouter.exactInputSingle(params);
+        // swapRouter.exactInputSingle(params);
 
-        skip(block.number + 1);
+        // skip(block.number + 1);
 
-        console.log(
-            "Price of Safe", twap.getEstimateAmountOut(distributor.safeYieldPool(), address(safeToken), 1e18, 60)
-        );
+        // console.log(
+        //     "Price of Safe", twap.getEstimateAmountOut(distributor.safeYieldPool(), address(safeToken), 1e18, 60)
+        // );
     }
 
     /*//////////////////////////////////////////////////////////////

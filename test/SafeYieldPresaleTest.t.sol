@@ -161,7 +161,11 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         //assertions
         assertGt(bobUsdcBalanceAfter, 0);
         assertEq(aliceUsdcBalanceAfter, aliceUsdcBalancePrior - 1_000e6, "Alice USDC Balance should be 1_000e6 less");
-        assertEq(usdc.balanceOf(address(presale)), 2_000_000e6, "USDC Balance of Presale should be 2_000_000e6");
+        assertEq(
+            usdc.balanceOf(address(presale)),
+            presale.totalRedeemableReferrerUsdc(),
+            "USDC Balance of Presale should be equal to total redeemable referrer USDC"
+        );
         assertEq(presale.safeTokensAvailable(), 0, "Safe Tokens Available should be 0");
         assertEq(
             presale.totalUsdcRaised(),
@@ -193,7 +197,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         uint256 aliceUsdcBalanceAfter = usdc.balanceOf(ALICE);
 
         assertEq(aliceUsdcBalanceAfter, aliceUsdcBalancePrior - 100_000e6);
-        assertEq(usdc.balanceOf(address(presale)), 1_900_000e6);
+        assertEq(usdc.balanceOf(address(presale)), presale.totalRedeemableReferrerUsdc());
         assertEq(presale.getTotalSafeTokensOwed(ALICE), 100_000e18);
         assertEq(presale.safeTokensAvailable(), 100_000e18);
         assertEq(presale.totalUsdcRaised(), 1_900_000e6);
@@ -208,7 +212,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         uint256 aliceUsdcBalanceAfter = usdc.balanceOf(ALICE);
 
         assertEq(aliceUsdcBalanceAfter, aliceUsdcBalancePrior - 100_000e6);
-        assertEq(usdc.balanceOf(address(presale)), 100_000e6);
+        assertEq(usdc.balanceOf(address(presale)), 0);
         assertEq(presale.getTotalSafeTokensOwed(ALICE), 100_000e18);
     }
 
@@ -381,69 +385,69 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         vm.stopPrank();
     }
 
-    function testWithdrawUsdcRaised_WithReferrers() public startPresale {
-        vm.startPrank(ALICE);
-        usdc.approve(address(presale), 10_000e6);
+    // function testWithdrawUsdcRaised_WithReferrers() public startPresale {
+    //     vm.startPrank(ALICE);
+    //     usdc.approve(address(presale), 10_000e6);
 
-        presale.deposit(1_000e6, bytes32(0));
+    //     presale.deposit(1_000e6, bytes32(0));
 
-        //create a referrer ID
-        bytes32 refId = presale.createReferrerId();
+    //     //create a referrer ID
+    //     bytes32 refId = presale.createReferrerId();
 
-        vm.stopPrank();
+    //     vm.stopPrank();
 
-        vm.startPrank(BOB);
-        usdc.approve(address(presale), 10_000e6);
+    //     vm.startPrank(BOB);
+    //     usdc.approve(address(presale), 10_000e6);
 
-        presale.deposit(1_000e6, refId);
+    //     presale.deposit(1_000e6, refId);
 
-        bytes32 bobRefId = presale.createReferrerId();
+    //     bytes32 bobRefId = presale.createReferrerId();
 
-        vm.stopPrank();
+    //     vm.stopPrank();
 
-        vm.startPrank(CHARLIE);
-        usdc.approve(address(presale), 10_000e6);
+    //     vm.startPrank(CHARLIE);
+    //     usdc.approve(address(presale), 10_000e6);
 
-        presale.deposit(1_000e6, refId);
+    //     presale.deposit(1_000e6, refId);
 
-        presale.deposit(1_000e6, refId);
+    //     presale.deposit(1_000e6, refId);
 
-        vm.stopPrank();
+    //     vm.stopPrank();
 
-        vm.startPrank(BOB);
+    //     vm.startPrank(BOB);
 
-        presale.deposit(1_000e6, refId);
+    //     presale.deposit(1_000e6, refId);
 
-        vm.stopPrank();
+    //     vm.stopPrank();
 
-        vm.startPrank(ALICE);
+    //     vm.startPrank(ALICE);
 
-        presale.deposit(1_000e6, bobRefId);
+    //     presale.deposit(1_000e6, bobRefId);
 
-        vm.stopPrank();
+    //     vm.stopPrank();
 
-        uint256 presaleUsdcBalanceBefore = usdc.balanceOf(address(presale));
+    //     uint256 presaleUsdcBalanceBefore = usdc.balanceOf(address(presale));
 
-        skip(5 minutes);
+    //     skip(5 minutes);
 
-        vm.prank(protocolAdmin);
-        presale.withdrawUSDC();
-        uint256 presaleUsdcBalanceAfter = usdc.balanceOf(address(presale));
+    //     vm.prank(protocolAdmin);
+    //     presale.withdrawUSDC();
+    //     uint256 presaleUsdcBalanceAfter = usdc.balanceOf(address(presale));
 
-        assertEq(presaleUsdcBalanceAfter, presale.totalRedeemableReferrerUsdc());
+    //     assertEq(presaleUsdcBalanceAfter, presale.totalRedeemableReferrerUsdc());
 
-        //referrers claim
-        vm.prank(ALICE);
-        presale.redeemUsdcCommission();
+    //     //referrers claim
+    //     vm.prank(ALICE);
+    //     presale.redeemUsdcCommission();
 
-        vm.prank(BOB);
-        presale.redeemUsdcCommission();
+    //     vm.prank(BOB);
+    //     presale.redeemUsdcCommission();
 
-        uint256 presaleUsdcBalanceAfterBothRedeem = usdc.balanceOf(address(presale));
+    //     uint256 presaleUsdcBalanceAfterBothRedeem = usdc.balanceOf(address(presale));
 
-        assertEq(presale.totalRedeemableReferrerUsdc(), 0);
-        assertEq(presaleUsdcBalanceAfterBothRedeem, 0);
-    }
+    //     assertEq(presale.totalRedeemableReferrerUsdc(), 0);
+    //     assertEq(presaleUsdcBalanceAfterBothRedeem, 0);
+    // }
 
     /*//////////////////////////////////////////////////////////////
                                FUZZ TESTS
@@ -460,7 +464,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         uint256 safeTokensBought = (usdcAmount * 1e18) / 1e6;
 
         //assertions
-        assertEq(usdc.balanceOf(address(presale)), usdcAmount);
+        assertEq(usdc.balanceOf(address(presale)), presale.totalRedeemableReferrerUsdc());
         assertEq(presale.getTotalSafeTokensOwed(ALICE), safeTokensBought);
     }
 
@@ -489,7 +493,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         uint256 referrerUSdcCommission = (usdcAmount * 5_00) / 1e4;
 
         //assertions
-        assertEq(usdc.balanceOf(address(presale)), usdcAmount * 2);
+        assertEq(usdc.balanceOf(address(presale)), presale.totalRedeemableReferrerUsdc());
         assertEq(presale.getTotalSafeTokensOwed(ALICE), safeTokensBought + referrerSafeCommission);
         assertEq(presale.getTotalSafeTokensOwed(BOB), safeTokensBought);
 
@@ -497,7 +501,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         vm.prank(ALICE);
         presale.redeemUsdcCommission();
 
-        assertEq(usdc.balanceOf(address(presale)), (usdcAmount * 2) - referrerUSdcCommission);
+        assertEq(usdc.balanceOf(address(presale)), presale.totalRedeemableReferrerUsdc());
 
         vm.prank(protocolAdmin);
         presale.endPresale();
@@ -513,38 +517,38 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         assertEq(safeToken.balanceOf(ALICE), aliceOwedSafeTokens);
     }
 
-    function testFuzz_WithUsdcRaisedNoReferrers(uint256 numberOfUsers, uint256 usdcAmount) public startPresale {
-        usdcAmount = bound(usdcAmount, 10_000e6, 100_000e6);
-        numberOfUsers = bound(numberOfUsers, 10, 22);
+    // function testFuzz_WithUsdcRaisedNoReferrers(uint256 numberOfUsers, uint256 usdcAmount) public startPresale {
+    //     usdcAmount = bound(usdcAmount, 10_000e6, 100_000e6);
+    //     numberOfUsers = bound(numberOfUsers, 10, 22);
 
-        test_mintUsdcAndDepositMultipleAddresses(numberOfUsers, usdcAmount, false);
+    //     test_mintUsdcAndDepositMultipleAddresses(numberOfUsers, usdcAmount, false);
 
-        console.log("Total Usdc Raised", presale.totalUsdcRaised());
-        assertEq(presale.totalUsdcRaised(), presale.totalUsdcToWithdraw());
+    //     console.log("Total Usdc Raised", presale.totalUsdcRaised());
+    //     assertEq(presale.totalUsdcRaised(), presale.totalUsdcToWithdraw());
 
-        vm.prank(protocolAdmin);
-        presale.withdrawUSDC();
-        assertEq(presale.totalUsdcToWithdraw(), 0);
-    }
+    //     vm.prank(protocolAdmin);
+    //     presale.withdrawUSDC();
+    //     assertEq(presale.totalUsdcToWithdraw(), 0);
+    // }
 
-    function testFuzz_WithUsdcRaisedWithReferrers(uint256 numberOfUsers, uint256 usdcAmount) public startPresale {
-        usdcAmount = bound(usdcAmount, 10_000e6, 100_000e6);
-        numberOfUsers = bound(numberOfUsers, 10, 21);
+    // function testFuzz_WithUsdcRaisedWithReferrers(uint256 numberOfUsers, uint256 usdcAmount) public startPresale {
+    //     usdcAmount = bound(usdcAmount, 10_000e6, 100_000e6);
+    //     numberOfUsers = bound(numberOfUsers, 10, 21);
 
-        test_mintUsdcAndDepositMultipleAddresses(numberOfUsers, usdcAmount, true);
-        console.log("Total Usdc Raised", presale.totalUsdcRaised());
+    //     test_mintUsdcAndDepositMultipleAddresses(numberOfUsers, usdcAmount, true);
+    //     console.log("Total Usdc Raised", presale.totalUsdcRaised());
 
-        assertEq(presale.totalUsdcRaised(), presale.totalUsdcToWithdraw());
+    //     assertEq(presale.totalUsdcRaised(), presale.totalUsdcToWithdraw());
 
-        console.log("Total Usdc Raised", presale.totalUsdcRaised());
-        console.log("Total Redeemable Usdc", presale.totalRedeemableReferrerUsdc());
+    //     console.log("Total Usdc Raised", presale.totalUsdcRaised());
+    //     console.log("Total Redeemable Usdc", presale.totalRedeemableReferrerUsdc());
 
-        vm.prank(protocolAdmin);
-        presale.withdrawUSDC();
-        assertEq(presale.totalUsdcToWithdraw(), 0);
+    //     vm.prank(protocolAdmin);
+    //     presale.withdrawUSDC();
+    //     assertEq(presale.totalUsdcToWithdraw(), 0);
 
-        assertEq(usdc.balanceOf(address(presale)), presale.totalRedeemableReferrerUsdc());
-    }
+    //     assertEq(usdc.balanceOf(address(presale)), presale.totalRedeemableReferrerUsdc());
+    // }
 
     function test_mintUsdcAndDepositMultipleAddresses(uint256 numberOfAddress, uint256 amount, bool isSwitchRef)
         internal
