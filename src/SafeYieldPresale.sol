@@ -98,7 +98,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
     /*//////////////////////////////////////////////////////////////
                                MODIFIERS
     //////////////////////////////////////////////////////////////*/
-    modifier preSaleNotEnded() {
+    modifier preSaleEnded() {
         if (currentPreSaleState != PreSaleState.Ended) revert SAFE_YIELD_PRESALE_NOT_ENDED();
         _;
     }
@@ -267,7 +267,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
      * @dev Recover tokens sent to the contract
      * @param amount The amount of tokens to recover
      */
-    function recoverSafeTokens(uint256 amount) external onlyOwner preSaleNotEnded {
+    function recoverSafeTokens(uint256 amount) external onlyOwner preSaleEnded {
         if (amount == 0) revert SAFE_YIELD_INVALID_AMOUNT();
 
         safeToken.transfer(owner(), amount);
@@ -318,7 +318,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
      * @dev Claim safe tokens
      * @notice This function can only be called when the presale has ended
      */
-    function claimSafeTokens() external override whenNotPaused preSaleNotEnded {
+    function claimSafeTokens() external override whenNotPaused preSaleEnded {
         uint128 safeTokens = safeYieldStaking.getUserStake(msg.sender).stakeAmount;
 
         if (safeTokens == 0) revert SAFE_YIELD_ZERO_BALANCE();
