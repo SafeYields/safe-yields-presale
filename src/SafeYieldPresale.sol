@@ -82,23 +82,17 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
                                  ERRORS
     //////////////////////////////////////////////////////////////*/
 
-    error SAFE_YIELD_REFERRER_MAX_WALLET_ALLOCATION_EXCEEDED();
     error SAFE_YIELD_INVALID_REFER_COMMISSION_PERCENTAGE();
-    error SAFE_YIELD_MAX_WALLET_ALLOCATION_EXCEEDED();
     error SAFE_YIELD_BELOW_MIN_ALLOCATION();
     error SAFE_YIELD_NO_MORE_TOKENS_LEFT();
-    error SAFE_YIELD_MAX_SUPPLY_EXCEEDED();
-    error SAFE_YIELD_INVALID_USDC_AMOUNT();
     error SAFE_YIELD_INVALID_AMOUNT();
     error SAFE_YIELD_INVALID_TOKEN_PRICE();
-    error SAFE_YIELD_INVALID_MAX_SUPPLY();
     error SAFE_YIELD_INVALID_ALLOCATION();
     error SAFE_YIELD_PRESALE_NOT_ENDED();
     error SAFE_YIELD_UNKNOWN_REFERRER();
     error SAFE_YIELD_REFERRAL_TO_SELF();
     error SAFE_YIELD_PRESALE_NOT_LIVE();
     error SAFE_YIELD_INVALID_ADDRESS();
-    error SAFE_YIELD_INVALID_USER();
     error SAFE_YIELD_ZERO_BALANCE();
 
     /*//////////////////////////////////////////////////////////////
