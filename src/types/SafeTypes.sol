@@ -36,3 +36,16 @@ struct ReferrerRecipient {
     address referrerRecipient;
     uint128 usdcAmountInvested;
 }
+
+struct UserDepositStats {
+    uint48 lastDepositTimestamp;
+    uint128 amountUnutilized;
+    uint128 amountUtilized;
+}
+
+struct StrategyStats {
+    uint48 timestampOfStrategy;
+    uint256 amountRequested;
+    uint256 lastAmountAvailable;
+    int256 pnl;
+}
