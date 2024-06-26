@@ -304,7 +304,6 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
 
         presale.deposit(1_500e6, bytes32(0));
     }
-    //1500000000
 
     function testBuySafeTokensWithReferrer() public startPresale {
         vm.startPrank(ALICE);
@@ -386,70 +385,6 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
 
         vm.stopPrank();
     }
-
-    // function testWithdrawUsdcRaised_WithReferrers() public startPresale {
-    //     vm.startPrank(ALICE);
-    //     usdc.approve(address(presale), 10_000e6);
-
-    //     presale.deposit(1_000e6, bytes32(0));
-
-    //     //create a referrer ID
-    //     bytes32 refId = presale.createReferrerId();
-
-    //     vm.stopPrank();
-
-    //     vm.startPrank(BOB);
-    //     usdc.approve(address(presale), 10_000e6);
-
-    //     presale.deposit(1_000e6, refId);
-
-    //     bytes32 bobRefId = presale.createReferrerId();
-
-    //     vm.stopPrank();
-
-    //     vm.startPrank(CHARLIE);
-    //     usdc.approve(address(presale), 10_000e6);
-
-    //     presale.deposit(1_000e6, refId);
-
-    //     presale.deposit(1_000e6, refId);
-
-    //     vm.stopPrank();
-
-    //     vm.startPrank(BOB);
-
-    //     presale.deposit(1_000e6, refId);
-
-    //     vm.stopPrank();
-
-    //     vm.startPrank(ALICE);
-
-    //     presale.deposit(1_000e6, bobRefId);
-
-    //     vm.stopPrank();
-
-    //     uint256 presaleUsdcBalanceBefore = usdc.balanceOf(address(presale));
-
-    //     skip(5 minutes);
-
-    //     vm.prank(protocolAdmin);
-    //     presale.withdrawUSDC();
-    //     uint256 presaleUsdcBalanceAfter = usdc.balanceOf(address(presale));
-
-    //     assertEq(presaleUsdcBalanceAfter, presale.totalRedeemableReferrerUsdc());
-
-    //     //referrers claim
-    //     vm.prank(ALICE);
-    //     presale.redeemUsdcCommission();
-
-    //     vm.prank(BOB);
-    //     presale.redeemUsdcCommission();
-
-    //     uint256 presaleUsdcBalanceAfterBothRedeem = usdc.balanceOf(address(presale));
-
-    //     assertEq(presale.totalRedeemableReferrerUsdc(), 0);
-    //     assertEq(presaleUsdcBalanceAfterBothRedeem, 0);
-    // }
 
     /*//////////////////////////////////////////////////////////////
                                FUZZ TESTS
