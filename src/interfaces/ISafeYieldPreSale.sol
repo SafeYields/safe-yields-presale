@@ -28,6 +28,10 @@ interface ISafeYieldPreSale {
 
     function pause() external;
 
+    function enableStaking() external;
+
+    function disableStaking() external;
+
     function unpause() external;
 
     function startPresale() external;
