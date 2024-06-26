@@ -231,9 +231,11 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20 {
         ) = calculatePendingRewards(user);
 
         /**
-         * @dev If the user has pending rewards, the rewards are transferred to the user.
-         * If the staking emissions are live, the rewards are transferred in SafeToken.
-         * If any other state, the rewards are transferred in USDC.
+         * @dev Transfers pending rewards to the user if available.
+         * Users can claim their pending USDC and SAFE rewards at any time.
+         * Example: If a user has accrued 100 SAFE rewards during the staking emissions
+         *       but has not claimed them, they can return after the staking period ends
+         *       and still claim the 100 SAFE rewards along with 100 USDC rewards.
          */
         if (pendingSafeRewards != 0) {
             userStake[user].safeRewardsDebt = accumulateSafeRewards;

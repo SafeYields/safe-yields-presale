@@ -36,7 +36,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
     PreSaleState public currentPreSaleState;
-
+    bool public stakingEnabled;
     address public protocolMultisig;
     uint128 public totalSold;
     uint128 public minAllocationPerWallet;
@@ -82,29 +82,23 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
                                  ERRORS
     //////////////////////////////////////////////////////////////*/
 
-    error SAFE_YIELD_REFERRER_MAX_WALLET_ALLOCATION_EXCEEDED();
     error SAFE_YIELD_INVALID_REFER_COMMISSION_PERCENTAGE();
-    error SAFE_YIELD_MAX_WALLET_ALLOCATION_EXCEEDED();
     error SAFE_YIELD_BELOW_MIN_ALLOCATION();
     error SAFE_YIELD_NO_MORE_TOKENS_LEFT();
-    error SAFE_YIELD_MAX_SUPPLY_EXCEEDED();
-    error SAFE_YIELD_INVALID_USDC_AMOUNT();
     error SAFE_YIELD_INVALID_AMOUNT();
     error SAFE_YIELD_INVALID_TOKEN_PRICE();
-    error SAFE_YIELD_INVALID_MAX_SUPPLY();
     error SAFE_YIELD_INVALID_ALLOCATION();
     error SAFE_YIELD_PRESALE_NOT_ENDED();
     error SAFE_YIELD_UNKNOWN_REFERRER();
     error SAFE_YIELD_REFERRAL_TO_SELF();
     error SAFE_YIELD_PRESALE_NOT_LIVE();
     error SAFE_YIELD_INVALID_ADDRESS();
-    error SAFE_YIELD_INVALID_USER();
     error SAFE_YIELD_ZERO_BALANCE();
 
     /*//////////////////////////////////////////////////////////////
                                MODIFIERS
     //////////////////////////////////////////////////////////////*/
-    modifier preSaleNotEnded() {
+    modifier preSaleEnded() {
         if (currentPreSaleState != PreSaleState.Ended) revert SAFE_YIELD_PRESALE_NOT_ENDED();
         _;
     }
@@ -169,6 +163,14 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
      */
     function unpause() external override onlyOwner {
         _unpause();
+    }
+
+    function enableStaking() external override onlyOwner {
+        stakingEnabled = true;
+    }
+
+    function disableStaking() external override onlyOwner {
+        stakingEnabled = false;
     }
 
     /**
@@ -273,7 +275,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
      * @dev Recover tokens sent to the contract
      * @param amount The amount of tokens to recover
      */
-    function recoverSafeTokens(uint256 amount) external onlyOwner preSaleNotEnded {
+    function recoverSafeTokens(uint256 amount) external onlyOwner preSaleEnded {
         if (amount == 0) revert SAFE_YIELD_INVALID_AMOUNT();
 
         safeToken.transfer(owner(), amount);
@@ -324,16 +326,28 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
      * @dev Claim safe tokens
      * @notice This function can only be called when the presale has ended
      */
-    function claimSafeTokens() external override whenNotPaused preSaleNotEnded {
-        uint128 safeTokens = safeYieldStaking.getUserStake(msg.sender).stakeAmount;
+    function claimSafeTokens() external override whenNotPaused preSaleEnded {
+        uint128 safeTokens;
+        if (stakingEnabled) {
+            safeTokens = safeYieldStaking.getUserStake(msg.sender).stakeAmount;
+            if (safeTokens == 0) revert SAFE_YIELD_ZERO_BALANCE();
 
-        if (safeTokens == 0) revert SAFE_YIELD_ZERO_BALANCE();
+            investorAllocations[msg.sender] = 0;
 
-        investorAllocations[msg.sender] = 0;
+            referrerInfo[keccak256(abi.encodePacked(msg.sender))].safeTokenVolume = 0;
 
-        referrerInfo[keccak256(abi.encodePacked(msg.sender))].safeTokenVolume = 0;
+            safeYieldStaking.unStakeFor(msg.sender, safeTokens);
+        } else {
+            safeTokens = getTotalSafeTokensOwed(msg.sender);
 
-        safeYieldStaking.unStakeFor(msg.sender, safeTokens);
+            if (safeTokens == 0) revert SAFE_YIELD_ZERO_BALANCE();
+
+            investorAllocations[msg.sender] = 0;
+
+            referrerInfo[keccak256(abi.encodePacked(msg.sender))].safeTokenVolume = 0;
+
+            safeToken.safeTransfer(msg.sender, safeTokens);
+        }
 
         emit SafeTokensClaimed(msg.sender, safeTokens);
     }
@@ -398,6 +412,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
              * say tokenPrice is 1e18
              * usdcToRefund = 110_000e6 - (99_000e18 * 1e6) / 1e18 = 110_000e6 - 99_000e6 = 11_000e6
              */
+            //!note confirm token price is 1e18 or 1e6
             uint128 valueOfAvailableTokens =
                 SafeCast.toUint128((safeTokensBought.mulDiv(USDC_PRECISION, tokenPrice, Math.Rounding.Ceil)));
 
@@ -430,6 +445,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
         if (investorAllocations[investor] + safeTokensBought > maxAllocationPerWallet) {
             safeTokensBought = maxAllocationPerWallet - investorAllocations[investor];
 
+            //the usdc decimals
             usdcToRefund = usdcAmount
                 - SafeCast.toUint128((safeTokensBought.mulDiv(USDC_PRECISION, tokenPrice, Math.Rounding.Ceil)));
         }
@@ -518,19 +534,21 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
 
         totalSold += totalSafeTokensToStake;
 
-        safeToken.approve(address(safeYieldStaking), totalSafeTokensToStake);
+        if (stakingEnabled) {
+            safeToken.approve(address(safeYieldStaking), totalSafeTokensToStake);
 
-        /**
-         * @dev check if the referrer is not address(0)
-         * then stake the safe tokens bought for both investor and the referrer
-         * else stake the safe tokens bought for the investor only.
-         */
-        if (referrerInvestor != address(0)) {
-            safeYieldStaking.autoStakeForBothReferrerAndRecipient(
-                investor, safeTokensBought, referrerInvestor, referrerSafeTokenCommission
-            );
-        } else {
-            safeYieldStaking.stakeFor(investor, totalSafeTokensToStake);
+            /**
+             * @dev check if the referrer is not address(0)
+             * then stake the safe tokens bought for both investor and the referrer
+             * else stake the safe tokens bought for the investor only.
+             */
+            if (referrerInvestor != address(0)) {
+                safeYieldStaking.autoStakeForBothReferrerAndRecipient(
+                    investor, safeTokensBought, referrerInvestor, referrerSafeTokenCommission
+                );
+            } else {
+                safeYieldStaking.stakeFor(investor, totalSafeTokensToStake);
+            }
         }
     }
 
