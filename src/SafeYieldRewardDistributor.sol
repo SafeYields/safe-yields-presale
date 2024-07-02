@@ -198,6 +198,8 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
 
         uint256 index = contractIndex[contract_];
 
+        if (updatedAllocations[index].share != 0) revert SYRD__INVALID_SHARE();
+
         ///@dev cannot remove the first three contracts
         if (index < 3) revert SYRD__INVALID_CONTRACT();
 
