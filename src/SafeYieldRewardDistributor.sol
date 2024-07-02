@@ -198,7 +198,7 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
 
         uint256 index = contractIndex[contract_];
 
-        ///@dev cannot remove the first two contracts
+        ///@dev cannot remove the first three contracts
         if (index < 3) revert SYRD__INVALID_CONTRACT();
 
         _distributeToAllContracts();
