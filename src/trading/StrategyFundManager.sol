@@ -97,7 +97,7 @@ contract StrategyFundManager is IStrategyFundManager, Ownable2Step {
      * @dev The new controller address must not be the zero address.
      * @param _controller The address of the new strategy controller
      */
-    function setStrategyController(address _controller) external override {
+    function setStrategyController(address _controller) external override onlyOwner {
         if (_controller == address(0)) revert SY__INVALID_ADDRESS();
 
         controller = IStrategyController(_controller);
@@ -130,15 +130,15 @@ contract StrategyFundManager is IStrategyFundManager, Ownable2Step {
      * @return totalAmountsDeposited The total amount of deposits after funding the strategy
      * onlyController Ensures that only the Strategy Controller can call this function
      */
-    function fundStrategy(address strategy, uint256 amountRequested)
+    function fundStrategy(address strategyHandler, uint256 amountRequested)
         external
         override
         onlyController(msg.sender)
         returns (uint256)
     {
-        usdc.safeIncreaseAllowance(strategy, amountRequested);
+        usdc.safeIncreaseAllowance(strategyHandler, amountRequested);
 
-        emit StrategyFunded(strategy, amountRequested);
+        emit StrategyFunded(strategyHandler, amountRequested);
 
         return totalAmountsDeposited;
     }
