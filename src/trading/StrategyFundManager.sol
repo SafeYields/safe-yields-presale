@@ -130,10 +130,15 @@ contract StrategyFundManager is IStrategyFundManager, Ownable2Step {
      * @return totalAmountsDeposited The total amount of deposits after funding the strategy
      * onlyController Ensures that only the Strategy Controller can call this function
      */
-    function fundStrategy(uint256 amountRequested) external override onlyController(msg.sender) returns (uint256) {
-        usdc.safeIncreaseAllowance(msg.sender, amountRequested);
+    function fundStrategy(address strategy, uint256 amountRequested)
+        external
+        override
+        onlyController(msg.sender)
+        returns (uint256)
+    {
+        usdc.safeIncreaseAllowance(strategy, amountRequested);
 
-        emit StrategyFunded(msg.sender, amountRequested);
+        emit StrategyFunded(strategy, amountRequested);
 
         return totalAmountsDeposited;
     }
@@ -161,6 +166,7 @@ contract StrategyFundManager is IStrategyFundManager, Ownable2Step {
         uint256 numberOfStrategies = controller.strategyCount();
 
         for (uint8 strategyId; strategyId < numberOfStrategies; strategyId++) {
+            //note : check gas  memory vs storage
             Strategy memory currentStrategy = controller.getStrategy(strategyId);
 
             pendingPnl += (currentStrategy.pnl * int256(uint256(userUtilizations[user][strategyId])))

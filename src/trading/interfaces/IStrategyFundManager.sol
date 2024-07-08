@@ -13,7 +13,9 @@ interface IStrategyFundManager {
 
     function setStrategyController(address _controller) external;
 
-    function fundStrategy(uint256 amountRequested) external returns (uint256 totalDepositsAvailable);
+    function fundStrategy(address strategyHandler, uint256 amountRequested)
+        external
+        returns (uint256 totalDepositsAvailable);
 
     function pendingRewards(address user) external view returns (int256 pendingPnl);
 
