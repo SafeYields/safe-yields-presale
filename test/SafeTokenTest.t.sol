@@ -34,25 +34,25 @@ contract SafeTokenTest is SafeYieldBaseTest {
     }
 
     function testSetAllocationLimitShouldFailIfNotADMIN_ROLE() public {
-        vm.expectRevert(abi.encodeWithSelector(SafeToken.SAFE_YIELD__ONLY_ADMIN_ROLE.selector));
+        vm.expectRevert(abi.encodeWithSelector(SafeToken.SY__ONLY_ADMIN_ROLE.selector));
         vm.prank(NOT_ADMIN);
         safeToken.setAllocationLimit(msg.sender, 1000e18);
     }
 
     function testSetAllocationLimitShouldFailIfAlreadySet() public {
-        vm.expectRevert(abi.encodeWithSelector(SafeToken.SAFE_YIELD__MAX_SUPPLY_EXCEEDED.selector));
+        vm.expectRevert(abi.encodeWithSelector(SafeToken.SY__MAX_SUPPLY_EXCEEDED.selector));
         vm.prank(protocolAdmin);
         safeToken.setAllocationLimit(address(distributor), 1_000e18);
     }
 
     function testMintShouldFailIfNotMINTER_ROLE() public {
-        vm.expectRevert(abi.encodeWithSelector(SafeToken.SAFE_YIELD__ONLY_MINTER_ROLE.selector));
+        vm.expectRevert(abi.encodeWithSelector(SafeToken.SY__ONLY_MINTER_ROLE.selector));
         vm.prank(NOT_MINTER);
         safeToken.mint(1_000e18);
     }
 
     function testMintShouldFailIfMaxMintAllocExceeded() public {
-        vm.expectRevert(abi.encodeWithSelector(SafeToken.SAFE_YIELD__MAX_SUPPLY_EXCEEDED.selector));
+        vm.expectRevert(abi.encodeWithSelector(SafeToken.SY__MAX_SUPPLY_EXCEEDED.selector));
         vm.prank(address(presale));
         safeToken.mint(1_000e18);
     }

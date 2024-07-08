@@ -42,12 +42,12 @@ contract SafeToken is ISafeToken, ERC20, AccessControl {
                                  ERRORS
     //////////////////////////////////////////////////////////////*/
 
-    error SAFE_YIELD__ALLOCATION_LIMIT_ALREADY_SET();
-    error SAFE_YIELD__MAX_MINT_ALLOC_EXCEEDED();
-    error SAFE_YIELD__MAX_SUPPLY_EXCEEDED();
-    error SAFE_YIELD__ONLY_MINTER_ROLE();
-    error SAFE_YIELD__ONLY_BURNER_ROLE();
-    error SAFE_YIELD__ONLY_ADMIN_ROLE();
+    error SY__ALLOCATION_LIMIT_ALREADY_SET();
+    error SY__MAX_MINT_ALLOC_EXCEEDED();
+    error SY__MAX_SUPPLY_EXCEEDED();
+    error SY__ONLY_MINTER_ROLE();
+    error SY__ONLY_BURNER_ROLE();
+    error SY__ONLY_ADMIN_ROLE();
 
     constructor() ERC20("Safe Yield", "SAY") {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
@@ -65,21 +65,21 @@ contract SafeToken is ISafeToken, ERC20, AccessControl {
 
     function mint(uint256 numberOfTokens) public override {
         if (!hasRole(MINTER_ROLE, _msgSender())) {
-            revert SAFE_YIELD__ONLY_MINTER_ROLE();
+            revert SY__ONLY_MINTER_ROLE();
         }
         /**
          * Check if the total supply before minting is within the
          * maximum supply limit
          */
         if (totalSupply() + numberOfTokens > MAX_SUPPLY) {
-            revert SAFE_YIELD__MAX_SUPPLY_EXCEEDED();
+            revert SY__MAX_SUPPLY_EXCEEDED();
         }
         /**
          * Check if the amount to mint is within the allocation limit
          * for the minter
          */
         if (numberOfTokens > allocationLimits[_msgSender()]) {
-            revert SAFE_YIELD__MAX_MINT_ALLOC_EXCEEDED();
+            revert SY__MAX_MINT_ALLOC_EXCEEDED();
         }
 
         _mint(_msgSender(), numberOfTokens);
@@ -97,11 +97,11 @@ contract SafeToken is ISafeToken, ERC20, AccessControl {
 
     function setAllocationLimit(address minter, uint256 maxNumberOfTokens) public override {
         if (!hasRole(DEFAULT_ADMIN_ROLE, _msgSender())) {
-            revert SAFE_YIELD__ONLY_ADMIN_ROLE();
+            revert SY__ONLY_ADMIN_ROLE();
         }
 
         if (allocationLimits[minter] != 0) {
-            revert SAFE_YIELD__ALLOCATION_LIMIT_ALREADY_SET();
+            revert SY__ALLOCATION_LIMIT_ALREADY_SET();
         }
         /**
          * Grant the minter role to the address if it doesn't have it
@@ -111,7 +111,7 @@ contract SafeToken is ISafeToken, ERC20, AccessControl {
         }
 
         if (totalSupply() + maxNumberOfTokens > MAX_SUPPLY) {
-            revert SAFE_YIELD__MAX_SUPPLY_EXCEEDED();
+            revert SY__MAX_SUPPLY_EXCEEDED();
         }
 
         allocationLimits[minter] = maxNumberOfTokens;
@@ -121,7 +121,7 @@ contract SafeToken is ISafeToken, ERC20, AccessControl {
 
     function burn(address from, uint256 amount) public override {
         if (!hasRole(BURNER_ROLE, _msgSender())) {
-            revert SAFE_YIELD__ONLY_BURNER_ROLE();
+            revert SY__ONLY_BURNER_ROLE();
         }
         _burn(from, amount);
     }

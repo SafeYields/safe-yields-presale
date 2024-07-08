@@ -81,24 +81,24 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
                                  ERRORS
     //////////////////////////////////////////////////////////////*/
 
-    error SAFE_YIELD_INVALID_REFER_COMMISSION_PERCENTAGE();
-    error SAFE_YIELD_BELOW_MIN_ALLOCATION();
-    error SAFE_YIELD_NO_MORE_TOKENS_LEFT();
-    error SAFE_YIELD_INVALID_AMOUNT();
-    error SAFE_YIELD_INVALID_TOKEN_PRICE();
-    error SAFE_YIELD_INVALID_ALLOCATION();
-    error SAFE_YIELD_PRESALE_NOT_ENDED();
-    error SAFE_YIELD_UNKNOWN_REFERRER();
-    error SAFE_YIELD_REFERRAL_TO_SELF();
-    error SAFE_YIELD_PRESALE_NOT_LIVE();
-    error SAFE_YIELD_INVALID_ADDRESS();
-    error SAFE_YIELD_ZERO_BALANCE();
+    error SY_INVALID_REFER_COMMISSION_PERCENTAGE();
+    error SY_BELOW_MIN_ALLOCATION();
+    error SY_NO_MORE_TOKENS_LEFT();
+    error SY_INVALID_AMOUNT();
+    error SY_INVALID_TOKEN_PRICE();
+    error SY_INVALID_ALLOCATION();
+    error SY_PRESALE_NOT_ENDED();
+    error SY_UNKNOWN_REFERRER();
+    error SY_REFERRAL_TO_SELF();
+    error SY_PRESALE_NOT_LIVE();
+    error SY_INVALID_ADDRESS();
+    error SY_ZERO_BALANCE();
 
     /*//////////////////////////////////////////////////////////////
                                MODIFIERS
     //////////////////////////////////////////////////////////////*/
     modifier preSaleEnded() {
-        if (currentPreSaleState != PreSaleState.Ended) revert SAFE_YIELD_PRESALE_NOT_ENDED();
+        if (currentPreSaleState != PreSaleState.Ended) revert SY_PRESALE_NOT_ENDED();
         _;
     }
 
@@ -114,20 +114,20 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
         address _protocolMultisig
     ) Ownable(msg.sender) {
         if (_minAllocationPerWallet > _maxAllocationPerWallet) {
-            revert SAFE_YIELD_INVALID_ALLOCATION();
+            revert SY_INVALID_ALLOCATION();
         }
 
         if (_referrerCommissionUsdcBps >= BPS_MAX || _referrerCommissionSafeTokenBps >= BPS_MAX) {
-            revert SAFE_YIELD_INVALID_REFER_COMMISSION_PERCENTAGE();
+            revert SY_INVALID_REFER_COMMISSION_PERCENTAGE();
         }
 
-        if (_tokenPrice == 0) revert SAFE_YIELD_INVALID_TOKEN_PRICE();
+        if (_tokenPrice == 0) revert SY_INVALID_TOKEN_PRICE();
 
         if (
             _safeToken == address(0) || _usdcToken == address(0) || _safeYieldStaking == address(0)
                 || _protocolMultisig == address(0)
         ) {
-            revert SAFE_YIELD_INVALID_ADDRESS();
+            revert SY_INVALID_ADDRESS();
         }
 
         protocolMultisig = _protocolMultisig;
@@ -188,7 +188,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
      * @param referrerId the referrer id of a referrer
      */
     function deposit(uint128 usdcAmount, bytes32 referrerId) external override whenNotPaused {
-        if (currentPreSaleState != PreSaleState.Live) revert SAFE_YIELD_PRESALE_NOT_LIVE();
+        if (currentPreSaleState != PreSaleState.Live) revert SY_PRESALE_NOT_LIVE();
 
         (
             uint128 safeTokensBought,
@@ -219,7 +219,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
         onlyOwner
     {
         if (_commissionUsdcBps >= BPS_MAX || _commissionSafeBps >= BPS_MAX) {
-            revert SAFE_YIELD_INVALID_REFER_COMMISSION_PERCENTAGE();
+            revert SY_INVALID_REFER_COMMISSION_PERCENTAGE();
         }
 
         referrerCommissionUsdcBps = _commissionUsdcBps;
@@ -233,7 +233,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
      * @param _price The token price to set with 18 decimal of precision
      */
     function setTokenPrice(uint128 _price) external override onlyOwner {
-        if (_price == 0) revert SAFE_YIELD_INVALID_TOKEN_PRICE();
+        if (_price == 0) revert SY_INVALID_TOKEN_PRICE();
 
         tokenPrice = _price;
 
@@ -246,7 +246,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
      * @param _max The maximum allocation per wallet
      */
     function setAllocationsPerWallet(uint128 _min, uint128 _max) external override onlyOwner {
-        if (_min >= _max) revert SAFE_YIELD_INVALID_ALLOCATION();
+        if (_min >= _max) revert SY_INVALID_ALLOCATION();
 
         minAllocationPerWallet = _min;
         maxAllocationPerWallet = _max;
@@ -255,7 +255,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
     }
 
     function setProtocolMultisig(address _protocolMultisig) external override onlyOwner {
-        if (_protocolMultisig == address(0)) revert SAFE_YIELD_INVALID_ADDRESS();
+        if (_protocolMultisig == address(0)) revert SY_INVALID_ADDRESS();
 
         protocolMultisig = _protocolMultisig;
 
@@ -267,7 +267,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
      * @param amount The amount of tokens to recover
      */
     function recoverSafeTokens(uint256 amount) external onlyOwner preSaleEnded {
-        if (amount == 0) revert SAFE_YIELD_INVALID_AMOUNT();
+        if (amount == 0) revert SY_INVALID_AMOUNT();
 
         safeToken.transfer(owner(), amount);
 
@@ -289,7 +289,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
 
         _referrerInfo.usdcVolume = 0;
 
-        if (_referrerInfo.referrer != msg.sender) revert SAFE_YIELD_UNKNOWN_REFERRER();
+        if (_referrerInfo.referrer != msg.sender) revert SY_UNKNOWN_REFERRER();
 
         usdcToken.safeTransfer(msg.sender, usdcToRedeem);
 
@@ -304,7 +304,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
         /**
          * @dev check if the referrer has invested
          */
-        if (investorAllocations[msg.sender] == 0) revert SAFE_YIELD_ZERO_BALANCE();
+        if (investorAllocations[msg.sender] == 0) revert SY_ZERO_BALANCE();
 
         referrerId = keccak256(abi.encodePacked(msg.sender));
 
@@ -319,7 +319,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
      */
     function claimSafeTokens() external override whenNotPaused preSaleEnded {
         uint128 safeTokens = safeYieldStaking.getUserStake(msg.sender).stakeAmount;
-        if (safeTokens == 0) revert SAFE_YIELD_ZERO_BALANCE();
+        if (safeTokens == 0) revert SY_ZERO_BALANCE();
 
         investorAllocations[msg.sender] = 0;
 
@@ -372,13 +372,13 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
         safeTokensBought = calculateSafeTokens(usdcAmount);
 
         /// @dev check if the safe tokens bought is less than the minimum allocation per wallet.
-        if (safeTokensBought < minAllocationPerWallet) revert SAFE_YIELD_BELOW_MIN_ALLOCATION();
+        if (safeTokensBought < minAllocationPerWallet) revert SY_BELOW_MIN_ALLOCATION();
 
         uint128 safeTokensAvailableForPurchase = safeTokensAvailable();
 
         uint128 usdcToRefund;
 
-        if (safeTokensAvailableForPurchase == 0) revert SAFE_YIELD_NO_MORE_TOKENS_LEFT();
+        if (safeTokensAvailableForPurchase == 0) revert SY_NO_MORE_TOKENS_LEFT();
 
         if (safeTokensBought >= safeTokensAvailableForPurchase) {
             safeTokensBought = safeTokensAvailableForPurchase;
@@ -444,9 +444,9 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
 
             referrerInvestor = _referrerInfo.referrer;
 
-            if (referrerInvestor == address(0)) revert SAFE_YIELD_UNKNOWN_REFERRER();
+            if (referrerInvestor == address(0)) revert SY_UNKNOWN_REFERRER();
 
-            if (referrerInvestor == investor) revert SAFE_YIELD_REFERRAL_TO_SELF();
+            if (referrerInvestor == investor) revert SY_REFERRAL_TO_SELF();
 
             referrerUsdcCommission =
                 SafeCast.toUint128(usdcAmount.mulDiv(referrerCommissionUsdcBps, BPS_MAX, Math.Rounding.Floor));

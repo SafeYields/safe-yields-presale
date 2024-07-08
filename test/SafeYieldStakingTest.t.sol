@@ -26,38 +26,38 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
 
     function testAutoStakeForShouldFailIfCallerIsNotPresale() public {
         vm.prank(ALICE);
-        vm.expectRevert(SafeYieldStaking.SAFE_YIELD_ONLY_PRESALE.selector);
+        vm.expectRevert(SafeYieldStaking.SY_ONLY_PRESALE.selector);
         staking.autoStakeForBothReferrerAndRecipient(ALICE, 100e6, BOB, 100e6);
     }
 
     function testStakeShouldFailIfDuringPresale() public {
         vm.prank(ALICE);
-        vm.expectRevert(SafeYieldStaking.SAFE_YIELD_STAKING_LOCKED.selector);
+        vm.expectRevert(SafeYieldStaking.SY_STAKING_LOCKED.selector);
         staking.stakeFor(ALICE, 100e6);
     }
 
     function testStakeForShouldFailIfPresaleIsLiveAndCallerIsNotPresale() public startPresale {
-        vm.expectRevert(SafeYieldStaking.SAFE_YIELD_STAKING_LOCKED.selector);
+        vm.expectRevert(SafeYieldStaking.SY_STAKING_LOCKED.selector);
         vm.prank(ALICE);
         staking.stakeFor(ALICE, 1_000e18);
     }
 
     function testStakeForShouldFailIfStakeAmountIsLessThanMin() public startEndPresale {
-        vm.expectRevert(SafeYieldStaking.SAFE_YIELD_INVALID_STAKE_AMOUNT.selector);
+        vm.expectRevert(SafeYieldStaking.SY_INVALID_STAKE_AMOUNT.selector);
         vm.startPrank(ALICE);
         staking.stakeFor(ALICE, 0);
         vm.stopPrank();
     }
 
     function testUnStakeForShouldFailIfUnStakeAmountIsLessThanMin() public startEndPresale {
-        vm.expectRevert(SafeYieldStaking.SAFE_YIELD_INVALID_STAKE_AMOUNT.selector);
+        vm.expectRevert(SafeYieldStaking.SY_INVALID_STAKE_AMOUNT.selector);
         vm.startPrank(ALICE);
         staking.unStake(0);
         vm.stopPrank();
     }
 
     function testUnStakeShouldFailIfUserHasNoStake() public startEndPresale {
-        vm.expectRevert(SafeYieldStaking.SAFE_YIELD_INSUFFICIENT_STAKE.selector);
+        vm.expectRevert(SafeYieldStaking.SY_INSUFFICIENT_STAKE.selector);
         vm.startPrank(ALICE);
         staking.unStake(1_000e18);
         vm.stopPrank();
@@ -66,7 +66,7 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
     function testStakeShouldRevertIfPreSaleIsLiveAndCallerIsNotAdmin() public startEndPresale {
         vm.prank(protocolAdmin);
         presale.startPresale();
-        vm.expectRevert(SafeYieldStaking.SAFE_YIELD_STAKING_LOCKED.selector);
+        vm.expectRevert(SafeYieldStaking.SY_STAKING_LOCKED.selector);
         vm.prank(NOT_ADMIN);
         staking.stakeFor(NOT_ADMIN, 1_000e18);
     }
