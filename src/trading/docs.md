@@ -1,8 +1,3 @@
+User ------>>>>>>>>>>>>> FundManager----------->>>>>> StrategyController ------>>>>>>
 
-
-
-
-User ------>>>>>>>>>>>>> Main Vault ----------->>>>>> Strategy Vault
-
-
-Main Vault ------>>> supply trade amount ----->>>> Strategy Vault
+--------->>>>>>> StrategyController------>>>>> supply trade amount ----->>>> Strategy Vault
