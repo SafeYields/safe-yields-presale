@@ -2,10 +2,10 @@
 
 pragma solidity 0.8.26;
 
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
-import { Ownable2Step, Ownable } from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import { IERC20 } from "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
+import { SafeERC20 } from "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
+import { Math } from "lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
+import { Ownable2Step, Ownable } from "lib/openzeppelin-contracts/contracts/access/Ownable2Step.sol";
 import { UserDepositDetails, Strategy } from "./types/StrategyControllerTypes.sol";
 import { IStrategyFundManager } from "./interfaces/IStrategyFundManager.sol";
 import { IStrategyController } from "./interfaces/IStrategyController.sol";
@@ -126,21 +126,24 @@ contract StrategyFundManager is IStrategyFundManager, Ownable2Step {
     /**
      * @notice Funds a strategy with the specified amount
      * @dev Increases the allowance for the strategy controller by the requested amount.
+     * @param strategyHandler The address of the handler (GMX or VELA)
      * @param amountRequested The amount of USDC to be allocated to the strategy
-     * @return totalAmountsDeposited The total amount of deposits after funding the strategy
+     * @return _totalAmountsDeposited The total amount of deposits after funding the strategy
      * onlyController Ensures that only the Strategy Controller can call this function
      */
     function fundStrategy(address strategyHandler, uint256 amountRequested)
         external
         override
         onlyController(msg.sender)
-        returns (uint256)
+        returns (uint256 _totalAmountsDeposited)
     {
         usdc.safeIncreaseAllowance(strategyHandler, amountRequested);
 
-        emit StrategyFunded(strategyHandler, amountRequested);
+        _totalAmountsDeposited = totalAmountsDeposited;
 
-        return totalAmountsDeposited;
+        totalAmountsDeposited -= amountRequested;
+
+        emit StrategyFunded(strategyHandler, amountRequested);
     }
 
     function userDepositDetails(address user) external view override returns (UserDepositDetails memory userDeposits) {
@@ -162,15 +165,39 @@ contract StrategyFundManager is IStrategyFundManager, Ownable2Step {
      * @param user The address of the user whose PNL is to be calculated
      * @return pendingPnl The total PNL for the user
      */
+    // function pendingRewards(address user) public view override returns (int256 pendingPnl) {
+    //     uint256 numberOfStrategies = controller.strategyCount();
+
+    //     for (uint256 strategyId; strategyId < numberOfStrategies; strategyId++) {
+    //         //note : check gas  memory vs storage
+    //         Strategy memory currentStrategy = controller.getStrategy(strategyId);
+
+    //         pendingPnl += (currentStrategy.pnl * int256(uint256(userUtilizations[user][strategyId])))
+    //             / int256(currentStrategy.amountRequested);
+    //     }
+    // }
+
     function pendingRewards(address user) public view override returns (int256 pendingPnl) {
-        uint256 numberOfStrategies = controller.strategyCount();
+        uint256 totalStrategyHandlers = controller.getStrategyHandlers().length;
 
-        for (uint8 strategyId; strategyId < numberOfStrategies; strategyId++) {
-            //note : check gas  memory vs storage
-            Strategy memory currentStrategy = controller.getStrategy(strategyId);
+        // // Iterate over each strategy handler
+        for (uint8 handlerIndex = 0; handlerIndex < totalStrategyHandlers; handlerIndex++) {
+            address strategyHandler = controller.getStrategyHandler(handlerIndex);
+            uint128 numberOfStrategies = controller.strategyCounts(strategyHandler, handlerIndex);
 
-            pendingPnl += (currentStrategy.pnl * int256(uint256(userUtilizations[user][strategyId])))
-                / int256(currentStrategy.amountRequested);
+            // Iterate over each strategy under the current strategy handler
+            for (uint8 strategyId = 0; strategyId < numberOfStrategies; strategyId++) {
+                Strategy memory currentStrategy = controller.getStrategy(strategyHandler, strategyId);
+
+                int256 userUtilization = int256(uint256(userUtilizations[user][strategyId]));
+                int256 strategyPnl = currentStrategy.pnl;
+                int256 amountRequested = int256(currentStrategy.amountRequested);
+
+                // Avoid division by zero
+                if (amountRequested != 0) {
+                    pendingPnl += (strategyPnl * userUtilization) / amountRequested;
+                }
+            }
         }
     }
 
@@ -181,37 +208,71 @@ contract StrategyFundManager is IStrategyFundManager, Ownable2Step {
      *       accordingly.
      *  @param user The address of the user whose details are to be updated
      */
+    // function updateUserDetails(address user) internal {
+    //     UserDepositDetails storage userDeposits = userStats[user];
+
+    //     uint256 numberOfStrategies = controller.strategyCount();
+
+    //     for (uint8 strategyId; strategyId < numberOfStrategies; strategyId++) {
+    //         //note : check gas  memory vs storage
+    //         Strategy memory currentStrategy = controller.getStrategy(strategyId);
+
+    //         if (currentStrategy.timestampOfStrategy > userDeposits.lastDepositTimestamp) {
+    //             // uint256 userUtilizedInStrategy = (userDeposits.amountUnutilized * currentStrategy.amountRequested)
+    //             //     / currentStrategy.lastTotalAmountsAvailable;
+
+    //             uint256 userUtilizedInStrategy = userDeposits.amountUnutilized.mulDiv(
+    //                 currentStrategy.amountRequested, currentStrategy.lastTotalAmountsAvailable, Math.Rounding.Floor
+    //             );
+    //             // console.log("Strategy ID", strategyId);
+    //             // console.log("Strategy Amount Requested", currentStrategy.amountRequested);
+    //             // console.log("User amount Utilized Before", userDeposits.amountUtilized);
+
+    //             userDeposits.amountUtilized += uint128(userUtilizedInStrategy);
+    //             userDeposits.amountUnutilized -= uint128(userUtilizedInStrategy);
+
+    //             userUtilizations[user][strategyId] = uint128(userUtilizedInStrategy);
+
+    //             // console.log("User amount Utilized for Strategy", userUtilizedInStrategy);
+    //             // console.log("User amount Unutilized before next Strategy", userDeposits.amountUnutilized);
+    //             // console.log();
+
+    //             if (userDeposits.amountUnutilized == 0) break;
+    //         }
+    //     }
+    // }
+
     function updateUserDetails(address user) internal {
         UserDepositDetails storage userDeposits = userStats[user];
+        uint256 totalStrategyHandlers = controller.getStrategyHandlers().length;
 
-        uint256 numberOfStrategies = controller.strategyCount();
+        // Iterate over each strategy handler
+        for (uint8 handlerIndex = 0; handlerIndex < totalStrategyHandlers; handlerIndex++) {
+            address strategyHandler = controller.getStrategyHandler(handlerIndex);
+            uint128 numberOfStrategies = controller.strategyCounts(strategyHandler, handlerIndex);
 
-        for (uint8 strategyId; strategyId < numberOfStrategies; strategyId++) {
-            //note : check gas  memory vs storage
-            Strategy memory currentStrategy = controller.getStrategy(strategyId);
+            // Iterate over each strategy under the current strategy handler
+            for (uint8 strategyId = 0; strategyId < numberOfStrategies; strategyId++) {
+                Strategy memory currentStrategy = controller.getStrategy(strategyHandler, strategyId);
 
-            if (currentStrategy.timestampOfStrategy > userDeposits.lastDepositTimestamp) {
-                // uint256 userUtilizedInStrategy = (userDeposits.amountUnutilized * currentStrategy.amountRequested)
-                //     / currentStrategy.lastTotalAmountsAvailable;
+                if (currentStrategy.timestampOfStrategy > userDeposits.lastDepositTimestamp) {
+                    // Calculate the user's utilized amount in the current strategy
+                    uint256 userUtilizedInStrategy = userDeposits.amountUnutilized.mulDiv(
+                        currentStrategy.amountRequested, currentStrategy.lastTotalAmountsAvailable, Math.Rounding.Floor
+                    );
 
-                uint256 userUtilizedInStrategy = userDeposits.amountUnutilized.mulDiv(
-                    currentStrategy.amountRequested, currentStrategy.lastTotalAmountsAvailable, Math.Rounding.Floor
-                );
-                // console.log("Strategy ID", strategyId);
-                // console.log("Strategy Amount Requested", currentStrategy.amountRequested);
-                // console.log("User amount Utilized Before", userDeposits.amountUtilized);
+                    userDeposits.amountUtilized += uint128(userUtilizedInStrategy);
+                    userDeposits.amountUnutilized -= uint128(userUtilizedInStrategy);
 
-                userDeposits.amountUtilized += uint128(userUtilizedInStrategy);
-                userDeposits.amountUnutilized -= uint128(userUtilizedInStrategy);
+                    userUtilizations[user][strategyId] = uint128(userUtilizedInStrategy);
 
-                userUtilizations[user][strategyId] = uint128(userUtilizedInStrategy);
-
-                // console.log("User amount Utilized for Strategy", userUtilizedInStrategy);
-                // console.log("User amount Unutilized before next Strategy", userDeposits.amountUnutilized);
-                // console.log();
-
-                if (userDeposits.amountUnutilized == 0) break;
+                    // Break the loop if the user's unutilized amount is exhausted
+                    if (userDeposits.amountUnutilized == 0) break;
+                }
             }
+
+            // Break the outer loop if the user's unutilized amount is exhausted
+            if (userDeposits.amountUnutilized == 0) break;
         }
     }
 }
