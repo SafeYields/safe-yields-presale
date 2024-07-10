@@ -18,10 +18,6 @@ interface IExchangeRouter {
 
     function cancelWithdrawal(bytes32 key) external payable;
 
-    function executeAtomicWithdrawal(CreateWithdrawalParams calldata params, SetPricesParams calldata oracleParams)
-        external
-        payable;
-
     /**
      * @dev To create a swap / increase position order, collateral needs to first be transferred to the OrderVault,
      *  ExchangeRouter.createOrder can then be called after. The transfer of tokens for collateral and
