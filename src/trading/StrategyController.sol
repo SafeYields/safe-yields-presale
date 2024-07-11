@@ -14,11 +14,22 @@ contract StrategyController is IStrategyController, Ownable2Step {
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
 
+    uint256 public handlerCount;
     uint128 public override strategyCount;
     address[] public strategyHandlers;
     IStrategyFundManager public fundManager;
     IERC20 public usdc;
+
     mapping(uint256 strategyId => Strategy) public strategies;
+    mapping(address strategyHandler => uint256) public strategyHandlerIndex;
+
+    event StrategyHandlerAdded(address strategyHandler, uint256 index);
+    event StrategyHandlerRemoved(address strategyHandler);
+
+    error SYSC_INVALID_ADDRESS();
+    error SYSC_DUPLICATE_HANDLER();
+    error SYSC_HANDLER_NOT_CONTRACT();
+    error SYSC_INVALID_HANDLER();
 
     constructor(address _usdc, address _fundManager, address _protocolAdmin) Ownable(_protocolAdmin) {
         fundManager = IStrategyFundManager(_fundManager);
@@ -50,9 +61,9 @@ contract StrategyController is IStrategyController, Ownable2Step {
         uint256 strategyId = ++strategyCount;
 
         strategies[strategyId].id = strategyId;
-        strategies[strategyId].amountRequested = amount;
-        strategies[strategyId].timestampOfStrategy = uint32(block.timestamp);
-        strategies[strategyId].lastTotalAmountsAvailable = lastTotalDeposits;
+        strategies[strategyId].amountFunded = amount;
+        strategies[strategyId].lastFundedAt = uint48(block.timestamp);
+        strategies[strategyId].lastFMTotalDeposits = lastTotalDeposits;
 
         //note interact with strategy handler
     }
@@ -71,9 +82,41 @@ contract StrategyController is IStrategyController, Ownable2Step {
         uint256 leverageUpdate
     ) external override { }
 
-    function addStrategyHandler(address strategyHandler) external override onlyOwner { }
+    function addStrategyHandler(address strategyHandler) external override onlyOwner {
+        if (strategyHandler == address(0)) revert SYSC_INVALID_ADDRESS();
+        address[] memory handlers = strategyHandlers;
+        if (strategyHandlerIndex[strategyHandler] != 0 || handlers[0] == strategyHandler) {
+            revert SYSC_DUPLICATE_HANDLER();
+        }
+        uint256 codeSize;
+        assembly {
+            codeSize := extcodesize(strategyHandler)
+        }
+        if (codeSize == 0) revert SYSC_HANDLER_NOT_CONTRACT();
 
-    function removeStrategyHandler(address strategyHandler) external override onlyOwner { }
+        uint256 index = handlers.length;
+        strategyHandlers.push(strategyHandler);
+        strategyHandlerIndex[strategyHandler] = index;
+    }
 
-    function getStrategyHandlers() external view override returns (address[] memory) { }
+    function removeStrategyHandler(address strategyHandler) external override onlyOwner {
+        address[] memory handlers = strategyHandlers;
+        uint256 index = strategyHandlerIndex[strategyHandler];
+
+        if (index == 0 && handlers[0] != strategyHandler) revert SYSC_INVALID_HANDLER();
+        if (handlers.length == 1) {
+            delete strategyHandlers;
+        } else {
+            strategyHandlers[index] = handlers[handlers.length - 1];
+            strategyHandlerIndex[handlers[handlers.length - 1]] = index;
+            strategyHandlers.pop();
+        }
+        delete strategyHandlerIndex[strategyHandler];
+
+        emit StrategyHandlerRemoved(strategyHandler);
+    }
+
+    function getStrategyHandlers() external view override returns (address[] memory) {
+        return strategyHandlers;
+    }
 }
