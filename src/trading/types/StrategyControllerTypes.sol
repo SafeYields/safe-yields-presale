@@ -8,23 +8,25 @@ enum OrderType {
 
 struct Strategy {
     uint256 id;
-    uint48 timestampOfStrategy;
-    uint256 amountRequested;
-    uint256 lastTotalAmountsAvailable;
+    uint256 amountFunded;
+    uint256 lastFMTotalDeposits;
     uint256 limitPrice;
-    uint256 stopLossPrice;
-    uint256 takeProfitPrice;
+    uint256 slPrice;
+    uint256 tpPrice;
     uint256 leverage;
+    int256 livePnl;
     int256 pnl;
     OrderType orderType;
     address token;
-    address strategyHandler;
+    address handler;
+    uint48 openedAt;
+    uint48 lastFundedAt;
     bool isLong;
     bool isMatured;
 }
 
 struct UserDepositDetails {
-    uint48 lastDepositTimestamp;
+    uint48 lastDepositedAt;
     uint128 amountUnutilized;
     uint128 amountUtilized;
 }
