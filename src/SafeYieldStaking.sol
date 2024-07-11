@@ -63,12 +63,12 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20 {
                                  ERRORS
     //////////////////////////////////////////////////////////////*/
 
-    error SY_STAKING_LOCKED();
-    error SY_ONLY_PRESALE();
-    error SY_INVALID_STAKE_AMOUNT();
-    error SY_INSUFFICIENT_STAKE();
-    error SY_INVALID_ADDRESS();
-    error SY_STAKED_SAFE_TRANSFER_NOT_ALLOWED();
+    error SY__ST_STAKING_LOCKED();
+    error SY__ST_ONLY_PRESALE();
+    error SY__ST_INVALID_STAKE_AMOUNT();
+    error SY__ST_INSUFFICIENT_STAKE();
+    error SY__ST_INVALID_ADDRESS();
+    error SY__ST_STAKED_SAFE_TRANSFER_NOT_ALLOWED();
 
     /*//////////////////////////////////////////////////////////////
                                MODIFIERS
@@ -80,14 +80,14 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20 {
     modifier lockStaking() {
         if (presale.currentPreSaleState() != PreSaleState.Ended) {
             if (msg.sender != address(presale)) {
-                revert SY_STAKING_LOCKED();
+                revert SY__ST_STAKING_LOCKED();
             }
         }
         _;
     }
 
     modifier onlyPresale() {
-        if (msg.sender != address(presale)) revert SY_ONLY_PRESALE();
+        if (msg.sender != address(presale)) revert SY__ST_ONLY_PRESALE();
         _;
     }
 
@@ -96,7 +96,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20 {
         ERC20("SafeYield Staked SafeToken", "sSafeToken")
     {
         if (_safeToken == address(0) || _usdc == address(0)) {
-            revert SY_INVALID_ADDRESS();
+            revert SY__ST_INVALID_ADDRESS();
         }
 
         safeToken = IERC20(_safeToken);
@@ -140,7 +140,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20 {
     }
 
     function stakeFor(address user, uint128 amount) public override lockStaking {
-        if (amount == 0) revert SY_INVALID_STAKE_AMOUNT();
+        if (amount == 0) revert SY__ST_INVALID_STAKE_AMOUNT();
 
         safeToken.safeTransferFrom(msg.sender, address(this), amount);
 
@@ -175,8 +175,8 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20 {
      * @param amount is the number of safe tokens to unstake
      */
     function unStakeFor(address user, uint128 amount) external override onlyPresale {
-        if (amount == 0) revert SY_INVALID_STAKE_AMOUNT();
-        if (userStake[user].stakeAmount < amount) revert SY_INSUFFICIENT_STAKE();
+        if (amount == 0) revert SY__ST_INVALID_STAKE_AMOUNT();
+        if (userStake[user].stakeAmount < amount) revert SY__ST_INSUFFICIENT_STAKE();
 
         claimRewards(user);
 
@@ -186,8 +186,8 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20 {
     }
 
     function unStake(uint128 amount) external override lockStaking {
-        if (amount == 0) revert SY_INVALID_STAKE_AMOUNT();
-        if (userStake[msg.sender].stakeAmount < amount) revert SY_INSUFFICIENT_STAKE();
+        if (amount == 0) revert SY__ST_INVALID_STAKE_AMOUNT();
+        if (userStake[msg.sender].stakeAmount < amount) revert SY__ST_INSUFFICIENT_STAKE();
 
         claimRewards(msg.sender);
 
@@ -197,7 +197,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20 {
     }
 
     function setPresale(address _presale) external override onlyOwner {
-        if (_presale == address(0)) revert SY_INVALID_ADDRESS();
+        if (_presale == address(0)) revert SY__ST_INVALID_ADDRESS();
         presale = ISafeYieldPreSale(_presale);
 
         emit PresaleSet(_presale);
@@ -208,7 +208,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20 {
      */
 
     function setRewardDistributor(address _distributor) external override onlyOwner {
-        if (_distributor == address(0)) revert SY_INVALID_ADDRESS();
+        if (_distributor == address(0)) revert SY__ST_INVALID_ADDRESS();
         distributor = ISafeYieldRewardDistributor(_distributor);
 
         emit RewardDistributorSet(_distributor);
@@ -360,7 +360,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20 {
     ///@dev disable sSafeToken transfer
     function _update(address from, address to, uint256 value) internal override {
         if (from != address(0) && to != address(0)) {
-            revert SY_STAKED_SAFE_TRANSFER_NOT_ALLOWED();
+            revert SY__ST_STAKED_SAFE_TRANSFER_NOT_ALLOWED();
         }
 
         super._update(from, to, value);

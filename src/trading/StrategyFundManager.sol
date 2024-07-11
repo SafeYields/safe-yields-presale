@@ -43,20 +43,21 @@ contract StrategyFundManager is IStrategyFundManager, Ownable2Step {
     /*//////////////////////////////////////////////////////////////
                                  ERRORS
     //////////////////////////////////////////////////////////////*/
-    error SY__INVALID_ADDRESS();
-    error SY__INVALID_AMOUNT();
-    error SY__ONLY_CONTROLLER();
+    //!note: errors
+    error SY__SFM__INVALID_ADDRESS();
+    error SY__SFM__INVALID_AMOUNT();
+    error SY__SFM__ONLY_CONTROLLER();
 
     /*//////////////////////////////////////////////////////////////
                                MODIFIERS
     //////////////////////////////////////////////////////////////*/
     modifier onlyController(address _caller) {
-        if (_caller != address(controller)) revert SY__ONLY_CONTROLLER();
+        if (_caller != address(controller)) revert SY__SFM__ONLY_CONTROLLER();
         _;
     }
 
     constructor(address _usdc, address _protocolAdmin) Ownable(_protocolAdmin) {
-        if (_usdc == address(0) || _protocolAdmin == address(0)) revert SY__INVALID_ADDRESS();
+        if (_usdc == address(0) || _protocolAdmin == address(0)) revert SY__SFM__INVALID_ADDRESS();
 
         usdc = IERC20(_usdc);
 
@@ -69,7 +70,7 @@ contract StrategyFundManager is IStrategyFundManager, Ownable2Step {
      * @param amount The amount of USDC to be deposited
      */
     function deposit(uint128 amount) external override {
-        if (amount < 1e6) revert SY__INVALID_AMOUNT();
+        if (amount < 1e6) revert SY__SFM__INVALID_AMOUNT();
 
         usdc.safeTransferFrom(msg.sender, address(this), amount);
 
@@ -98,7 +99,7 @@ contract StrategyFundManager is IStrategyFundManager, Ownable2Step {
      * @param _controller The address of the new strategy controller
      */
     function setStrategyController(address _controller) external override onlyOwner {
-        if (_controller == address(0)) revert SY__INVALID_ADDRESS();
+        if (_controller == address(0)) revert SY__SFM__INVALID_ADDRESS();
 
         controller = IStrategyController(_controller);
 
@@ -165,28 +166,16 @@ contract StrategyFundManager is IStrategyFundManager, Ownable2Step {
      * @param user The address of the user whose PNL is to be calculated
      * @return pendingPnl The total PNL for the user
      */
-    // function pendingRewards(address user) public view override returns (int256 pendingPnl) {
-    //     uint256 numberOfStrategies = controller.strategyCount();
-
-    //     for (uint256 strategyId; strategyId < numberOfStrategies; strategyId++) {
-    //         //note : check gas  memory vs storage
-    //         Strategy memory currentStrategy = controller.getStrategy(strategyId);
-
-    //         pendingPnl += (currentStrategy.pnl * int256(uint256(userUtilizations[user][strategyId])))
-    //             / int256(currentStrategy.amountRequested);
-    //     }
-    // }
-
     function pendingRewards(address user) public view override returns (int256 pendingPnl) {
         uint256 totalStrategyHandlers = controller.getStrategyHandlers().length;
-
+        //!note user utilization to continue.
         // // Iterate over each strategy handler
-        for (uint8 handlerIndex = 0; handlerIndex < totalStrategyHandlers; handlerIndex++) {
+        for (uint8 handlerIndex; handlerIndex < totalStrategyHandlers; handlerIndex++) {
             address strategyHandler = controller.getStrategyHandler(handlerIndex);
             uint128 numberOfStrategies = controller.strategyCounts(strategyHandler, handlerIndex);
 
             // Iterate over each strategy under the current strategy handler
-            for (uint8 strategyId = 0; strategyId < numberOfStrategies; strategyId++) {
+            for (uint8 strategyId; strategyId < numberOfStrategies; strategyId++) {
                 Strategy memory currentStrategy = controller.getStrategy(strategyHandler, strategyId);
 
                 int256 userUtilization = int256(uint256(userUtilizations[user][strategyId]));
@@ -208,51 +197,17 @@ contract StrategyFundManager is IStrategyFundManager, Ownable2Step {
      *       accordingly.
      *  @param user The address of the user whose details are to be updated
      */
-    // function updateUserDetails(address user) internal {
-    //     UserDepositDetails storage userDeposits = userStats[user];
-
-    //     uint256 numberOfStrategies = controller.strategyCount();
-
-    //     for (uint8 strategyId; strategyId < numberOfStrategies; strategyId++) {
-    //         //note : check gas  memory vs storage
-    //         Strategy memory currentStrategy = controller.getStrategy(strategyId);
-
-    //         if (currentStrategy.timestampOfStrategy > userDeposits.lastDepositTimestamp) {
-    //             // uint256 userUtilizedInStrategy = (userDeposits.amountUnutilized * currentStrategy.amountRequested)
-    //             //     / currentStrategy.lastTotalAmountsAvailable;
-
-    //             uint256 userUtilizedInStrategy = userDeposits.amountUnutilized.mulDiv(
-    //                 currentStrategy.amountRequested, currentStrategy.lastTotalAmountsAvailable, Math.Rounding.Floor
-    //             );
-    //             // console.log("Strategy ID", strategyId);
-    //             // console.log("Strategy Amount Requested", currentStrategy.amountRequested);
-    //             // console.log("User amount Utilized Before", userDeposits.amountUtilized);
-
-    //             userDeposits.amountUtilized += uint128(userUtilizedInStrategy);
-    //             userDeposits.amountUnutilized -= uint128(userUtilizedInStrategy);
-
-    //             userUtilizations[user][strategyId] = uint128(userUtilizedInStrategy);
-
-    //             // console.log("User amount Utilized for Strategy", userUtilizedInStrategy);
-    //             // console.log("User amount Unutilized before next Strategy", userDeposits.amountUnutilized);
-    //             // console.log();
-
-    //             if (userDeposits.amountUnutilized == 0) break;
-    //         }
-    //     }
-    // }
-
     function updateUserDetails(address user) internal {
         UserDepositDetails storage userDeposits = userStats[user];
         uint256 totalStrategyHandlers = controller.getStrategyHandlers().length;
 
         // Iterate over each strategy handler
-        for (uint8 handlerIndex = 0; handlerIndex < totalStrategyHandlers; handlerIndex++) {
+        for (uint8 handlerIndex; handlerIndex < totalStrategyHandlers; handlerIndex++) {
             address strategyHandler = controller.getStrategyHandler(handlerIndex);
             uint128 numberOfStrategies = controller.strategyCounts(strategyHandler, handlerIndex);
 
             // Iterate over each strategy under the current strategy handler
-            for (uint8 strategyId = 0; strategyId < numberOfStrategies; strategyId++) {
+            for (uint8 strategyId; strategyId < numberOfStrategies; strategyId++) {
                 Strategy memory currentStrategy = controller.getStrategy(strategyHandler, strategyId);
 
                 if (currentStrategy.timestampOfStrategy > userDeposits.lastDepositTimestamp) {
