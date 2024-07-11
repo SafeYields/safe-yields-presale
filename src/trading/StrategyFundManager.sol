@@ -24,7 +24,7 @@ contract StrategyFundManager is IStrategyFundManager, Ownable2Step {
 
     mapping(address user => UserDepositDetails userStats) internal userStats;
     /// @notice Tracks the amount utilized by each user in each strategy
-    mapping(address user => mapping(uint8 strategyID => uint128 userAmountUtilized)) internal userUtilizations;
+    mapping(address user => mapping(uint128 strategyID => uint128 userAmountUtilized)) internal userUtilizations;
 
     IStrategyController public controller;
     IERC20 public usdc;
@@ -75,11 +75,11 @@ contract StrategyFundManager is IStrategyFundManager, Ownable2Step {
         usdc.safeTransferFrom(msg.sender, address(this), amount);
 
         //If the user has previously deposited, update their details
-        if (userStats[msg.sender].lastDepositTimestamp != 0) {
+        if (userStats[msg.sender].lastDepositedAt != 0) {
             updateUserDetails(msg.sender);
         }
 
-        userStats[msg.sender].lastDepositTimestamp = uint48(block.timestamp);
+        userStats[msg.sender].lastDepositedAt = uint48(block.timestamp);
 
         userStats[msg.sender].amountUnutilized += amount;
 
@@ -167,20 +167,23 @@ contract StrategyFundManager is IStrategyFundManager, Ownable2Step {
      * @return pendingPnl The total PNL for the user
      */
     function pendingRewards(address user) public view override returns (int256 pendingPnl) {
-        uint256 totalStrategyHandlers = controller.getStrategyHandlers().length;
+        address[] memory allHandlers = controller.getStrategyHandlers();
+        uint256 handlersCount = allHandlers.length;
+
         //!note user utilization to continue.
-        // // Iterate over each strategy handler
-        for (uint8 handlerIndex; handlerIndex < totalStrategyHandlers; handlerIndex++) {
-            address strategyHandler = controller.getStrategyHandler(handlerIndex);
-            uint128 numberOfStrategies = controller.strategyCounts(strategyHandler, handlerIndex);
+        // Iterate over each strategy handler
+        for (uint256 i = 1; i <= handlersCount; i++) {
+            address strategyHandler = allHandlers[i];
+            uint128 strategiesCount = 1; //controller.strategyCounts(strategyHandler, i);
 
             // Iterate over each strategy under the current strategy handler
-            for (uint8 strategyId; strategyId < numberOfStrategies; strategyId++) {
-                Strategy memory currentStrategy = controller.getStrategy(strategyHandler, strategyId);
+            for (uint128 strategyId = 1; strategyId <= strategiesCount; strategyId++) {
+                Strategy memory currentStrategy = controller.getStrategy(strategyId);
 
+                //! what's going on here?
                 int256 userUtilization = int256(uint256(userUtilizations[user][strategyId]));
                 int256 strategyPnl = currentStrategy.pnl;
-                int256 amountRequested = int256(currentStrategy.amountRequested);
+                int256 amountRequested = int256(currentStrategy.amountFunded);
 
                 // Avoid division by zero
                 if (amountRequested != 0) {
@@ -199,31 +202,32 @@ contract StrategyFundManager is IStrategyFundManager, Ownable2Step {
      */
     function updateUserDetails(address user) internal {
         UserDepositDetails storage userDeposits = userStats[user];
-        uint256 totalStrategyHandlers = controller.getStrategyHandlers().length;
+        address[] memory allHandlers = controller.getStrategyHandlers();
+        uint256 handlersCount = allHandlers.length;
 
         // Iterate over each strategy handler
-        for (uint8 handlerIndex; handlerIndex < totalStrategyHandlers; handlerIndex++) {
-            address strategyHandler = controller.getStrategyHandler(handlerIndex);
-            uint128 numberOfStrategies = controller.strategyCounts(strategyHandler, handlerIndex);
+        for (uint256 i = 1; i <= handlersCount; i++) {
+            address strategyHandler = allHandlers[i];
+            uint128 numberOfStrategies = 1; //controller.strategyCounts(strategyHandler, i);
 
             // Iterate over each strategy under the current strategy handler
-            for (uint8 strategyId; strategyId < numberOfStrategies; strategyId++) {
-                Strategy memory currentStrategy = controller.getStrategy(strategyHandler, strategyId);
+            for (uint128 strategyId = 1; strategyId <= numberOfStrategies; strategyId++) {
+                Strategy memory currentStrategy = controller.getStrategy(strategyId);
 
-                if (currentStrategy.timestampOfStrategy > userDeposits.lastDepositTimestamp) {
-                    // Calculate the user's utilized amount in the current strategy
-                    uint256 userUtilizedInStrategy = userDeposits.amountUnutilized.mulDiv(
-                        currentStrategy.amountRequested, currentStrategy.lastTotalAmountsAvailable, Math.Rounding.Floor
-                    );
+                if (currentStrategy.lastFundedAt < userDeposits.lastDepositedAt) continue;
 
-                    userDeposits.amountUtilized += uint128(userUtilizedInStrategy);
-                    userDeposits.amountUnutilized -= uint128(userUtilizedInStrategy);
+                // Calculate the user's utilized amount in the current strategy
+                uint256 userUtilizedInStrategy = userDeposits.amountUnutilized.mulDiv(
+                    currentStrategy.amountFunded, currentStrategy.lastFMTotalDeposits, Math.Rounding.Floor
+                );
 
-                    userUtilizations[user][strategyId] = uint128(userUtilizedInStrategy);
+                userDeposits.amountUtilized += uint128(userUtilizedInStrategy);
+                userDeposits.amountUnutilized -= uint128(userUtilizedInStrategy);
 
-                    // Break the loop if the user's unutilized amount is exhausted
-                    if (userDeposits.amountUnutilized == 0) break;
-                }
+                userUtilizations[user][strategyId] = uint128(userUtilizedInStrategy);
+
+                // Break the loop if the user's unutilized amount is exhausted
+                if (userDeposits.amountUnutilized == 0) break;
             }
 
             // Break the outer loop if the user's unutilized amount is exhausted
