@@ -1,14 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { Ownable2Step, Ownable } from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import { IERC20 } from "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
+import { SafeERC20 } from "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
+import { Ownable2Step, Ownable } from "lib/openzeppelin-contracts/contracts/access/Ownable2Step.sol";
 import { OrderType, Strategy } from "./types/StrategyControllerTypes.sol";
 import { IStrategyFundManager } from "./interfaces/IStrategyFundManager.sol";
 import { IStrategyController } from "./interfaces/IStrategyController.sol";
 
-contract StrategyController is IStrategyController, Ownable2Step {
+contract StrategyController is
+    /**
+     * IStrategyController,
+     */
+    Ownable2Step
+{
     using SafeERC20 for IERC20;
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
@@ -54,33 +59,46 @@ contract StrategyController is IStrategyController, Ownable2Step {
      * bool isMatured;
      * }
      */
-    //TODO: more params
-    function executeStrategy(address strategyHandler, uint256 amount) external override {
+    //note restrict function
+    function executeStrategy(address strategyHandler, bytes4 functionSelector, bytes32 params, uint256 amount)
+        external
+    {
         uint256 lastTotalDeposits = fundManager.fundStrategy(strategyHandler, amount);
 
-        uint256 strategyId = ++strategyCount;
+        uint128 strategyId = ++strategyCounts[strategyHandler];
 
         strategies[strategyId].id = strategyId;
         strategies[strategyId].amountFunded = amount;
         strategies[strategyId].lastFundedAt = uint48(block.timestamp);
         strategies[strategyId].lastFMTotalDeposits = lastTotalDeposits;
 
-        //note interact with strategy handler
+        (bool success, bytes memory result) =
+            strategyHandler.call(abi.encodeWithSelector(functionSelector, params, amount));
+
+        if (!success) revert SY__SC_TRANSACTION_FAILED();
+        //!note results.
     }
 
-    function getStrategy(uint256 strategyId) external view override returns (Strategy memory) {
-        return strategies[strategyId];
-    }
-
-    function closeStrategy(uint256 strategyId) external { }
+    // function updateStrategy(
+    //     address strategyHandler,
+    //     uint256 strategyId,
+    //     uint256 amountUpdate,
+    //     uint256 slUpdate,
+    //     uint256 tpUpdate,
+    //     uint256 leverageUpdate
+    // ) external {
+    //     //encode params
+    // }
 
     function updateStrategy(
+        address strategyHandler,
         uint256 strategyId,
-        uint256 amountUpdate,
-        uint256 slUpdate,
-        uint256 tpUpdate,
-        uint256 leverageUpdate
-    ) external override { }
+        bytes4 functionSelector,
+        bytes32 params,
+        uint256 updateAmount
+    ) public {
+        uint256 lastTotalDeposits = fundManager.fundStrategy(strategyHandler, updateAmount);
+    }
 
     function addStrategyHandler(address strategyHandler) external override onlyOwner {
         if (strategyHandler == address(0)) revert SYSC_INVALID_ADDRESS();

@@ -181,6 +181,8 @@ contract StrategyFundManager is IStrategyFundManager, Ownable2Step {
                 Strategy memory currentStrategy = controller.getStrategy(strategyId);
 
                 //! what's going on here?
+                if (userUtilizations[user][strategyId] == 0) continue;
+
                 int256 userUtilization = int256(uint256(userUtilizations[user][strategyId]));
                 int256 strategyPnl = currentStrategy.pnl;
                 int256 amountRequested = int256(currentStrategy.amountFunded);
