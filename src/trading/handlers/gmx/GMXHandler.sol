@@ -2,16 +2,13 @@
 
 pragma solidity 0.8.26;
 
-import { IERC20 } from "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
-import { SafeERC20 } from "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
-import { Ownable2Step, Ownable } from "lib/openzeppelin-contracts/contracts/access/Ownable2Step.sol";
-import { CreateDepositParams, CreateWithdrawalParams, SetPricesParams, CreateOrderParams } from
-//UpdateOrderParams
-"./types/GMXTypes.sol";
-
+import { IERC20 } from "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
+import { SafeERC20 } from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
+import { CreateDepositParams, CreateWithdrawalParams, SetPricesParams, CreateOrderParams } from "./types/GMXTypes.sol";
+import { BaseStrategyHandler } from "../Base/BaseStrategyHandler.sol";
 import { IExchangeRouter } from "./interfaces/IExchangeRouter.sol";
 
-contract GMXHandler is Ownable2Step {
+contract GMXHandler is BaseStrategyHandler {
     using SafeERC20 for IERC20;
     /*//////////////////////////////////////////////////////////////
                         CONSTANTS AND IMMUTABLES
@@ -25,8 +22,6 @@ contract GMXHandler is Ownable2Step {
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
-    IERC20 public usdc;
-    address public controller;
 
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
@@ -38,51 +33,59 @@ contract GMXHandler is Ownable2Step {
 
     error SY__HDL__INVALID_ADDRESS();
     error SY__HDL__ONLY_CONTROLLER();
+    error SY_GMX_SL_CREATE_ORDER_FAILED();
 
     /*//////////////////////////////////////////////////////////////
                                MODIFIERS
     //////////////////////////////////////////////////////////////*/
-    modifier onlyController(address _caller) {
-        if (_caller != address(controller)) revert SY__HDL__ONLY_CONTROLLER();
-        _;
-    }
 
-    constructor(address _exchangeRouter, address protocolAdmin, address _usdc, address _controller)
-        Ownable(protocolAdmin)
+    constructor(address _exchangeRouter, address _usdc, address _controller, string memory _exchangeName)
+        BaseStrategyHandler(_controller, _usdc, _exchangeName)
     {
-        if (
-            _exchangeRouter == address(0) || protocolAdmin == address(0) || _usdc == address(0)
-                || _controller == address(0)
-        ) {
-            revert SY__HDL__INVALID_ADDRESS();
-        }
+        if (_exchangeRouter == address(0)) revert SY__HDL__INVALID_ADDRESS();
 
         exchangeRouter = IExchangeRouter(_exchangeRouter);
-        usdc = IERC20(_usdc);
-        controller = _controller;
+        usdcToken = IERC20(_usdc);
+        strategyController = _controller;
     }
 
-    function createOrder(CreateOrderParams memory order, uint128 amount) external onlyController(msg.sender) {
-        //transfer tokens to the OrderVault
-        usdc.safeTransferFrom(controller, orderVault, amount);
-
-        //call create order.addresses
-        bytes32 key = exchangeRouter.createOrder(order);
-
-        //emit OrderCreated(OrderParams, key);
-    }
-
-    function createDeposit(CreateDepositParams memory depositParams, uint128 amount)
+    function createOrder(bytes memory handlerData, bytes memory exchangeData)
         external
+        override
         onlyController(msg.sender)
     {
-        //transfer tokens to the OrderVault
-        usdc.safeTransferFrom(controller, depositVault, amount);
+        (uint256 orderAmount, uint128 controllerStrategyId,) = abi.decode(handlerData, (uint256, uint128, address));
+        usdcToken.safeTransferFrom(strategyController, depositVault, orderAmount);
 
-        // bytes32 key = exchangeRouter.createDeposit(deposit);
+        (bool status, bytes memory returnData) = address(exchangeRouter).call(exchangeData);
+        if (!status) revert SY_GMX_SL_CREATE_ORDER_FAILED();
 
-        // emit DepositCreated(deposit, key);
+        bytes32 orderId = abi.decode(returnData, (bytes32));
+
+        strategyPositionId[controllerStrategyId] = uint256(orderId);
     }
+
+    // function createOrder(CreateOrderParams memory order, uint128 amount) external onlyController(msg.sender) {
+    //     //transfer tokens to the OrderVault
+    //     usdcToken.safeTransferFrom(strategyController, orderVault, amount);
+
+    //     //call create order.addresses
+    //     bytes32 key = exchangeRouter.createOrder(order);
+
+    //     //emit OrderCreated(OrderParams, key);
+    // }
+
+    // function createDeposit(CreateDepositParams memory depositParams, uint128 amount)
+    //     external
+    //     onlyController(msg.sender)
+    // {
+    //     //transfer tokens to the OrderVault
+    //     usdcToken.safeTransferFrom(strategyController, depositVault, amount);
+
+    //     // bytes32 key = exchangeRouter.createDeposit(deposit);
+
+    //     // emit DepositCreated(deposit, key);
+    // }
 
     function createWithdrawal(CreateWithdrawalParams memory withdrawParams) external onlyController(msg.sender) {
         //bytes32 key = exchangeRouter.createWithdrawal(withdraw);
@@ -103,15 +106,35 @@ contract GMXHandler is Ownable2Step {
     //     emit OrderUpdated(updateOrderParams);
     // }
 
-    function cancelOrder(bytes32 key) external onlyController(msg.sender) {
-        exchangeRouter.cancelOrder(key);
+    // function cancelOrder(bytes32 key) external onlyController(msg.sender) {
+    //     exchangeRouter.cancelOrder(key);
+    // }
+
+    // function cancelWithdrawal(bytes32 key) external onlyController(msg.sender) {
+    //     exchangeRouter.cancelWithdrawal(key);
+    // }
+
+    // function cancelDeposit(bytes32 key) external onlyController(msg.sender) {
+    //     exchangeRouter.cancelDeposit(key);
+    // }
+
+    function exitStrategy(bytes memory data) public override onlyController(msg.sender) {
+        //call exit strategy
     }
 
-    function cancelWithdrawal(bytes32 key) external onlyController(msg.sender) {
-        exchangeRouter.cancelWithdrawal(key);
+    function createWithdrawal(bytes memory data) public override onlyController(msg.sender) {
+        //call create withdrawal
     }
 
-    function cancelDeposit(bytes32 key) external onlyController(msg.sender) {
-        exchangeRouter.cancelDeposit(key);
+    function cancelOrder(bytes memory data) public override onlyController(msg.sender) {
+        //call cancel order
+    }
+
+    function cancelWithdrawal(bytes memory data) public override onlyController(msg.sender) {
+        //call cancel withdrawal
+    }
+
+    function cancelDeposit(bytes memory data) public override onlyController(msg.sender) {
+        //call cancel deposit
     }
 }
