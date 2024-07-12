@@ -20,7 +20,7 @@ contract StrategyController is
     //////////////////////////////////////////////////////////////*/
 
     uint256 public handlerCount;
-    uint128 public override strategyCount;
+    uint128 public strategyCount;
     address[] public strategyHandlers;
     IStrategyFundManager public fundManager;
     IERC20 public usdc;
@@ -35,6 +35,7 @@ contract StrategyController is
     error SYSC_DUPLICATE_HANDLER();
     error SYSC_HANDLER_NOT_CONTRACT();
     error SYSC_INVALID_HANDLER();
+    error SYSC_TRANSACTION_FAILED();
 
     constructor(address _usdc, address _fundManager, address _protocolAdmin) Ownable(_protocolAdmin) {
         fundManager = IStrategyFundManager(_fundManager);
@@ -65,7 +66,7 @@ contract StrategyController is
     {
         uint256 lastTotalDeposits = fundManager.fundStrategy(strategyHandler, amount);
 
-        uint128 strategyId = ++strategyCounts[strategyHandler];
+        uint128 strategyId = ++strategyCount;
 
         strategies[strategyId].id = strategyId;
         strategies[strategyId].amountFunded = amount;
@@ -75,7 +76,7 @@ contract StrategyController is
         (bool success, bytes memory result) =
             strategyHandler.call(abi.encodeWithSelector(functionSelector, params, amount));
 
-        if (!success) revert SY__SC_TRANSACTION_FAILED();
+        if (!success) revert SYSC_TRANSACTION_FAILED();
         //!note results.
     }
 
@@ -100,7 +101,7 @@ contract StrategyController is
         uint256 lastTotalDeposits = fundManager.fundStrategy(strategyHandler, updateAmount);
     }
 
-    function addStrategyHandler(address strategyHandler) external override onlyOwner {
+    function addStrategyHandler(address strategyHandler) external onlyOwner {
         if (strategyHandler == address(0)) revert SYSC_INVALID_ADDRESS();
         address[] memory handlers = strategyHandlers;
         if (strategyHandlerIndex[strategyHandler] != 0 || handlers[0] == strategyHandler) {
@@ -117,7 +118,7 @@ contract StrategyController is
         strategyHandlerIndex[strategyHandler] = index;
     }
 
-    function removeStrategyHandler(address strategyHandler) external override onlyOwner {
+    function removeStrategyHandler(address strategyHandler) external onlyOwner {
         address[] memory handlers = strategyHandlers;
         uint256 index = strategyHandlerIndex[strategyHandler];
 
@@ -134,7 +135,7 @@ contract StrategyController is
         emit StrategyHandlerRemoved(strategyHandler);
     }
 
-    function getStrategyHandlers() external view override returns (address[] memory) {
+    function getStrategyHandlers() external view returns (address[] memory) {
         return strategyHandlers;
     }
 }
