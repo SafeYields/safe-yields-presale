@@ -19,7 +19,6 @@ contract StrategyController is
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
 
-    uint256 public handlerCount;
     uint128 public strategyCount;
     address[] public strategyHandlers;
     IStrategyFundManager public fundManager;
@@ -36,6 +35,11 @@ contract StrategyController is
     error SYSC_HANDLER_NOT_CONTRACT();
     error SYSC_INVALID_HANDLER();
     error SYSC_TRANSACTION_FAILED();
+
+    modifier onlyValidHandler(address handler) {
+        if (strategyHandlerIndex[handler] == 0 && strategyHandlers[0] != handler) revert SYSC_INVALID_HANDLER();
+        _;
+    }
 
     constructor(address _usdc, address _fundManager, address _protocolAdmin) Ownable(_protocolAdmin) {
         fundManager = IStrategyFundManager(_fundManager);
@@ -64,20 +68,32 @@ contract StrategyController is
     function executeStrategy(address strategyHandler, bytes4 functionSelector, bytes32 params, uint256 amount)
         external
     {
+        // uint256 lastTotalDeposits = fundManager.fundStrategy(strategyHandler, amount);
+
+        // uint128 strategyId = ++strategyCount;
+
+        // strategies[strategyId].id = strategyId;
+        // strategies[strategyId].amountFunded = amount;
+        // strategies[strategyId].lastFundedAt = uint48(block.timestamp);
+        // strategies[strategyId].lastFMTotalDeposits = lastTotalDeposits;
+
+        // (bool success, bytes memory result) =
+        //     strategyHandler.call(abi.encodeWithSelector(functionSelector, params, amount));
+
+        // if (!success) revert SYSC_TRANSACTION_FAILED();
+        //!note results.
+    }
+
+    function openStrategy(address strategyHandler, uint256 amount, bytes memory data)
+        external
+        onlyValidHandler(strategyHandler)
+    {
         uint256 lastTotalDeposits = fundManager.fundStrategy(strategyHandler, amount);
 
         uint128 strategyId = ++strategyCount;
 
-        strategies[strategyId].id = strategyId;
-        strategies[strategyId].amountFunded = amount;
-        strategies[strategyId].lastFundedAt = uint48(block.timestamp);
-        strategies[strategyId].lastFMTotalDeposits = lastTotalDeposits;
-
-        (bool success, bytes memory result) =
-            strategyHandler.call(abi.encodeWithSelector(functionSelector, params, amount));
-
-        if (!success) revert SYSC_TRANSACTION_FAILED();
-        //!note results.
+        //strategyHandler.openStrategy(strategyId, amount, data);
+        //encode params
     }
 
     // function updateStrategy(
@@ -139,7 +155,7 @@ contract StrategyController is
         return strategyHandlers;
     }
 
-    function getStrategy(uint256 strategyId) external view override returns (Strategy memory) {
+    function getStrategy(uint256 strategyId) external view returns (Strategy memory) {
         return strategies[strategyId];
     }
 }
