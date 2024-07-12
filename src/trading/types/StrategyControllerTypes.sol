@@ -14,12 +14,12 @@ struct Strategy {
     uint256 slPrice;
     uint256 tpPrice;
     uint256 leverage;
-    int256 livePnl;
+    //int256 livePnl;
     int256 pnl;
     OrderType orderType;
     address token;
     address handler;
-    uint48 openedAt;
+    //uint48 openedAt;
     uint48 lastFundedAt;
     bool isLong;
     bool isMatured;
