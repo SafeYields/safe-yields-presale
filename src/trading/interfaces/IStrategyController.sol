@@ -6,6 +6,8 @@ import { OrderType, Strategy } from "../types/StrategyControllerTypes.sol";
 interface IStrategyController {
     function executeStrategy(address strategyHandler, uint256 amount) external;
 
+    function openStrategy() external;
+
     function closeStrategy(uint256 strategyId) external;
 
     function updateStrategy(

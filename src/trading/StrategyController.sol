@@ -26,7 +26,7 @@ contract StrategyController is
     IERC20 public usdc;
 
     mapping(uint256 strategyId => Strategy) public strategies;
-    mapping(address strategyHandler => uint256) public strategyHandlerIndex;
+    mapping(address strategyHandler => uint256 index) public strategyHandlerIndex;
 
     event StrategyHandlerAdded(address strategyHandler, uint256 index);
     event StrategyHandlerRemoved(address strategyHandler);
@@ -137,5 +137,9 @@ contract StrategyController is
 
     function getStrategyHandlers() external view returns (address[] memory) {
         return strategyHandlers;
+    }
+
+    function getStrategy(uint256 strategyId) external view override returns (Strategy memory) {
+        return strategies[strategyId];
     }
 }
