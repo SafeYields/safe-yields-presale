@@ -300,6 +300,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
      * @dev Create a referrer ID
      * @notice This function can only be called by an investor
      */
+    //! should be read only, called only once when you buy in presale
     function createReferrerId() external override whenNotPaused returns (bytes32 referrerId) {
         /**
          * @dev check if the referrer has invested
