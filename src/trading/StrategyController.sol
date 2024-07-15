@@ -7,13 +7,9 @@ import { Ownable2Step, Ownable } from "lib/openzeppelin-contracts/contracts/acce
 import { OrderType, Strategy } from "./types/StrategyControllerTypes.sol";
 import { IStrategyFundManager } from "./interfaces/IStrategyFundManager.sol";
 import { IStrategyController } from "./interfaces/IStrategyController.sol";
+import { IBaseStrategyHandler } from "./handlers/Base/interfaces/IBaseStrategyHandler.sol";
 
-contract StrategyController is
-    /**
-     * IStrategyController,
-     */
-    Ownable2Step
-{
+contract StrategyController is /*IStrategyController,*/ Ownable2Step {
     using SafeERC20 for IERC20;
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
@@ -84,16 +80,37 @@ contract StrategyController is
         //!note results.
     }
 
-    function openStrategy(address strategyHandler, uint256 amount, bytes memory data)
-        external
-        onlyValidHandler(strategyHandler)
-    {
+    function openStrategy(
+        address strategyHandler,
+        address market,
+        uint256 amount,
+        bool isLong,
+        bytes memory exchangeData
+    ) external onlyValidHandler(strategyHandler) {
         uint256 lastTotalDeposits = fundManager.fundStrategy(strategyHandler, amount);
 
         uint128 strategyId = ++strategyCount;
 
-        //strategyHandler.openStrategy(strategyId, amount, data);
-        //encode params
+        bytes memory handlerData = abi.encode(amount, strategyId, market, isLong);
+
+        IBaseStrategyHandler(strategyHandler).openStrategy(handlerData, exchangeData);
+
+        strategies[strategyId] = Strategy({
+            id: strategyId,
+            amountFunded: amount,
+            lastFMTotalDeposits: lastTotalDeposits,
+            limitPrice: 0,
+            slPrice: 0,
+            tpPrice: 0,
+            leverage: 0,
+            pnl: 0,
+            orderType: OrderType.LIMIT,
+            token: address(usdc),
+            handler: strategyHandler,
+            lastFundedAt: uint48(block.timestamp),
+            isLong: isLong,
+            isMatured: false
+        });
     }
 
     // function updateStrategy(
