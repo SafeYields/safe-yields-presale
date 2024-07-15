@@ -7,6 +7,7 @@ import { SafeERC20 } from "openzeppelin-contracts/contracts/token/ERC20/utils/Sa
 import { CreateDepositParams, CreateWithdrawalParams, SetPricesParams, CreateOrderParams } from "./types/GMXTypes.sol";
 import { BaseStrategyHandler } from "../Base/BaseStrategyHandler.sol";
 import { IExchangeRouter } from "./interfaces/IExchangeRouter.sol";
+import { IStrategyController } from "../../interfaces/IStrategyController.sol";
 
 contract GMXHandler is BaseStrategyHandler {
     using SafeERC20 for IERC20;
@@ -26,7 +27,9 @@ contract GMXHandler is BaseStrategyHandler {
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
-    event OrderCreated(CreateOrderParams indexed OrderParams);
+    event OrderCreated(
+        address indexed market, uint128 indexed controllerStrategyId, bytes32 indexed orderId, bytes32 gmxPositionKey
+    );
     /*//////////////////////////////////////////////////////////////
                                  ERRORS
     //////////////////////////////////////////////////////////////*/
@@ -49,28 +52,44 @@ contract GMXHandler is BaseStrategyHandler {
         strategyController = _controller;
     }
 
-    function createOrder(bytes memory handlerData, bytes memory exchangeData)
+    function openStrategy(bytes memory handlerData, bytes memory exchangeData)
         external
         override
         onlyController(msg.sender)
     {
-        (uint256 orderAmount, uint128 controllerStrategyId,) = abi.decode(handlerData, (uint256, uint128, address));
-        usdcToken.safeTransferFrom(strategyController, depositVault, orderAmount);
+        (uint256 orderAmount, uint128 controllerStrategyId, address market, bool isLong) =
+            abi.decode(handlerData, (uint256, uint128, address, bool));
+
+        usdcToken.safeTransferFrom(
+            address(IStrategyController(strategyController).fundManager()), depositVault, orderAmount
+        );
 
         (bool status, bytes memory returnData) = address(exchangeRouter).call(exchangeData);
         if (!status) revert SY_GMX_SL_CREATE_ORDER_FAILED();
 
         bytes32 orderId = abi.decode(returnData, (bytes32));
 
-        strategyPositionId[controllerStrategyId] = uint256(orderId);
+        bytes32 positionKey = getGMXPositionKey(address(this), market, address(usdcToken), isLong);
+
+        strategyPositionId[controllerStrategyId] = uint256(positionKey);
+
+        emit OrderCreated(market, controllerStrategyId, orderId, positionKey);
     }
 
-    // function createOrder(CreateOrderParams memory order, uint128 amount) external onlyController(msg.sender) {
+    /// @notice from GMX contracts
+    function getGMXPositionKey(address account, address market, address collateralToken, bool isLong)
+        public
+        pure
+        returns (bytes32 key)
+    {
+        key = keccak256(abi.encode(account, market, collateralToken, isLong));
+    }
+    // function openStrategy(CreateOrderParams memory order, uint128 amount) external onlyController(msg.sender) {
     //     //transfer tokens to the OrderVault
     //     usdcToken.safeTransferFrom(strategyController, orderVault, amount);
 
     //     //call create order.addresses
-    //     bytes32 key = exchangeRouter.createOrder(order);
+    //     bytes32 key = exchangeRouter.openStrategy(order);
 
     //     //emit OrderCreated(OrderParams, key);
     // }
