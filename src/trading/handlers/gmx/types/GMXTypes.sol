@@ -58,7 +58,7 @@ struct CreateWithdrawalParams {
     uint256 callbackGasLimit;
 }
 
-// @dev CreateOrderParams struct used in createOrder to avoid stack
+// @dev CreateOrderParams struct used in openStrategy to avoid stack
 // too deep errors
 //
 // @param addresses address values
