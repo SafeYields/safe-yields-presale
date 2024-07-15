@@ -70,7 +70,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         vm.startPrank(ALICE);
         usdc.approve(address(presale), 1_000e6);
 
-        vm.expectRevert(SafeYieldPresale.SY__PS_PRESALE_NOT_LIVE.selector);
+        vm.expectRevert(SafeYieldPresale.SYPS__PRESALE_NOT_LIVE.selector);
         presale.deposit(1_000e6, bytes32(0));
     }
 
@@ -78,7 +78,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         vm.startPrank(ALICE);
         usdc.approve(address(presale), 999e6);
 
-        vm.expectRevert(SafeYieldPresale.SY__PS_BELOW_MIN_ALLOCATION.selector);
+        vm.expectRevert(SafeYieldPresale.SYPS__BELOW_MIN_ALLOCATION.selector);
 
         presale.deposit(999e6, bytes32(0));
     }
@@ -87,7 +87,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         vm.startPrank(ALICE);
         usdc.approve(address(presale), 1_000e6);
 
-        vm.expectRevert(SafeYieldPresale.SY__PS_UNKNOWN_REFERRER.selector);
+        vm.expectRevert(SafeYieldPresale.SYPS__UNKNOWN_REFERRER.selector);
 
         presale.deposit(1_000e6, keccak256(abi.encode("invalid_referrer_id")));
     }
@@ -103,7 +103,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
 
         usdc.approve(address(presale), 1_000e6);
 
-        vm.expectRevert(SafeYieldPresale.SY__PS_REFERRAL_TO_SELF.selector);
+        vm.expectRevert(SafeYieldPresale.SYPS__REFERRAL_TO_SELF.selector);
 
         presale.deposit(1_000e6, refId);
     }
@@ -273,7 +273,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
     }
 
     function test_claimTokensShouldRevertIfPreSaleNotEnded() public {
-        vm.expectRevert(abi.encodeWithSelector(SafeYieldPresale.SY__PS_PRESALE_NOT_ENDED.selector));
+        vm.expectRevert(abi.encodeWithSelector(SafeYieldPresale.SYPS__PRESALE_NOT_ENDED.selector));
         presale.claimSafeTokens();
     }
 
