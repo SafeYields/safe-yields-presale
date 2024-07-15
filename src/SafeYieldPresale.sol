@@ -40,6 +40,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
     uint128 public totalSold;
     uint128 public minAllocationPerWallet;
     uint128 public maxAllocationPerWallet;
+    /// @dev the price of SAY tokens to 18 decimal precision
     uint128 public tokenPrice;
     uint128 public referrerCommissionUsdcBps;
     uint128 public referrerCommissionSafeTokenBps;
@@ -307,17 +308,8 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
         emit UsdcCommissionRedeemed(msg.sender, uint128(usdcToRedeem));
     }
 
-    function getReferrerID() external view override isValidInvestor(msg.sender) returns (bytes32) {
+    function getReferrerID() public view override isValidInvestor(msg.sender) returns (bytes32) {
         return keccak256(abi.encodePacked(msg.sender));
-    }
-
-    /**
-     * @dev Create a referrer ID
-     * @notice This function can only be called by an investor
-     */
-    //! should be read only, called only once when you buy in presale
-    function _createReferrerId() internal view isValidInvestor(msg.sender) returns (bytes32 referrerId) {
-        referrerId = keccak256(abi.encodePacked(msg.sender));
     }
 
     /**
@@ -398,7 +390,6 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
              * say tokenPrice is 1e18
              * usdcToRefund = 110_000e6 - (99_000e18 * 1e6) / 1e18 = 110_000e6 - 99_000e6 = 11_000e6
              */
-            //!note confirm token price is 1e18 or 1e6
             uint128 valueOfAvailableTokens =
                 SafeCast.toUint128((safeTokensBought.mulDiv(USDC_PRECISION, tokenPrice, Math.Rounding.Ceil)));
 
@@ -521,7 +512,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
         totalSold += totalSafeTokensToStake;
 
         //create refID.
-        buyerReferrerId = _createReferrerId();
+        buyerReferrerId = getReferrerID();
         referrerInfo[buyerReferrerId].referrer = msg.sender;
 
         safeToken.approve(address(safeYieldStaking), totalSafeTokensToStake);
