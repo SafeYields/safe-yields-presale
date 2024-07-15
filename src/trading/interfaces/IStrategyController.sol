@@ -2,6 +2,7 @@
 pragma solidity 0.8.26;
 
 import { OrderType, Strategy } from "../types/StrategyControllerTypes.sol";
+import { IStrategyFundManager } from "./IStrategyFundManager.sol";
 
 interface IStrategyController {
     function executeStrategy(address strategyHandler, uint256 amount) external;
@@ -32,4 +33,6 @@ interface IStrategyController {
     function getStrategyHandlers() external view returns (address[] memory);
 
     function getStrategy(uint256 strategyId) external view returns (Strategy memory);
+
+    function fundManager() external view returns (IStrategyFundManager);
 }

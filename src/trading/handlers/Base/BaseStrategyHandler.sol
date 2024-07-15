@@ -27,7 +27,7 @@ abstract contract BaseStrategyHandler is IBaseStrategyHandler {
         usdcToken = IERC20(_usdcToken);
     }
 
-    function createOrder(bytes memory, bytes memory) external virtual onlyController(msg.sender) {
+    function openStrategy(bytes memory, bytes memory) external virtual onlyController(msg.sender) {
         revert SY_B_SH_UNIMPLEMENTED();
     }
 
