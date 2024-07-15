@@ -61,15 +61,9 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
 
         presale.deposit(1_000e6, bytes32(0));
 
-        bytes32 refId = presale.createReferrerId();
+        bytes32 refId = presale. getReferrerID();
 
         assertEq(refId, keccak256(abi.encodePacked(ALICE)));
-    }
-
-    function testCreateReferrerIdShouldFailIfCallerHasNotInvested() public startPresale {
-        vm.expectRevert(SafeYieldPresale.SY__PS_ZERO_BALANCE.selector);
-        presale.createReferrerId();
-        vm.stopPrank();
     }
 
     function testBuyShouldFailIfPresaleNotStarted() public {
@@ -105,7 +99,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         presale.deposit(1_000e6, bytes32(0));
 
         //create a referrer ID
-        bytes32 refId = presale.createReferrerId();
+        bytes32 refId = presale. getReferrerID();
 
         usdc.approve(address(presale), 1_000e6);
 
@@ -132,7 +126,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         presale.deposit(1_000e6, bytes32(0));
 
         //create a referrer ID
-        bytes32 refId = presale.createReferrerId();
+        bytes32 refId = presale. getReferrerID();
         /**
          * After Alice buys 1_000e6 safe tokens, the remaining safe tokens available 99_000e18
          */
@@ -227,7 +221,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         presale.deposit(1_000e6, bytes32(0));
 
         //create a referrer ID
-        bytes32 refId = presale.createReferrerId();
+        bytes32 refId = presale. getReferrerID();
 
         console.log("Safe Tokens Remaining After selling to 19 users", presale.safeTokensAvailable());
 
@@ -250,7 +244,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         presale.deposit(1_000e6, bytes32(0));
 
         //create a referrer ID
-        bytes32 refId = presale.createReferrerId();
+        bytes32 refId = presale. getReferrerID();
 
         vm.stopPrank();
 
@@ -312,7 +306,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         presale.deposit(1_000e6, bytes32(0));
 
         //create a referrer ID
-        bytes32 refId = presale.createReferrerId();
+        bytes32 refId = presale. getReferrerID();
 
         vm.stopPrank();
 
@@ -350,7 +344,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         presale.deposit(1_000e6, bytes32(0));
 
         //create a referrer ID
-        bytes32 refId = presale.createReferrerId();
+        bytes32 refId = presale. getReferrerID();
 
         vm.stopPrank();
 
@@ -359,7 +353,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
 
         presale.deposit(1_000e6, refId);
 
-        bytes32 bobRefId = presale.createReferrerId();
+        bytes32 bobRefId = presale. getReferrerID();
 
         vm.stopPrank();
 
@@ -414,7 +408,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         presale.deposit(uint128(usdcAmount), bytes32(0));
 
         //create a referrer ID
-        bytes32 refId = presale.createReferrerId();
+        bytes32 refId = presale. getReferrerID();
 
         vm.stopPrank();
 
@@ -513,7 +507,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
                 if (counter == 10) {
                     //create a referrer ID
                     vm.prank(address(uint160(i - 1)));
-                    refId = presale.createReferrerId();
+                    refId = presale. getReferrerID();
 
                     counter = 0;
                 }

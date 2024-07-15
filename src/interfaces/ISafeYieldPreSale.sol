@@ -14,9 +14,9 @@ interface ISafeYieldPreSale {
 
     function redeemUsdcCommission() external;
 
-    function createReferrerId() external returns (bytes32 referrerId);
-
     function setTokenPrice(uint128 _price) external;
+
+    function getReferrerID() external view returns (bytes32);
 
     function setProtocolMultisig(address _protocolMultisig) external;
 
