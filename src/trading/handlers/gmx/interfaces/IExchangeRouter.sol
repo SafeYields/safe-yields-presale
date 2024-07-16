@@ -20,11 +20,11 @@ interface IExchangeRouter {
 
     /**
      * @dev To create a swap / increase position order, collateral needs to first be transferred to the OrderVault,
-     *  ExchangeRouter.createOrder can then be called after. The transfer of tokens for collateral and
-     *  the calling of ExchangeRouter.createOrder should be done in a single transaction,
+     *  ExchangeRouter.openStrategy can then be called after. The transfer of tokens for collateral and
+     *  the calling of ExchangeRouter.openStrategy should be done in a single transaction,
      *  otherwise the tokens may be transferred out by other users.
      */
-    function createOrder(CreateOrderParams calldata params) external payable returns (bytes32);
+    function openStrategy(CreateOrderParams calldata params) external payable returns (bytes32);
 
     function updateOrder(
         bytes32 key,

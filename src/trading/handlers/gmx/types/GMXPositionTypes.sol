@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.26;
 
-struct Props {
+struct PositionProps {
     Addresses addresses;
     Numbers numbers;
     Flags flags;
