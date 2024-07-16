@@ -24,5 +24,7 @@ interface IStrategyController {
 
     function getStrategyHandlers() external view returns (address[] memory);
 
+    function getStrategyHandler() external view returns (address);
+
     function getStrategy(uint256 strategyId) external view returns (Strategy memory);
 }

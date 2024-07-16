@@ -12,9 +12,9 @@ import { SafeYieldRewardDistributor } from "src/SafeYieldRewardDistributor.sol";
 contract SafeYieldPresaleDeployment is Script {
     uint256 public constant PRE_SALE_MAX_SUPPLY = 2_000_000e18;
     uint256 public constant STAKING_MAX_SUPPLY = 11_000_000e18;
-    address public constant SY_ADMIN = 0x061Bc6f643038E4d6561aF4EBbc0B127cc5316cF; //!CHANGE
-    address public constant teamOperations = address(0x14); //!CHANGE
-    address public constant usdcBuyback = address(0x15); //!CHANGE
+    address public constant SY_ADMIN = 0x8478F8c1d693aB4C054d3BBC0aBff4178b8F1b0B; //!CHANGE
+    address public constant teamOperations = address(0x8478F8c1d693aB4C054d3BBC0aBff4178b8F1b0B); //!CHANGE
+    address public constant usdcBuyback = address(0x8478F8c1d693aB4C054d3BBC0aBff4178b8F1b0B); //!CHANGE
     SafeYieldPresale public presale;
     SafeYieldStaking public staking;
     SafeYieldRewardDistributor public distributor;
