@@ -42,25 +42,6 @@ contract StrategyController is /*IStrategyController,*/ Ownable2Step {
         usdc = IERC20(_usdc);
     }
 
-    /**
-     * struct Strategy {
-     * uint256 id;
-     * uint48 timestampOfStrategy;
-     * uint256 amountRequested;
-     * uint256 lastTotalAmountsAvailable;
-     * uint256 limitPrice;
-     * uint256 stopLossPrice;
-     * uint256 takeProfitPrice;
-     * uint256 leverage;
-     * int256 pnl;
-     * OrderType orderType;
-     * address token;
-     * address strategyHandler;
-     * bool isLong;
-     * bool isMatured;
-     * }
-     */
-    //note restrict function
     function executeStrategy(address strategyHandler, bytes4 functionSelector, bytes32 params, uint256 amount)
         external
     {
@@ -113,17 +94,6 @@ contract StrategyController is /*IStrategyController,*/ Ownable2Step {
         });
     }
 
-    // function updateStrategy(
-    //     address strategyHandler,
-    //     uint256 strategyId,
-    //     uint256 amountUpdate,
-    //     uint256 slUpdate,
-    //     uint256 tpUpdate,
-    //     uint256 leverageUpdate
-    // ) external {
-    //     //encode params
-    // }
-
     function updateStrategy(
         address strategyHandler,
         uint256 strategyId,
@@ -136,10 +106,13 @@ contract StrategyController is /*IStrategyController,*/ Ownable2Step {
 
     function addStrategyHandler(address strategyHandler) external onlyOwner {
         if (strategyHandler == address(0)) revert SYSC_INVALID_ADDRESS();
+
         address[] memory handlers = strategyHandlers;
+
         if (strategyHandlerIndex[strategyHandler] != 0 || handlers[0] == strategyHandler) {
             revert SYSC_DUPLICATE_HANDLER();
         }
+
         uint256 codeSize;
         assembly {
             codeSize := extcodesize(strategyHandler)
@@ -147,7 +120,9 @@ contract StrategyController is /*IStrategyController,*/ Ownable2Step {
         if (codeSize == 0) revert SYSC_HANDLER_NOT_CONTRACT();
 
         uint256 index = handlers.length;
+
         strategyHandlers.push(strategyHandler);
+
         strategyHandlerIndex[strategyHandler] = index;
     }
 

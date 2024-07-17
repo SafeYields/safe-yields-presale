@@ -18,7 +18,6 @@ contract GMXHandler is BaseStrategyHandler {
     IExchangeRouter public immutable exchangeRouter;
     address public constant orderVault = address(0x16);
     address public constant depositVault = address(0x20);
-    //note add mapping to track strategies , needed??
 
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
@@ -65,6 +64,7 @@ contract GMXHandler is BaseStrategyHandler {
         );
 
         (bool status, bytes memory returnData) = address(exchangeRouter).call(exchangeData);
+
         if (!status) revert SY_GMX_SL_CREATE_ORDER_FAILED();
 
         bytes32 orderId = abi.decode(returnData, (bytes32));
@@ -76,7 +76,13 @@ contract GMXHandler is BaseStrategyHandler {
         emit OrderCreated(market, controllerStrategyId, orderId, positionKey);
     }
 
+    function exitStrategy(bytes memory exchangeData) external override onlyController(msg.sender) {
+        (bool status, bytes memory returnData) = address(exchangeRouter).call(exchangeData);
+
+        //update state variable
+    }
     /// @notice from GMX contracts
+
     function getGMXPositionKey(address account, address market, address collateralToken, bool isLong)
         public
         pure
@@ -136,10 +142,6 @@ contract GMXHandler is BaseStrategyHandler {
     // function cancelDeposit(bytes32 key) external onlyController(msg.sender) {
     //     exchangeRouter.cancelDeposit(key);
     // }
-
-    function exitStrategy(bytes memory data) public override onlyController(msg.sender) {
-        //call exit strategy
-    }
 
     function createWithdrawal(bytes memory data) public override onlyController(msg.sender) {
         //call create withdrawal
