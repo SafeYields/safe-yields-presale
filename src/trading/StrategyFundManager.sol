@@ -43,7 +43,6 @@ contract StrategyFundManager is IStrategyFundManager, Ownable2Step {
     /*//////////////////////////////////////////////////////////////
                                  ERRORS
     //////////////////////////////////////////////////////////////*/
-    //!note: errors
     error SY__SFM__INVALID_ADDRESS();
     error SY__SFM__INVALID_AMOUNT();
     error SY__SFM__ONLY_CONTROLLER();
@@ -69,6 +68,7 @@ contract StrategyFundManager is IStrategyFundManager, Ownable2Step {
      * @dev The amount must be at least 1e6 units (1 USDC).
      * @param amount The amount of USDC to be deposited
      */
+    //!Todo : add a max deposit??
     function deposit(uint128 amount) external override {
         if (amount < 1e6) revert SY__SFM__INVALID_AMOUNT();
 
