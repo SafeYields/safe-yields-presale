@@ -43,31 +43,6 @@ abstract contract BaseStrategyHandler is IBaseStrategyHandler {
         revert SY_B_SH_UNIMPLEMENTED();
     }
 
-    // function createWithdrawal(bytes memory) external virtual onlyController(msg.sender) {
-    //     revert SY_B_SH_UNIMPLEMENTED();
-    // }
-
-    // function updateOrder(UpdateOrderParams memory updateOrderParams) external onlyController(msg.sender) {
-    //     exchangeRouter.updateOrder(
-    //         updateOrderParams.key,
-    //         updateOrderParams.sizeDeltaUsd,
-    //         updateOrderParams.acceptablePrice,
-    //         updateOrderParams.triggerPrice,
-    //         updateOrderParams.minOutputAmount,
-    //         updateOrderParams.autoCancel
-    //     );
-
-    //     emit OrderUpdated(updateOrderParams);
-    // }
-
-    // function cancelWithdrawal(bytes memory) external virtual onlyController(msg.sender) {
-    //     revert SY_B_SH_UNIMPLEMENTED();
-    // }
-
-    // function cancelDeposit(bytes memory) external virtual onlyController(msg.sender) {
-    //     revert SY_B_SH_UNIMPLEMENTED();
-    // }
-
     function getStrategyPositionId(uint128 controllerStrategyId)
         external
         view

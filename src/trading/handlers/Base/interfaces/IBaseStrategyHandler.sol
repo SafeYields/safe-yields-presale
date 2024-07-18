@@ -10,13 +10,7 @@ interface IBaseStrategyHandler {
 
     function exitStrategy(bytes memory data) external;
 
-    function createWithdrawal(bytes memory data) external;
-
     function cancelOrder(bytes memory data) external;
-
-    function cancelWithdrawal(bytes memory data) external;
-
-    function cancelDeposit(bytes memory data) external;
 
     function getStrategyPositionId(uint128 controllerStrategyId)
         external
