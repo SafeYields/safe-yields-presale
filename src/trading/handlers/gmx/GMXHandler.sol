@@ -29,13 +29,22 @@ contract GMXHandler is BaseStrategyHandler {
     event OrderCreated(
         address indexed market, uint128 indexed controllerStrategyId, bytes32 indexed orderId, bytes32 gmxPositionKey
     );
+    event StrategyModified(
+        bytes32 indexed key,
+        uint256 indexed sizeDeltaUsd,
+        uint256 indexed acceptablePrice,
+        uint256 triggerPrice,
+        uint256 minOutputAmount,
+        bool autoCancel
+    );
     /*//////////////////////////////////////////////////////////////
                                  ERRORS
     //////////////////////////////////////////////////////////////*/
 
     error SY__HDL__INVALID_ADDRESS();
     error SY__HDL__ONLY_CONTROLLER();
-    error SY_GMX_SL_CREATE_ORDER_FAILED();
+    error SY_CALL_FAILED();
+    error SY_GMX_SL_MODIFY_STRATEGY_FAILED();
 
     /*//////////////////////////////////////////////////////////////
                                MODIFIERS
@@ -65,7 +74,7 @@ contract GMXHandler is BaseStrategyHandler {
 
         (bool status, bytes memory returnData) = address(exchangeRouter).call(exchangeData);
 
-        if (!status) revert SY_GMX_SL_CREATE_ORDER_FAILED();
+        if (!status) revert SY_CALL_FAILED();
 
         bytes32 orderId = abi.decode(returnData, (bytes32));
 
@@ -79,6 +88,8 @@ contract GMXHandler is BaseStrategyHandler {
     function exitStrategy(bytes memory exchangeData) external override onlyController(msg.sender) {
         (bool status, bytes memory returnData) = address(exchangeRouter).call(exchangeData);
 
+        if (!status) revert SY_CALL_FAILED();
+
         //update state variable
     }
     /// @notice from GMX contracts
@@ -90,72 +101,32 @@ contract GMXHandler is BaseStrategyHandler {
     {
         key = keccak256(abi.encode(account, market, collateralToken, isLong));
     }
-    // function openStrategy(CreateOrderParams memory order, uint128 amount) external onlyController(msg.sender) {
-    //     //transfer tokens to the OrderVault
-    //     usdcToken.safeTransferFrom(strategyController, orderVault, amount);
 
-    //     //call create order.addresses
-    //     bytes32 key = exchangeRouter.openStrategy(order);
+    //!note: depositing or withdrawing
+    function modifyStrategy(bytes memory exchangeData) external override onlyController(msg.sender) {
+        bytes32 key;
+        uint256 sizeDeltaUsd;
+        uint256 acceptablePrice;
+        uint256 triggerPrice;
+        uint256 minOutputAmount;
+        bool autoCancel;
 
-    //     //emit OrderCreated(OrderParams, key);
-    // }
+        assembly {
+            // Skip the first 4 bytes (function selector)
+            key := mload(add(exchangeData, 4))
+            sizeDeltaUsd := mload(add(exchangeData, 36))
+            acceptablePrice := mload(add(exchangeData, 68))
+            triggerPrice := mload(add(exchangeData, 100))
+            minOutputAmount := mload(add(exchangeData, 132))
+            autoCancel := mload(add(exchangeData, 164))
+        }
 
-    // function createDeposit(CreateDepositParams memory depositParams, uint128 amount)
-    //     external
-    //     onlyController(msg.sender)
-    // {
-    //     //transfer tokens to the OrderVault
-    //     usdcToken.safeTransferFrom(strategyController, depositVault, amount);
+        (bool status,) = address(exchangeRouter).call(exchangeData);
 
-    //     // bytes32 key = exchangeRouter.createDeposit(deposit);
+        if (!status) revert SY_CALL_FAILED();
 
-    //     // emit DepositCreated(deposit, key);
-    // }
+        //update state variables
 
-    function createWithdrawal(CreateWithdrawalParams memory withdrawParams) external onlyController(msg.sender) {
-        //bytes32 key = exchangeRouter.createWithdrawal(withdraw);
-
-        // emit WithdrawalCreated(withdrawParams, key);
-    }
-
-    // function updateOrder(UpdateOrderParams memory updateOrderParams) external onlyController(msg.sender) {
-    //     exchangeRouter.updateOrder(
-    //         updateOrderParams.key,
-    //         updateOrderParams.sizeDeltaUsd,
-    //         updateOrderParams.acceptablePrice,
-    //         updateOrderParams.triggerPrice,
-    //         updateOrderParams.minOutputAmount,
-    //         updateOrderParams.autoCancel
-    //     );
-
-    //     emit OrderUpdated(updateOrderParams);
-    // }
-
-    // function cancelOrder(bytes32 key) external onlyController(msg.sender) {
-    //     exchangeRouter.cancelOrder(key);
-    // }
-
-    // function cancelWithdrawal(bytes32 key) external onlyController(msg.sender) {
-    //     exchangeRouter.cancelWithdrawal(key);
-    // }
-
-    // function cancelDeposit(bytes32 key) external onlyController(msg.sender) {
-    //     exchangeRouter.cancelDeposit(key);
-    // }
-
-    function createWithdrawal(bytes memory data) public override onlyController(msg.sender) {
-        //call create withdrawal
-    }
-
-    function cancelOrder(bytes memory data) public override onlyController(msg.sender) {
-        //call cancel order
-    }
-
-    function cancelWithdrawal(bytes memory data) public override onlyController(msg.sender) {
-        //call cancel withdrawal
-    }
-
-    function cancelDeposit(bytes memory data) public override onlyController(msg.sender) {
-        //call cancel deposit
+        emit StrategyModified(key, sizeDeltaUsd, acceptablePrice, triggerPrice, minOutputAmount, autoCancel);
     }
 }
