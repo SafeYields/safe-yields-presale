@@ -42,25 +42,6 @@ contract StrategyController is /*IStrategyController,*/ Ownable2Step {
         usdc = IERC20(_usdc);
     }
 
-    function executeStrategy(address strategyHandler, bytes4 functionSelector, bytes32 params, uint256 amount)
-        external
-    {
-        // uint256 lastTotalDeposits = fundManager.fundStrategy(strategyHandler, amount);
-
-        // uint128 strategyId = ++strategyCount;
-
-        // strategies[strategyId].id = strategyId;
-        // strategies[strategyId].amountFunded = amount;
-        // strategies[strategyId].lastFundedAt = uint48(block.timestamp);
-        // strategies[strategyId].lastFMTotalDeposits = lastTotalDeposits;
-
-        // (bool success, bytes memory result) =
-        //     strategyHandler.call(abi.encodeWithSelector(functionSelector, params, amount));
-
-        // if (!success) revert SYSC_TRANSACTION_FAILED();
-        //!note results.
-    }
-
     function openStrategy(
         address strategyHandler,
         address market,

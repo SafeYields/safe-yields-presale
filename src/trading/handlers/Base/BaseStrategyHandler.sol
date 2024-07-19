@@ -39,7 +39,7 @@ abstract contract BaseStrategyHandler is IBaseStrategyHandler {
         revert SY_B_SH_UNIMPLEMENTED();
     }
 
-    function exitStrategy(bytes memory) external virtual onlyController(msg.sender) {
+    function exitStrategy(uint128, bytes memory) external virtual onlyController(msg.sender) {
         revert SY_B_SH_UNIMPLEMENTED();
     }
 

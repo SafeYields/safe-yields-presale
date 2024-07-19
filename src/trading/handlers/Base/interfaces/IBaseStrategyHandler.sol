@@ -8,7 +8,7 @@ interface IBaseStrategyHandler {
 
     function openStrategy(bytes memory handlerData, bytes memory exchangeData) external;
 
-    function exitStrategy(bytes memory data) external;
+    function exitStrategy(uint128 controllerStrategyId, bytes memory exitStrategyData) external;
 
     function cancelOrder(bytes memory data) external;
 
