@@ -18,6 +18,7 @@ contract GMXHandler is BaseStrategyHandler {
     IExchangeRouter public immutable exchangeRouter;
     address public constant orderVault = address(0x16);
     address public constant depositVault = address(0x20);
+    uint256 public DEFAULT_EXECUTION_FEE = 0.01e18;
 
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
@@ -26,6 +27,8 @@ contract GMXHandler is BaseStrategyHandler {
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
+    event StrategyExited(uint128 indexed controllerStrategyId);
+    event OrderCanceled(bytes indexed returnData);
     event OrderCreated(
         address indexed market, uint128 indexed controllerStrategyId, bytes32 indexed orderId, bytes32 gmxPositionKey
     );
@@ -41,10 +44,8 @@ contract GMXHandler is BaseStrategyHandler {
                                  ERRORS
     //////////////////////////////////////////////////////////////*/
 
-    error SY__HDL__INVALID_ADDRESS();
-    error SY__HDL__ONLY_CONTROLLER();
-    error SY_CALL_FAILED();
-    error SY_GMX_SL_MODIFY_STRATEGY_FAILED();
+    error SY_HDL__INVALID_ADDRESS();
+    error SY_HDL__CALL_FAILED();
 
     /*//////////////////////////////////////////////////////////////
                                MODIFIERS
@@ -53,14 +54,21 @@ contract GMXHandler is BaseStrategyHandler {
     constructor(address _exchangeRouter, address _usdc, address _controller, string memory _exchangeName)
         BaseStrategyHandler(_controller, _usdc, _exchangeName)
     {
-        if (_exchangeRouter == address(0)) revert SY__HDL__INVALID_ADDRESS();
+        if (_exchangeRouter == address(0)) revert SY_HDL__INVALID_ADDRESS();
 
         exchangeRouter = IExchangeRouter(_exchangeRouter);
         usdcToken = IERC20(_usdc);
         strategyController = _controller;
     }
 
-    function openStrategy(bytes memory handlerData, bytes memory exchangeData)
+    /**
+     * @notice Opens a new strategy by sending necessary funds and data to the exchange router.
+     * @dev This function is callable only by the controller.
+     *      It sends WNT (wrapped native tokens) as an execution fee, sends USDC as collateral, and then executes the strategy.
+     * @param handlerData Encoded data containing the order amount, controller strategy ID, market address, and whether the strategy is long.
+     * @param openStrategyData Encoded data specific to the strategy being opened, which will be used in the multicall.
+     */
+    function openStrategy(bytes memory handlerData, bytes memory openStrategyData)
         external
         override
         onlyController(msg.sender)
@@ -68,15 +76,22 @@ contract GMXHandler is BaseStrategyHandler {
         (uint256 orderAmount, uint128 controllerStrategyId, address market, bool isLong) =
             abi.decode(handlerData, (uint256, uint128, address, bool));
 
-        usdcToken.safeTransferFrom(
-            address(IStrategyController(strategyController).fundManager()), depositVault, orderAmount
-        );
+        bytes[] memory multicallData = new bytes[](3);
 
-        (bool status, bytes memory returnData) = address(exchangeRouter).call(exchangeData);
+        //call exchangeRouter sendWNT tokens to pray fee.
+        bytes memory sendExFeeData =
+            abi.encodeWithSelector(exchangeRouter.sendWnt.selector, orderVault, DEFAULT_EXECUTION_FEE);
+        //send collateral
+        bytes memory sendCollateralData =
+            abi.encodeWithSelector(exchangeRouter.sendTokens.selector, usdcToken, orderVault, orderAmount);
+        //call multicall
+        multicallData[0] = sendExFeeData;
+        multicallData[1] = sendCollateralData;
+        multicallData[2] = openStrategyData;
 
-        if (!status) revert SY_CALL_FAILED();
+        bytes[] memory resultData = exchangeRouter.multicall(multicallData);
 
-        bytes32 orderId = abi.decode(returnData, (bytes32));
+        bytes32 orderId = abi.decode(resultData[2], (bytes32));
 
         bytes32 positionKey = getGMXPositionKey(address(this), market, address(usdcToken), isLong);
 
@@ -85,14 +100,47 @@ contract GMXHandler is BaseStrategyHandler {
         emit OrderCreated(market, controllerStrategyId, orderId, positionKey);
     }
 
-    function exitStrategy(bytes memory exchangeData) external override onlyController(msg.sender) {
-        (bool status, bytes memory returnData) = address(exchangeRouter).call(exchangeData);
+    /**
+     * @notice Exits an existing strategy by sending necessary funds to the exchange router and performing the exit actions.
+     * @dev This function is callable only by the controller.
+     *      It sends WNT (wrapped native tokens) as an execution fee and then executes the exit strategy.
+     * @param controllerStrategyId The ID of the strategy to exit.
+     * @param exitStrategyData Encoded data specific to the strategy being exited, which will be used in the multicall.
+     */
+    function exitStrategy(uint128 controllerStrategyId, bytes memory exitStrategyData)
+        external
+        override
+        onlyController(msg.sender)
+    {
+        bytes[] memory multicallData = new bytes[](2);
 
-        if (!status) revert SY_CALL_FAILED();
+        //call exchangeRouter sendWNT tokens to pray fee.
+        bytes memory sendExFeeData =
+            abi.encodeWithSelector(exchangeRouter.sendWnt.selector, orderVault, DEFAULT_EXECUTION_FEE);
+
+        multicallData[0] = sendExFeeData;
+        multicallData[1] = exitStrategyData;
+
+        //call multicall
+        exchangeRouter.multicall(multicallData);
 
         //update state variable
+        delete  strategyPositionId[controllerStrategyId];
+
+        // Handle the profit and loss (PnL) for the strategy exit
+
+        emit StrategyExited(controllerStrategyId);
     }
-    /// @notice from GMX contracts
+
+    function cancelOrder(bytes memory cancelOrderData) external override onlyController(msg.sender) {
+        bytes memory returnData = _externalCall(cancelOrderData);
+
+        emit OrderCanceled(returnData);
+    }
+
+    function modifyStrategy(bytes memory exchangeData) external override onlyController(msg.sender) {
+        _externalCall(exchangeData);
+    }
 
     function getGMXPositionKey(address account, address market, address collateralToken, bool isLong)
         public
@@ -102,31 +150,11 @@ contract GMXHandler is BaseStrategyHandler {
         key = keccak256(abi.encode(account, market, collateralToken, isLong));
     }
 
-    //!note: depositing or withdrawing
-    function modifyStrategy(bytes memory exchangeData) external override onlyController(msg.sender) {
-        bytes32 key;
-        uint256 sizeDeltaUsd;
-        uint256 acceptablePrice;
-        uint256 triggerPrice;
-        uint256 minOutputAmount;
-        bool autoCancel;
+    function _externalCall(bytes memory callData) internal returns (bytes memory) {
+        (bool status, bytes memory returnData) = address(exchangeRouter).call(callData);
 
-        assembly {
-            // Skip the first 4 bytes (function selector)
-            key := mload(add(exchangeData, 4))
-            sizeDeltaUsd := mload(add(exchangeData, 36))
-            acceptablePrice := mload(add(exchangeData, 68))
-            triggerPrice := mload(add(exchangeData, 100))
-            minOutputAmount := mload(add(exchangeData, 132))
-            autoCancel := mload(add(exchangeData, 164))
-        }
+        if (!status) revert SY_HDL__CALL_FAILED();
 
-        (bool status,) = address(exchangeRouter).call(exchangeData);
-
-        if (!status) revert SY_CALL_FAILED();
-
-        //update state variables
-
-        emit StrategyModified(key, sizeDeltaUsd, acceptablePrice, triggerPrice, minOutputAmount, autoCancel);
+        return returnData;
     }
 }
