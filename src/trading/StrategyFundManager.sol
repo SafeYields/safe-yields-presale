@@ -68,7 +68,6 @@ contract StrategyFundManager is IStrategyFundManager, Ownable2Step {
      * @dev The amount must be at least 1e6 units (1 USDC).
      * @param amount The amount of USDC to be deposited
      */
-    //!Todo : add a max deposit??
     function deposit(uint128 amount) external override {
         if (amount < 1e6) revert SY__SFM__INVALID_AMOUNT();
 
@@ -145,6 +144,15 @@ contract StrategyFundManager is IStrategyFundManager, Ownable2Step {
         totalAmountsDeposited -= amountRequested;
 
         emit StrategyFunded(strategyHandler, amountRequested);
+    }
+
+    function returnStrategyFunds(uint256 strategyId, int256 pnl) external onlyController(msg.sender) {
+        strategies[tradeId].pnl = pnl;
+        if (pnl < 0) {
+            totalAmountsDeposited += (strategies[tradeId].amountRequested - uint256(-pnl));
+        } else {
+            totalAmountsDeposited += strategies[tradeId].amountRequested;
+        }
     }
 
     function userDepositDetails(address user) external view override returns (UserDepositDetails memory userDeposits) {
