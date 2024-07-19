@@ -152,9 +152,9 @@ contract StrategyFundManager is IStrategyFundManager, Ownable2Step {
 
         Strategy memory currentStrategy = controller.getStrategy(strategyId);
         if (pnl < 0) {
-            totalAmountsDeposited += (currentStrategy.amountRequested - uint256(-pnl));
+            totalAmountsDeposited += (currentStrategy.amountFunded - uint256(-pnl));
         } else {
-            totalAmountsDeposited += currentStrategy.amountRequested;
+            totalAmountsDeposited += currentStrategy.amountFunded;
         }
     }
 
