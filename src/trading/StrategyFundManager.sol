@@ -147,11 +147,14 @@ contract StrategyFundManager is IStrategyFundManager, Ownable2Step {
     }
 
     function returnStrategyFunds(uint256 strategyId, int256 pnl) external onlyController(msg.sender) {
-        strategies[tradeId].pnl = pnl;
+        //!note make sure to update pnl strategy in controller
+        //strategies[strategyId].pnl = pnl;
+
+        Strategy memory currentStrategy = controller.getStrategy(strategyId);
         if (pnl < 0) {
-            totalAmountsDeposited += (strategies[tradeId].amountRequested - uint256(-pnl));
+            totalAmountsDeposited += (currentStrategy.amountRequested - uint256(-pnl));
         } else {
-            totalAmountsDeposited += strategies[tradeId].amountRequested;
+            totalAmountsDeposited += currentStrategy.amountRequested;
         }
     }
 
