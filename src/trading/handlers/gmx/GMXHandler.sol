@@ -52,7 +52,7 @@ contract GMXHandler is BaseStrategyHandler {
     constructor(address _exchangeRouter, address _usdc, address _controller, string memory _exchangeName)
         BaseStrategyHandler(_controller, _usdc, _exchangeName)
     {
-        //if (_exchangeRouter == address(0)) revert SY_HDL__INVALID_ADDRESS();
+        if (_exchangeRouter == address(0)) revert SY_HDL__INVALID_ADDRESS();
 
         exchangeRouter = IExchangeRouter(_exchangeRouter);
     }
