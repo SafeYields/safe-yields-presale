@@ -16,6 +16,7 @@ import { IUniswapV3Pool } from "src/uniswapV3/interfaces/IUniswapV3Pool.sol";
 import { ISwapRouter } from "src/uniswapV3/interfaces/ISwapRouter.sol";
 import { INonFungiblePositionManager } from "src/uniswapV3/interfaces/INonFungiblePositionManager.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
+import { GMXHandler } from "src/trading/handlers/gmx/GMXHandler.sol";
 
 abstract contract SafeYieldBaseTest is Test {
     uint256 public constant PRE_SALE_MAX_SUPPLY = 2_000_000e18;
@@ -45,6 +46,7 @@ abstract contract SafeYieldBaseTest is Test {
     SafeYieldTWAP public twap;
     SafeToken public safeToken;
     USDCMockToken public usdc;
+    GMXHandler gmxHandler;
 
     error AccessControlUnauthorizedAccount(address account, bytes32 neededRole);
     error OwnableUnauthorizedAccount(address account);
@@ -84,6 +86,10 @@ abstract contract SafeYieldBaseTest is Test {
         distributor = new SafeYieldRewardDistributorMock(
             address(safeToken), address(usdc), teamOperations, usdcBuyback, address(staking), address(twap)
         );
+        /**
+         * constructor(address _exchangeRouter, address _usdc, address _controller, string memory _exchangeName)
+         */
+        // gmxHandler = new GMXHandler(address(0), address(0), address(0), "GMX");
 
         safeToken.setAllocationLimit(address(distributor), STAKING_MAX_SUPPLY);
         safeToken.setAllocationLimit(address(presale), PRE_SALE_MAX_SUPPLY);
