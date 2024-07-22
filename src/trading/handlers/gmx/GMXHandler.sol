@@ -76,7 +76,7 @@ contract GMXHandler is BaseStrategyHandler {
 
         bytes[] memory multicallData = new bytes[](3);
 
-        //call exchangeRouter sendWNT tokens to pray fee.
+        //call exchangeRouter sendWNT tokens to pay fee.
         bytes memory sendExFeeData = abi.encodeWithSelector(exchangeRouter.sendWnt.selector, orderVault, executionFee);
 
         //send collateral
