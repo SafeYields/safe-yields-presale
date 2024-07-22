@@ -17,8 +17,7 @@ contract GMXHandler is BaseStrategyHandler {
 
     IExchangeRouter public immutable exchangeRouter;
     address public constant orderVault = address(0x16);
-    address public constant depositVault = address(0x20);
-    uint256 public DEFAULT_EXECUTION_FEE = 0.01e18;
+    uint256 public executionFee;
 
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
@@ -57,8 +56,6 @@ contract GMXHandler is BaseStrategyHandler {
         if (_exchangeRouter == address(0)) revert SY_HDL__INVALID_ADDRESS();
 
         exchangeRouter = IExchangeRouter(_exchangeRouter);
-        usdcToken = IERC20(_usdc);
-        strategyController = _controller;
     }
 
     /**
@@ -70,6 +67,7 @@ contract GMXHandler is BaseStrategyHandler {
      */
     function openStrategy(bytes memory handlerData, bytes memory openStrategyData)
         external
+        payable
         override
         onlyController(msg.sender)
     {
@@ -79,11 +77,12 @@ contract GMXHandler is BaseStrategyHandler {
         bytes[] memory multicallData = new bytes[](3);
 
         //call exchangeRouter sendWNT tokens to pray fee.
-        bytes memory sendExFeeData =
-            abi.encodeWithSelector(exchangeRouter.sendWnt.selector, orderVault, DEFAULT_EXECUTION_FEE);
+        bytes memory sendExFeeData = abi.encodeWithSelector(exchangeRouter.sendWnt.selector, orderVault, executionFee);
+
         //send collateral
         bytes memory sendCollateralData =
             abi.encodeWithSelector(exchangeRouter.sendTokens.selector, usdcToken, orderVault, orderAmount);
+
         //call multicall
         multicallData[0] = sendExFeeData;
         multicallData[1] = sendCollateralData;
@@ -109,14 +108,14 @@ contract GMXHandler is BaseStrategyHandler {
      */
     function exitStrategy(uint128 controllerStrategyId, bytes memory exitStrategyData)
         external
+        payable
         override
         onlyController(msg.sender)
     {
         bytes[] memory multicallData = new bytes[](2);
 
         //call exchangeRouter sendWNT tokens to pray fee.
-        bytes memory sendExFeeData =
-            abi.encodeWithSelector(exchangeRouter.sendWnt.selector, orderVault, DEFAULT_EXECUTION_FEE);
+        bytes memory sendExFeeData = abi.encodeWithSelector(exchangeRouter.sendWnt.selector, orderVault, executionFee);
 
         multicallData[0] = sendExFeeData;
         multicallData[1] = exitStrategyData;
@@ -127,18 +126,18 @@ contract GMXHandler is BaseStrategyHandler {
         //update state variable
         delete  strategyPositionId[controllerStrategyId];
 
-        // Handle the profit and loss (PnL) for the strategy exit
+        //!@note Handle the profit and loss (PnL) for the strategy exit in the controller
 
         emit StrategyExited(controllerStrategyId);
     }
 
-    function cancelOrder(bytes memory cancelOrderData) external override onlyController(msg.sender) {
+    function cancelOrder(bytes memory cancelOrderData) external payable override onlyController(msg.sender) {
         bytes memory returnData = _externalCall(cancelOrderData);
 
         emit OrderCanceled(returnData);
     }
 
-    function modifyStrategy(bytes memory exchangeData) external override onlyController(msg.sender) {
+    function modifyStrategy(bytes memory exchangeData) external payable override onlyController(msg.sender) {
         _externalCall(exchangeData);
     }
 
