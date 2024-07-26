@@ -47,7 +47,7 @@ contract SafeToken is ISafeToken, ERC20, AccessControl {
     error SY__ONLY_BURNER_ROLE();
     error SY__ONLY_ADMIN_ROLE();
 
-    constructor() ERC20("Safe Yield", "SAY") {
+    constructor() ERC20("Safe Yields Token", "SAY") {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
 
         _mint(TEAM_OPERATIONS_IDO, 4_000_000e18);
