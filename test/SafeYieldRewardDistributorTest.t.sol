@@ -774,4 +774,54 @@ contract SafeYieldRewardDistributorTest is SafeYieldBaseTest {
         ///reallocate 1k to the vault from the removed contract
         return currentContracts;
     }
+
+    function testPendingRewards2() public {
+        vm.startPrank(protocolAdmin);
+        usdc.mint(address(distributor), 1_000e6);
+        vm.stopPrank();
+
+        skip(5 minutes);
+        (,, uint16 teamOperationsShare) =
+            distributor.approvedContracts(distributor.contractIndex(address(teamOperations)));
+
+        uint256 expectedTeamOperationsUsdcDistributed = (1_000e6 * uint256(teamOperationsShare)) / distributor.BPS_MAX();
+
+        (uint256 pendingRewards,) = distributor.pendingRewards(address(teamOperations));
+        
+        vm.startPrank(protocolAdmin);
+        distributor.distributeToContract(address(teamOperations));
+        vm.stopPrank();
+
+        console2.log(expectedTeamOperationsUsdcDistributed, pendingRewards);
+
+        vm.startPrank(protocolAdmin);
+        usdc.mint(address(distributor), 1_000e6);
+        vm.stopPrank();
+
+        console2.log("last balance bf recovery", distributor.lastBalance());
+
+        vm.startPrank(protocolAdmin);
+        distributor.recoverTokens(address(usdc), 1000e6);
+        vm.stopPrank();
+
+        assertEq(
+            pendingRewards,
+            expectedTeamOperationsUsdcDistributed,
+            "Should return the expected amount of pending rewards"
+        );
+
+        console2.log("last balance after recovery", distributor.lastBalance());
+
+        (uint256 pendingRewards2,) = distributor.pendingRewards(address(teamOperations));
+        console2.log(pendingRewards2);
+
+        assertEq(
+            pendingRewards2,
+            expectedTeamOperationsUsdcDistributed,
+            "Should return the expected amount of pending rewards"
+        );
+    }
 }
+
+
+

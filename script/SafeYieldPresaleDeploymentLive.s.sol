@@ -6,7 +6,6 @@ import { SafeYieldPresale } from "src/SafeYieldPresale.sol";
 import { SafeYieldStaking } from "src/SafeYieldStaking.sol";
 import { SafeToken } from "src/SafeToken.sol";
 import { SafeYieldTWAP } from "src/SafeYieldTWAP.sol";
-import { USDCMockToken } from "test/mocks/USDCMockToken.sol";
 import { SafeYieldRewardDistributor } from "src/SafeYieldRewardDistributor.sol";
 
 contract SafeYieldPresaleDeployment is Script {
@@ -17,44 +16,53 @@ contract SafeYieldPresaleDeployment is Script {
     address public constant SY_ADMIN = 0x8478F8c1d693aB4C054d3BBC0aBff4178b8F1b0B; //!CHANGE
     address public constant teamOperations = address(0x8478F8c1d693aB4C054d3BBC0aBff4178b8F1b0B); //!CHANGE
     address public constant usdcBuyback = address(0x8478F8c1d693aB4C054d3BBC0aBff4178b8F1b0B); //!CHANGE
+    
+    address public constant usdcAddressAbitrum = 0xaf88d065e77c8cC2239327C5EDb3A432268e5831; //!Verify
+    //https://arbiscan.io/token/0xaf88d065e77c8cC2239327C5EDb3A432268e5831
 
     SafeYieldPresale public presale;
     SafeYieldStaking public staking;
     SafeYieldRewardDistributor public distributor;
     SafeToken public safeToken;
-    USDCMockToken usdc;
     SafeYieldTWAP twap;
 
+    
+    uint128 minAllocationPerWallet = 5e18;
+    uint128 maxAllocationPerWallet = uint128(PRE_SALE_MAX_SUPPLY); //set max allocation per wallet to the presale max supply
+    uint128 tokenPrice = 1e18; //e.g 1 usdc
+    uint128 referrerCommissionUsdcBps = 5_00; //5% => 500 bps
+    uint128 referrerCommissionSafeTokenBps = 5_00; // 5% => 500 bps
+    address protcolMultisig = SY_ADMIN;
+
     /**
-     * @dev Run the script
-     * forge script script/SafeYieldPresaleDeployment.so.sol --rpc-url sepolia --etherscan-api-key sepolia --verify --vv
+     * @dev Run the script to deploy contracts to Arbitrum One
+     * @dev replace "ARBITRUM_SCAN_API_KEY" with your arbiscan api key
+     * forge script script/SafeYieldPresaleDeploymentLive.s.sol --rpc-url https://rpc.ankr.com/arbitrum	 --etherscan-api-key "ARBITRUM_SCAN_API_KEY" --verify --vv
      */
     function run() public {
         uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PK");
         vm.startBroadcast(deployerPrivateKey);
 
-        usdc = new USDCMockToken("USDC", "USDC", 6);
+        safeToken = new SafeToken(); //deploy new safe token
 
-        safeToken = new SafeToken();
-
-        staking = new SafeYieldStaking(address(safeToken), address(usdc));
+        staking = new SafeYieldStaking(address(safeToken), usdcAddressAbitrum); // deploy new staking contract
 
         presale = new SafeYieldPresale(
-            address(safeToken), 
-            address(usdc),
+            address(safeToken),
+            usdcAddressAbitrum,
             address(staking),
-            5e18,
-            100_000e18,
-            1e18,
-            5_00,
-            5_00,
-            SY_ADMIN
+            minAllocationPerWallet,
+            maxAllocationPerWallet,
+            tokenPrice,
+            referrerCommissionUsdcBps,
+            referrerCommissionSafeTokenBps,
+            protcolMultisig
         );
 
         twap = new SafeYieldTWAP();
 
         distributor = new SafeYieldRewardDistributor(
-            address(safeToken), address(usdc), teamOperations, usdcBuyback, address(staking), address(twap)
+            address(safeToken), usdcAddressAbitrum, teamOperations, usdcBuyback, address(staking), address(twap)
         );
 
         vm.stopBroadcast();
@@ -80,7 +88,7 @@ contract SafeYieldPresaleDeployment is Script {
     }
 
     function logAddresses() public view {
-        console.log("USDC", address(usdc));
+        console.log("USDC", usdcAddressAbitrum);
         console.log("Safe Token", address(safeToken));
         console.log("Staking", address(staking));
         console.log("Presale", address(presale));
@@ -93,22 +101,22 @@ contract SafeYieldPresaleDeployment is Script {
         require(safeToken.balanceOf(address(presale)) == PRE_SALE_MAX_SUPPLY, "Invalid presale allocation");
         require(address(presale.safeYieldStaking()) == address(staking), "Invalid staking address");
         require(address(presale.safeToken()) == address(safeToken), "Invalid safeToken token address");
-        require(address(presale.usdcToken()) == address(usdc), "Invalid usdc address");
-        require(presale.minAllocationPerWallet() == 5e18, "Invalid min allocation per wallet");
-        require(presale.maxAllocationPerWallet() == 100_000e18, "Invalid max allocation per wallet");
-        require(presale.referrerCommissionSafeTokenBps() == 5_00, "Invalid referrer commission safeToken token bps");
-        require(presale.referrerCommissionUsdcBps() == 5_00, "Invalid referrer commission usdc bps");
+        require(address(presale.usdcToken()) == usdcAddressAbitrum, "Invalid usdc address");
+        require(presale.minAllocationPerWallet() == minAllocationPerWallet, "Invalid min allocation per wallet");
+        require(presale.maxAllocationPerWallet() == maxAllocationPerWallet, "Invalid max allocation per wallet");
+        require(presale.referrerCommissionSafeTokenBps() == referrerCommissionSafeTokenBps, "Invalid referrer commission safeToken token bps");
+        require(presale.referrerCommissionUsdcBps() == referrerCommissionUsdcBps, "Invalid referrer commission usdc bps");
 
         //validate staking configuration
         require(address(staking.safeToken()) == address(safeToken), "Invalid safeToken token address");
-        require(address(staking.usdc()) == address(usdc), "Invalid usdc address");
+        require(address(staking.usdc()) == usdcAddressAbitrum, "Invalid usdc address");
         require(address(staking.distributor()) == address(distributor), "Invalid distributor address");
         require(address(staking.presale()) == address(presale), "Invalid presale address");
 
         //validate distributor configuration
         require(safeToken.balanceOf(address(presale)) == PRE_SALE_MAX_SUPPLY, "Invalid presale allocation");
         require(address(distributor.safeToken()) == address(safeToken), "Invalid safeToken token address");
-        require(address(distributor.usdcToken()) == address(usdc), "Invalid usdc address");
+        require(address(distributor.usdcToken()) == usdcAddressAbitrum, "Invalid usdc address");
         require(address(distributor.safeYieldTWAP()) == address(twap), "Invalid twap address");
         require(distributor.teamOperations() == teamOperations, "Invalid team operations address");
         require(distributor.usdcBuyback() == usdcBuyback, "Invalid usdc buyback address");

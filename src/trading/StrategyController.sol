@@ -37,10 +37,10 @@ contract StrategyController is /*IStrategyController,*/ Ownable2Step {
         _;
     }
 
-    constructor(address _usdc, address _fundManager, address _protocolAdmin) Ownable(_protocolAdmin) {
-        fundManager = IStrategyFundManager(_fundManager);
-        usdc = IERC20(_usdc);
-    }
+//     constructor(address _usdc, address _fundManager, address _protocolAdmin) Ownable(_protocolAdmin) {
+//         fundManager = IStrategyFundManager(_fundManager);
+//         usdc = IERC20(_usdc);
+//     }
 
     function openStrategy(
         address strategyHandler,
