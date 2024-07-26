@@ -86,10 +86,6 @@ abstract contract SafeYieldBaseTest is Test {
         distributor = new SafeYieldRewardDistributorMock(
             address(safeToken), address(usdc), teamOperations, usdcBuyback, address(staking), address(twap)
         );
-        /**
-         * constructor(address _exchangeRouter, address _usdc, address _controller, string memory _exchangeName)
-         */
-        // gmxHandler = new GMXHandler(address(0), address(0), address(0), "GMX");
 
         safeToken.setAllocationLimit(address(distributor), STAKING_MAX_SUPPLY);
         safeToken.setAllocationLimit(address(presale), PRE_SALE_MAX_SUPPLY);

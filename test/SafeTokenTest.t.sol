@@ -27,10 +27,8 @@ contract SafeTokenTest is SafeYieldBaseTest {
 
         assertEq(tokensRemaining, 0);
         assertEq(safeToken.totalSupply(), totalSupply);
-        assertEq(safeToken.balanceOf(safeToken.TEAM_OPERATIONS()), teamOperationsSupply);
-        assertEq(safeToken.balanceOf(safeToken.CORE_CONTRIBUTORS()), coreContributorsSupply);
+        assertEq(safeToken.balanceOf(safeToken.TEAM_OPERATIONS_IDO()), teamOperationsSupply);
         assertEq(safeToken.balanceOf(safeToken.FUTURE_LIQUIDITY()), futureLiquiditySupply);
-        assertEq(safeToken.balanceOf(safeToken.EARLY_INVESTORS()), earlyInvestorsSupply);
     }
 
     function testSetAllocationLimitShouldFailIfNotADMIN_ROLE() public {
