@@ -29,20 +29,7 @@ contract GMXHandler is BaseStrategyHandler {
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
-    event StrategyExited(uint128 indexed controllerStrategyId);
-    event OrderCanceled(bytes32 indexed orderId);
-    event OrderCreated(
-        address indexed market, uint128 indexed controllerStrategyId, bytes32 indexed orderId, bytes32 gmxPositionKey
-    );
-    event OrderFulfilled(bytes32 indexed positionKey);
-    event StrategyModified(
-        bytes32 indexed key,
-        uint256 indexed sizeDeltaUsd,
-        uint256 indexed acceptablePrice,
-        uint256 triggerPrice,
-        uint256 minOutputAmount,
-        bool autoCancel
-    );
+
     /*//////////////////////////////////////////////////////////////
                                  ERRORS
     //////////////////////////////////////////////////////////////*/
@@ -50,6 +37,8 @@ contract GMXHandler is BaseStrategyHandler {
     error SY_HDL__INVALID_ADDRESS();
     error SY_HDL__ORDER_NOT_SETTLED();
     error SY_HDL__NO_ORDER();
+    error SY_HDL__CALL_FAILED();
+    error SY_HDL__POSITION_EXIST();
     error SY_HDL__NOT_LIMIT_ORDER();
 
     /*//////////////////////////////////////////////////////////////
@@ -86,6 +75,8 @@ contract GMXHandler is BaseStrategyHandler {
         (uint256 orderAmount, uint128 controllerStrategyId, address market, bool isLong, uint256 executionFee) =
             abi.decode(handlerData, (uint256, uint128, address, bool, uint256));
 
+        if (strategyPositionId[controllerStrategyId] != 0) revert SY_HDL__POSITION_EXIST();
+
         bytes[] memory multicallData = new bytes[](3);
 
         //call exchangeRouter sendWNT tokens to pay fee.
@@ -104,20 +95,15 @@ contract GMXHandler is BaseStrategyHandler {
         bytes[] memory resultData = exchangeRouter.multicall(multicallData);
 
         bytes32 orderId = abi.decode(resultData[2], (bytes32));
-
-        bytes32 positionKey = getGMXPositionKey(address(this), market, address(usdcToken), isLong);
-
-        emit OrderCreated(market, controllerStrategyId, orderId, positionKey);
     }
 
     /// @notice Exits a strategy by executing a series of operations on the GMX exchange router.
-    /// @param controllerStrategyId The ID of the strategy to be exited.
     /// @param executionFee The fee required for executing the exit strategy.
     /// @param exitStrategyData Encoded data containing the details of the exit strategy.
     /// @dev This function prepares a multicall data array to first send the execution fee
     ///      and then perform the exit strategy operations. It then calls the `multicall` function
     ///      on the `exchangeRouter`.
-    function exitStrategy(uint128 controllerStrategyId, uint256 executionFee, bytes memory exitStrategyData)
+    function exitStrategy(uint256 executionFee, bytes memory exitStrategyData)
         external
         payable
         onlyController(msg.sender)
@@ -132,8 +118,6 @@ contract GMXHandler is BaseStrategyHandler {
 
         //call multicall
         exchangeRouter.multicall(multicallData);
-
-        emit StrategyExited(controllerStrategyId);
     }
 
     /// @notice Confirms the fulfillment of an order by verifying the position on the GMX exchange.
@@ -150,8 +134,6 @@ contract GMXHandler is BaseStrategyHandler {
         if (position.addresses.account == address(0)) revert SY_HDL__ORDER_NOT_SETTLED();
 
         strategyPositionId[controllerStrategyId] = uint256(positionKey);
-
-        emit OrderFulfilled(positionKey);
     }
 
     /// @notice Cancels an existing order on the GMX exchange router.
@@ -159,34 +141,21 @@ contract GMXHandler is BaseStrategyHandler {
     /// @dev This function decodes the `cancelOrderData` to extract the `orderId`, checks if the order exists,
     ///      and then calls the `cancelOrder` function on the `exchangeRouter'.
     function cancelOrder(bytes memory cancelOrderData) external override onlyController(msg.sender) {
-        (bytes32 orderId) = abi.decode(cancelOrderData, (bytes32));
+        (bool success,) = address(exchangeRouter).call(cancelOrderData);
 
-        if (!checkOrderExist(orderId)) revert SY_HDL__NO_ORDER();
-
-        exchangeRouter.cancelOrder(orderId);
-
-        emit OrderCanceled(orderId);
+        if (!success) revert SY_HDL__CALL_FAILED();
     }
 
     /// @notice Modifies an existing strategy order on the GMX exchange router.
     /// @param exchangeData Encoded data containing the order details to be modified.
     /// - orderId: The ID of the order to be modified.
-    /// - sizeDeltaUsd: The change in size of the order in USD.
     /// - acceptablePrice: The acceptable price for the order.
     /// - triggerPrice: The price at which the order will be triggered.
-    /// - minOutputAmount: The minimum output amount for the order.
-    /// - autoCancel: Whether the order should be auto-cancelled.
     /// @dev This function decodes the `exchangeData`, checks if the order exists and is a limit order,
     ///      and then calls the `updateOrder` function on the `exchangeRouter`.
     function modifyStrategy(bytes memory exchangeData) external payable override onlyController(msg.sender) {
-        (
-            bytes32 orderId,
-            uint128 sizeDeltaUsd,
-            uint256 acceptablePrice,
-            uint256 triggerPrice,
-            uint256 minOutputAmount,
-            bool autoCancel
-        ) = abi.decode(exchangeData, (bytes32, uint128, uint256, uint256, uint256, bool));
+        (bytes32 orderId, uint256 acceptablePrice, uint256 triggerPrice) =
+            abi.decode(exchangeData, (bytes32, uint256, uint256));
 
         if (!checkOrderExist(orderId)) revert SY_HDL__NO_ORDER();
 
@@ -199,9 +168,7 @@ contract GMXHandler is BaseStrategyHandler {
             revert SY_HDL__NOT_LIMIT_ORDER();
         }
 
-        exchangeRouter.updateOrder(orderId, sizeDeltaUsd, acceptablePrice, triggerPrice, minOutputAmount, autoCancel);
-
-        emit StrategyModified(orderId, sizeDeltaUsd, acceptablePrice, triggerPrice, minOutputAmount, autoCancel);
+        exchangeRouter.updateOrder(orderId, 0, acceptablePrice, triggerPrice, 0, false);
     }
 
     function getGMXPositionKey(address account, address market, address collateralToken, bool isLong)
