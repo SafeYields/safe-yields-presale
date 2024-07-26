@@ -49,3 +49,11 @@ struct StrategyStats {
     uint256 lastAmountAvailable;
     int256 pnl;
 }
+
+struct VestingSchedule {
+    uint128 totalAmount;
+    uint128 amountClaimed;
+    uint48 start;
+    uint48 cliff;
+    uint48 duration;
+}

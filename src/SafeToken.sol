@@ -18,15 +18,13 @@ contract SafeToken is ISafeToken, ERC20, AccessControl {
     /**
      * 11,000,000e18 for staking emissions
      * 2,000,000e18 for team operations
-     * 1,000,000e18 for Core contributors
+     * 1,000,000e18 for Core contributors (Vesting Contract)
      * 2,000,000e18 for future liquidity
-     * 2,000,000e18 for early investors rounds
+     * 2,000,000e18 for early investors rounds (Presale Contract)
      * 2,000,000e18 for IDO
      */
-    address public constant TEAM_OPERATIONS = address(0x12); //!CHANGE
-    address public constant CORE_CONTRIBUTORS = address(0x13); //!CHANGE
-    address public constant FUTURE_LIQUIDITY = address(0x14); //!CHANGE
-    address public constant EARLY_INVESTORS = address(0x15); //!CHANGE
+    address public constant TEAM_OPERATIONS_IDO = 0xb7eCbD7262a9250A44EaA040A2B2a184536F3861;
+    address public constant FUTURE_LIQUIDITY = 0x13c281703dbf281829F489846687eCE0c0d8e73e;
 
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
@@ -52,10 +50,8 @@ contract SafeToken is ISafeToken, ERC20, AccessControl {
     constructor() ERC20("Safe Yield", "SAY") {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
 
-        _mint(TEAM_OPERATIONS, 2_000_000e18);
-        _mint(CORE_CONTRIBUTORS, 1_000_000e18);
+        _mint(TEAM_OPERATIONS_IDO, 4_000_000e18);
         _mint(FUTURE_LIQUIDITY, 2_000_000e18);
-        _mint(EARLY_INVESTORS, 2_000_000e18);
     }
     /**
      * @notice Mint new tokens
