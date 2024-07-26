@@ -6,17 +6,11 @@ interface IBaseStrategyHandler {
 
     function strategyController() external view returns (address);
 
-    function openStrategy(bytes memory handlerData, bytes memory exchangeData) external;
+    function openStrategy(bytes memory handlerData, bytes memory exchangeData) external payable;
 
-    function exitStrategy(bytes memory data) external;
-
-    function createWithdrawal(bytes memory data) external;
+    function exitStrategy(uint128 controllerStrategyId, bytes memory exitStrategyData) external payable;
 
     function cancelOrder(bytes memory data) external;
-
-    function cancelWithdrawal(bytes memory data) external;
-
-    function cancelDeposit(bytes memory data) external;
 
     function getStrategyPositionId(uint128 controllerStrategyId)
         external

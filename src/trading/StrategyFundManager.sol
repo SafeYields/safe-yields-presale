@@ -43,7 +43,6 @@ contract StrategyFundManager is IStrategyFundManager, Ownable2Step {
     /*//////////////////////////////////////////////////////////////
                                  ERRORS
     //////////////////////////////////////////////////////////////*/
-    //!note: errors
     error SY__SFM__INVALID_ADDRESS();
     error SY__SFM__INVALID_AMOUNT();
     error SY__SFM__ONLY_CONTROLLER();
@@ -145,6 +144,18 @@ contract StrategyFundManager is IStrategyFundManager, Ownable2Step {
         totalAmountsDeposited -= amountRequested;
 
         emit StrategyFunded(strategyHandler, amountRequested);
+    }
+
+    function returnStrategyFunds(uint256 strategyId, int256 pnl) external onlyController(msg.sender) {
+        //!note make sure to update pnl strategy in controller
+        //strategies[strategyId].pnl = pnl;
+
+        Strategy memory currentStrategy = controller.getStrategy(strategyId);
+        if (pnl < 0) {
+            totalAmountsDeposited += (currentStrategy.amountFunded - uint256(-pnl));
+        } else {
+            totalAmountsDeposited += currentStrategy.amountFunded;
+        }
     }
 
     function userDepositDetails(address user) external view override returns (UserDepositDetails memory userDeposits) {

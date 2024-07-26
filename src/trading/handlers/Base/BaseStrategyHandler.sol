@@ -27,7 +27,7 @@ abstract contract BaseStrategyHandler is IBaseStrategyHandler {
         usdcToken = IERC20(_usdcToken);
     }
 
-    function openStrategy(bytes memory, bytes memory) external virtual onlyController(msg.sender) {
+    function openStrategy(bytes memory, bytes memory) external payable virtual onlyController(msg.sender) {
         revert SY_B_SH_UNIMPLEMENTED();
     }
 
@@ -35,38 +35,13 @@ abstract contract BaseStrategyHandler is IBaseStrategyHandler {
         revert SY_B_SH_UNIMPLEMENTED();
     }
 
-    function modifyStrategy(bytes memory) external virtual onlyController(msg.sender) {
+    function modifyStrategy(bytes memory) external payable virtual onlyController(msg.sender) {
         revert SY_B_SH_UNIMPLEMENTED();
     }
 
-    function exitStrategy(bytes memory) external virtual onlyController(msg.sender) {
+    function exitStrategy(uint128, bytes memory) external payable virtual onlyController(msg.sender) {
         revert SY_B_SH_UNIMPLEMENTED();
     }
-
-    // function createWithdrawal(bytes memory) external virtual onlyController(msg.sender) {
-    //     revert SY_B_SH_UNIMPLEMENTED();
-    // }
-
-    // function updateOrder(UpdateOrderParams memory updateOrderParams) external onlyController(msg.sender) {
-    //     exchangeRouter.updateOrder(
-    //         updateOrderParams.key,
-    //         updateOrderParams.sizeDeltaUsd,
-    //         updateOrderParams.acceptablePrice,
-    //         updateOrderParams.triggerPrice,
-    //         updateOrderParams.minOutputAmount,
-    //         updateOrderParams.autoCancel
-    //     );
-
-    //     emit OrderUpdated(updateOrderParams);
-    // }
-
-    // function cancelWithdrawal(bytes memory) external virtual onlyController(msg.sender) {
-    //     revert SY_B_SH_UNIMPLEMENTED();
-    // }
-
-    // function cancelDeposit(bytes memory) external virtual onlyController(msg.sender) {
-    //     revert SY_B_SH_UNIMPLEMENTED();
-    // }
 
     function getStrategyPositionId(uint128 controllerStrategyId)
         external
