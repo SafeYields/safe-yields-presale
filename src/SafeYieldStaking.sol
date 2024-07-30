@@ -104,7 +104,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
         usdc = IERC20(_usdc);
     }
 
-    function updateRewards() public override {
+    function updateRewards() public override whenNotPaused {
         if (totalStaked == 0) {
             lastUpdateRewardsTimestamp = uint48(block.timestamp);
             return;
