@@ -36,7 +36,7 @@ contract CoreContributorsLockUp is ICoreContributorsLockUp, Ownable2Step, Pausab
                                  ERRORS
     //////////////////////////////////////////////////////////////*/
     error SY_CCLU__INVALID_ADDRESS();
-    error SY_CCLU_LENGTH_MISMATCH();
+    error SY_CCLU__LENGTH_MISMATCH();
     error SY_CCLU__NO_SAY_TO_UNLOCK();
     error SY_CCLU__INVALID_AMOUNT();
 
@@ -47,7 +47,7 @@ contract CoreContributorsLockUp is ICoreContributorsLockUp, Ownable2Step, Pausab
     }
 
     function addMultipleMembers(address[] calldata members, uint128[] calldata totalAmounts) external onlyOwner {
-        if (members.length != totalAmounts.length) revert SY_CCLU_LENGTH_MISMATCH();
+        if (members.length != totalAmounts.length) revert SY_CCLU__LENGTH_MISMATCH();
 
         uint256 numOfMembers = members.length;
         for (uint256 i; i < numOfMembers; i++) {
