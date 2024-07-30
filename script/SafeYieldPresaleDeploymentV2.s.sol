@@ -16,17 +16,17 @@ contract SafeYieldPresaleDeploymentV2 is Script {
 
     bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");
 
-    address public constant SY_ADMIN = 0x8478F8c1d693aB4C054d3BBC0aBff4178b8F1b0B;
+    address public constant SY_ADMIN = 0x0378da1e9D6bB039e2E06EDAf43e8744ea204244;
 
-    address public constant USDC = 0xa51c9123a01e0d9fb1d55bA478e09f89f3D5Aebd;
+    address public constant USDC = 0xaf88d065e77c8cC2239327C5EDb3A432268e5831;
     address public constant PROTOCOL_MULTISIG = 0xb7eCbD7262a9250A44EaA040A2B2a184536F3861;
 
-    address public OldPresale = address(0xCc3a494596d3160DAfAD3C25aF29B4327aBBAf3C);
-    address public OldStaking = address(0x1000c5612932b9B9A1abf8A06Ef3d3220DBaa940);
+    address public OldPresale = address(0x5e6c54d4B60C6220a9ad8C49Cd802b958CA2672D);
+    address public OldStaking = address(0x4E82e319CFCaD06DC82da04CBa03f1e9233f806b);
 
-    SafeToken public safeToken = SafeToken(0xD08B28Ad99e88e7cAC99F2aa61aaf6Ad3D2421a6);
+    SafeToken public safeToken = SafeToken(0x19D4b337B77b04256668679159E0b78A42fb0a1a);
     SafeYieldRewardDistributor public distributor =
-        SafeYieldRewardDistributor(0x225b3fB1C83fC7ab218a5a172137d3cFdf6aACf0);
+        SafeYieldRewardDistributor(0xb0078df6b45eaa683b5DFD032D35fF2925e5690e);
 
     SafeYieldPresale public presale;
     SafeYieldStaking public staking;
@@ -38,7 +38,7 @@ contract SafeYieldPresaleDeploymentV2 is Script {
     uint128 referrerCommissionSafeTokenBps = 500; // 5% => 500 bps
 
     function run() public {
-        uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PK_DL");
+        uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PK");
         vm.startBroadcast(deployerPrivateKey);
 
         SafeYieldPresale oldPresaleContract = SafeYieldPresale(OldPresale);
@@ -56,9 +56,19 @@ contract SafeYieldPresaleDeploymentV2 is Script {
             tokenPrice,
             referrerCommissionUsdcBps,
             referrerCommissionSafeTokenBps,
-            SY_ADMIN
+            PROTOCOL_MULTISIG
         );
-
+        /**
+         * address _safeToken,
+         *     address _usdcToken,
+         *     address _safeYieldStaking,
+         *     uint128 _minAllocationPerWallet,
+         *     uint128 _maxAllocationPerWallet,
+         *     uint128 _tokenPrice,
+         *     uint128 _referrerCommissionUsdcBps,
+         *     uint128 _referrerCommissionSafeTokenBps,
+         *     address _protocolMultisig
+         */
         safeToken.grantRole(BURNER_ROLE, SY_ADMIN);
 
         uint256 oldPresaleBal = safeToken.balanceOf(OldPresale);
