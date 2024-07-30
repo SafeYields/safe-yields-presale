@@ -340,7 +340,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
      * @return safeTokens The amount of safe tokens to be bought
      */
     function calculateSafeTokens(uint128 usdcAmount) public view override returns (uint128) {
-        return (usdcAmount * 1e18) / tokenPrice;
+        return (usdcAmount * 1e30) / tokenPrice;
     }
 
     /**
