@@ -13,5 +13,7 @@ interface ICoreContributorsLockUp {
 
     function claimSayTokens() external;
 
-    //function getSchedule(address member) external view returns (VestingSchedule memory schedule);
+    function pause() external;
+
+    function unpause() external;
 }
