@@ -32,6 +32,10 @@ interface ISafeYieldStaking {
 
     function setPresale(address _presale) external;
 
+    function pause() external;
+
+    function unpause() external;
+
     function setRewardDistributor(address _distributor) external;
 
     function getUserStake(address _user) external view returns (Stake memory stake);

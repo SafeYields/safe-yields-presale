@@ -4,6 +4,7 @@ pragma solidity 0.8.26;
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { Ownable2Step } from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -19,7 +20,7 @@ import { ISafeYieldRewardDistributor } from "./interfaces/ISafeYieldRewardDistri
  * users receive sSafeToken as receipt tokens.
  * Users can earn SafeToken and USDC as rewards.
  */
-contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20 {
+contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
     using Math for uint256;
     using Math for int256;
     using Math for uint128;
@@ -212,6 +213,22 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20 {
         distributor = ISafeYieldRewardDistributor(_distributor);
 
         emit RewardDistributorSet(_distributor);
+    }
+
+    /**
+     * @dev Pause the presale
+     * @notice This function can only be called by the owner()
+     */
+    function pause() external override onlyOwner {
+        _pause();
+    }
+
+    /**
+     * @dev Unpause the presale
+     * @notice This function can only be called by the owner()
+     */
+    function unpause() external override onlyOwner {
+        _unpause();
     }
 
     function getUserStake(address _user) external view override returns (Stake memory) {
