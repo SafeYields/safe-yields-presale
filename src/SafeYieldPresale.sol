@@ -6,6 +6,7 @@ import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol"
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { Ownable2Step } from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { ISafeYieldStaking } from "./interfaces/ISafeYieldStaking.sol";
@@ -13,7 +14,7 @@ import { ISafeYieldPreSale } from "./interfaces/ISafeYieldPreSale.sol";
 import { ISafeToken } from "./interfaces/ISafeToken.sol";
 import { PreSaleState, ReferrerInfo, ReferrerRecipient } from "./types/SafeTypes.sol";
 
-contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
+contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
     using Math for uint128;
     using Math for uint256;
 
@@ -339,7 +340,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable {
      * @return safeTokens The amount of safe tokens to be bought
      */
     function calculateSafeTokens(uint128 usdcAmount) public view override returns (uint128) {
-        return (usdcAmount * tokenPrice) / USDC_PRECISION;
+        return (usdcAmount * 1e18) / tokenPrice;
     }
 
     /**
