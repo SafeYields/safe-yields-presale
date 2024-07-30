@@ -27,7 +27,7 @@ contract SafeYieldPresaleDeployment is Script {
 
     /**
      * @dev Run the script
-     * forge script script/SafeYieldPresaleDeployment.so.sol --rpc-url sepolia --etherscan-api-key sepolia --verify --vv
+     * forge script script/SafeYieldPresaleDeployment.s.sol --rpc-url sepolia --etherscan-api-key sepolia --verify --vv
      */
     function run() public {
         uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PK");
