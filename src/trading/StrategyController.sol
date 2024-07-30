@@ -26,6 +26,21 @@ contract StrategyController is /*IStrategyController,*/ Ownable2Step {
     event StrategyHandlerAdded(address strategyHandler, uint256 index);
     event StrategyHandlerRemoved(address strategyHandler);
 
+    event StrategyExited(uint128 indexed controllerStrategyId);
+    event OrderCanceled(bytes indexed data);
+    event OrderCreated(
+        address indexed market, uint128 indexed controllerStrategyId, bytes32 indexed orderId, bytes32 gmxPositionKey
+    );
+    event OrderFulfilled(bytes32 indexed positionKey);
+    event StrategyModified(
+        bytes32 indexed key,
+        uint256 indexed sizeDeltaUsd,
+        uint256 indexed acceptablePrice,
+        uint256 triggerPrice,
+        uint256 minOutputAmount,
+        bool autoCancel
+    );
+
     error SYSC_INVALID_ADDRESS();
     error SYSC_DUPLICATE_HANDLER();
     error SYSC_HANDLER_NOT_CONTRACT();
@@ -47,6 +62,7 @@ contract StrategyController is /*IStrategyController,*/ Ownable2Step {
         address market,
         uint256 amount,
         bool isLong,
+        OrderType orderType,
         bytes memory exchangeData
     ) external onlyValidHandler(strategyHandler) {
         uint256 lastTotalDeposits = fundManager.fundStrategy(strategyHandler, amount);
@@ -57,33 +73,21 @@ contract StrategyController is /*IStrategyController,*/ Ownable2Step {
 
         IBaseStrategyHandler(strategyHandler).openStrategy(handlerData, exchangeData);
 
-        strategies[strategyId] = Strategy({
-            id: strategyId,
-            amountFunded: amount,
-            lastFMTotalDeposits: lastTotalDeposits,
-            limitPrice: 0,
-            slPrice: 0,
-            tpPrice: 0,
-            leverage: 0,
-            pnl: 0,
-            orderType: OrderType.LIMIT,
-            token: address(usdc),
-            handler: strategyHandler,
-            lastFundedAt: uint48(block.timestamp),
-            isLong: isLong,
-            isMatured: false
-        });
+        strategies[strategyId].id = strategyId;
+        strategies[strategyId].lastFMTotalDeposits = lastTotalDeposits;
+        strategies[strategyId].orderType = orderType;
+        strategies[strategyId].token = address(usdc);
+        strategies[strategyId].handler = strategyHandler;
+        strategies[strategyId].lastFundedAt = uint48(block.timestamp);
+        strategies[strategyId].isLong = isLong;
+        strategies[strategyId].isMatured = false;
     }
 
-    function updateStrategy(
-        address strategyHandler,
-        uint256 strategyId,
-        bytes4 functionSelector,
-        bytes32 params,
-        uint256 updateAmount
-    ) public {
-        uint256 lastTotalDeposits = fundManager.fundStrategy(strategyHandler, updateAmount);
-    }
+    function updateStrategy(address strategyHandler, uint256 strategyId, bytes memory exchangeData) public { }
+
+    // function cancelOrder(bytes memory exchangeData) external {
+    //     IBaseStrategyHandler(strategyHandler).cancelOrder(exchangeData);
+    // }
 
     function addStrategyHandler(address strategyHandler) external onlyOwner {
         if (strategyHandler == address(0)) revert SYSC_INVALID_ADDRESS();
