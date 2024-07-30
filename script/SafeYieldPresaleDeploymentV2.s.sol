@@ -58,17 +58,7 @@ contract SafeYieldPresaleDeploymentV2 is Script {
             referrerCommissionSafeTokenBps,
             PROTOCOL_MULTISIG
         );
-        /**
-         * address _safeToken,
-         *     address _usdcToken,
-         *     address _safeYieldStaking,
-         *     uint128 _minAllocationPerWallet,
-         *     uint128 _maxAllocationPerWallet,
-         *     uint128 _tokenPrice,
-         *     uint128 _referrerCommissionUsdcBps,
-         *     uint128 _referrerCommissionSafeTokenBps,
-         *     address _protocolMultisig
-         */
+
         safeToken.grantRole(BURNER_ROLE, SY_ADMIN);
 
         uint256 oldPresaleBal = safeToken.balanceOf(OldPresale);
