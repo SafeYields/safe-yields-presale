@@ -16,7 +16,7 @@ contract SafeYieldPresaleDeploymentV2 is Script {
 
     bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");
 
-    address public constant SY_ADMIN = 0x0378da1e9D6bB039e2E06EDAf43e8744ea204244;
+    address public constant SY_ADMIN = 0x3e88e60894D081B27D180fcADd524365A3DE7Dd4;
 
     address public constant USDC = 0xaf88d065e77c8cC2239327C5EDb3A432268e5831;
     address public constant PROTOCOL_MULTISIG = 0xb7eCbD7262a9250A44EaA040A2B2a184536F3861;
@@ -70,6 +70,9 @@ contract SafeYieldPresaleDeploymentV2 is Script {
         //burn staking say tokens
         safeToken.burn(OldStaking, oldStakingBal);
 
+        //renounce the burner role
+        safeToken.renounceRole(BURNER_ROLE, SY_ADMIN);
+
         //set new allocation
         safeToken.setAllocationLimit(address(presale), PRE_SALE_MAX_SUPPLY);
 
@@ -77,6 +80,9 @@ contract SafeYieldPresaleDeploymentV2 is Script {
 
         //update new staking
         distributor.updateSafeStaking(address(staking));
+
+        staking.setPresale(address(presale));
+        staking.setRewardDistributor(address(distributor));
 
         vm.stopBroadcast();
 
