@@ -157,14 +157,14 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         assertEq(aliceUsdcBalanceAfter, aliceUsdcBalancePrior - 1_000e6, "Alice USDC Balance should be 1_000e6 less");
         assertEq(
             usdc.balanceOf(address(presale)),
-            presale.totalRedeemableReferrerUsdc(),
+            presale.totalReferrersUsdc(),
             "USDC Balance of Presale should be equal to total redeemable referrer USDC"
         );
         assertEq(presale.safeTokensAvailable(), 0, "Safe Tokens Available should be 0");
         assertEq(
             presale.totalUsdcRaised(),
-            2_000_000e6 - presale.totalRedeemableReferrerUsdc(),
-            "Total USDC Raised should be 2_000_000e6 - totalRedeemableReferrerUsdc"
+            2_000_000e6 - presale.totalReferrersUsdc(),
+            "Total USDC Raised should be 2_000_000e6 - totalReferrersUsdc"
         );
     }
 
@@ -191,7 +191,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         uint256 aliceUsdcBalanceAfter = usdc.balanceOf(ALICE);
 
         assertEq(aliceUsdcBalanceAfter, aliceUsdcBalancePrior - 100_000e6);
-        assertEq(usdc.balanceOf(address(presale)), presale.totalRedeemableReferrerUsdc());
+        assertEq(usdc.balanceOf(address(presale)), presale.totalReferrersUsdc());
         assertEq(presale.getTotalSafeTokensOwed(ALICE), 100_000e18);
         assertEq(presale.safeTokensAvailable(), 100_000e18);
         assertEq(presale.totalUsdcRaised(), 1_900_000e6);
@@ -256,7 +256,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         uint256 bobUsdcBalanceAfter = usdc.balanceOf(BOB);
 
         assertEq(bobUsdcBalanceAfter, bobUsdcBalancePrior - 100_000e6);
-        assertEq(usdc.balanceOf(address(presale)), presale.totalRedeemableReferrerUsdc());
+        assertEq(usdc.balanceOf(address(presale)), presale.totalReferrersUsdc());
         assertEq(presale.getTotalSafeTokensOwed(BOB), 100_000e18, "Bob is Owed 100_000e18");
         assertGt(presale.getTotalSafeTokensOwed(ALICE), 1_000e18, "Alice is Owed 1_000e18 + Safe Commissions");
     }
@@ -280,7 +280,10 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         presale.deposit(2_000_000e6, aliceReferrerId);
         vm.stopPrank();
 
-        //assertTrue(presale.totalUsdcRaised() == 2_000_000e6, "Total USDC Raised should be 2_000_000e6");
+        assertTrue(
+            presale.totalUsdcRaised() + presale.totalReferrersUsdc() == 2_000_000e6,
+            "Total USDC Raised should be 2_000_000e6"
+        );
         assertTrue(presale.safeTokensAvailable() == 0, "Safe Tokens Available should be 0");
     }
 
@@ -407,7 +410,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         uint256 safeTokensBought = (usdcAmount * 1e18) / 1e6;
 
         //assertions
-        assertEq(usdc.balanceOf(address(presale)), presale.totalRedeemableReferrerUsdc());
+        assertEq(usdc.balanceOf(address(presale)), presale.totalReferrersUsdc());
         assertEq(presale.getTotalSafeTokensOwed(ALICE), safeTokensBought);
     }
 
@@ -436,17 +439,17 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         uint256 referrerUSdcCommission = (usdcAmount * 5_00) / 1e4;
 
         //assertions
-        assertEq(usdc.balanceOf(address(presale)), presale.totalRedeemableReferrerUsdc());
+        assertEq(usdc.balanceOf(address(presale)), presale.totalReferrersUsdc());
         assertEq(presale.getTotalSafeTokensOwed(ALICE), safeTokensBought + referrerSafeCommission);
         assertEq(presale.getTotalSafeTokensOwed(BOB), safeTokensBought);
 
-        assertEq(referrerUSdcCommission, presale.totalRedeemableReferrerUsdc());
+        assertEq(referrerUSdcCommission, presale.totalReferrersUsdc());
 
         //referrer claim usdc
         vm.prank(ALICE);
         presale.redeemUsdcCommission();
 
-        assertEq(usdc.balanceOf(address(presale)), presale.totalRedeemableReferrerUsdc());
+        assertEq(usdc.balanceOf(address(presale)), presale.totalReferrersUsdc());
 
         vm.prank(protocolAdmin);
         presale.endPresale();
@@ -486,13 +489,13 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
     //     assertEq(presale.totalUsdcRaised(), presale.totalUsdcToWithdraw());
 
     //     console.log("Total Usdc Raised", presale.totalUsdcRaised());
-    //     console.log("Total Redeemable Usdc", presale.totalRedeemableReferrerUsdc());
+    //     console.log("Total Redeemable Usdc", presale.totalReferrersUsdc());
 
     //     vm.prank(protocolAdmin);
     //     presale.withdrawUSDC();
     //     assertEq(presale.totalUsdcToWithdraw(), 0);
 
-    //     assertEq(usdc.balanceOf(address(presale)), presale.totalRedeemableReferrerUsdc());
+    //     assertEq(usdc.balanceOf(address(presale)), presale.totalReferrersUsdc());
     // }
 
     function test_mintUsdcAndDepositMultipleAddresses(uint256 numberOfAddress, uint256 amount, bool isSwitchRef)
