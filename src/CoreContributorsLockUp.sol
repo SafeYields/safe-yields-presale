@@ -55,7 +55,7 @@ contract CoreContributorsLockUp is ICoreContributorsLockUp, Ownable2Step, Pausab
         }
     }
 
-    function claimSayTokens() external override {
+    function claimSayTokens() external override whenNotPaused {
         uint256 releasableBRR = unlockedAmount(msg.sender);
 
         VestingSchedule storage schedule = schedules[msg.sender];
