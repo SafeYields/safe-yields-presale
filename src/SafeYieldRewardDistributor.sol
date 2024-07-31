@@ -76,6 +76,7 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
     error SYRD__NOT_ADMIN_OR_VALID_CONTRACT();
     error SYRD__STAKING_EMISSION_NOT_EXHAUSTED();
     error SYRD__ARRAY_LENGTH_MISMATCH();
+    error SYRD__TOKEN_NOT_ALLOWED();
     error SYRD__DUPLICATE_CONTRACT();
     error SYRD__INVALID_CONTRACT();
     error SYRD__TRANSFER_FAILED();
@@ -281,6 +282,7 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
      * @param amount the amount of the token to recover.
      */
     function recoverTokens(address token, uint256 amount) external override onlyOwner {
+        if (token == address(usdcToken) || token == address(safeToken)) revert SYRD__TOKEN_NOT_ALLOWED();
         IERC20(token).transfer(owner(), amount);
 
         emit TokensRecovered(token, amount);
