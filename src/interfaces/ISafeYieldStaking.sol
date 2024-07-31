@@ -4,6 +4,8 @@ pragma solidity 0.8.26;
 import { Stake } from "../types/SafeTypes.sol";
 
 interface ISafeYieldStaking {
+    function totalStaked() external view returns (uint128);
+
     function updateRewards() external;
 
     function stakeFor(address user, uint128 amount) external;
