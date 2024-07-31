@@ -368,7 +368,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
          *  @dev calculate the safe tokens bought at 1$ per token.
          *  formula: (usdcAmount * tokenPrice) / USDC_PRECISION
          *  example if usdcAmount = 1_000e6 and tokenPrice = 1$ then
-         *  safeTokensBought = (1_000e6 * 1e18) / 1e6 = 1_000e18 safe tokens.
+         *  safeTokensBought = (1_000e6 * 1e30) / 1e18 = 1_000e18 safe tokens.
          */
         safeTokensBought = calculateSafeTokens(usdcAmount);
 
@@ -410,6 +410,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
                  * 100% + 10% = 110%  = 500 tokens
                  * proportional amount for the buyer = 500 * 100 / 110 = 454.545454545454545454
                  * proportional amount for the referrer = 500 - 454.545454545454545454 = 45.454545454545454545
+                 * round up in favor for the buyer over the referrer
                  */
                 safeTokensBought =
                     SafeCast.toUint128(safeTokensBought.mulDiv(BPS_MAX, totalShareBps, Math.Rounding.Ceil));
