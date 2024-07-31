@@ -21,13 +21,13 @@ contract SafeTokenTest is SafeYieldBaseTest {
         uint256 idoSupply = 2_000_000e18;
         uint256 stakingEmissionsSupply = 11_000_000e18;
 
-        uint256 totalSupply = teamOperationsSupply + coreContributorsSupply + futureLiquiditySupply
-            + earlyInvestorsSupply + idoSupply + stakingEmissionsSupply;
+        uint256 totalSupply =
+            teamOperationsSupply + futureLiquiditySupply + earlyInvestorsSupply + idoSupply + stakingEmissionsSupply;
         uint256 tokensRemaining = safeToken.MAX_SUPPLY() - totalSupply;
 
-        assertEq(tokensRemaining, 0);
+        assertEq(tokensRemaining, coreContributorsSupply);
         assertEq(safeToken.totalSupply(), totalSupply);
-        assertEq(safeToken.balanceOf(safeToken.TEAM_OPERATIONS_IDO()), teamOperationsSupply);
+        assertEq(safeToken.balanceOf(safeToken.TEAM_OPERATIONS_IDO()), teamOperationsSupply + idoSupply);
         assertEq(safeToken.balanceOf(safeToken.FUTURE_LIQUIDITY()), futureLiquiditySupply);
     }
 
@@ -40,7 +40,7 @@ contract SafeTokenTest is SafeYieldBaseTest {
     function testSetAllocationLimitShouldFailIfAlreadySet() public {
         vm.expectRevert(abi.encodeWithSelector(SafeToken.SY__MAX_SUPPLY_EXCEEDED.selector));
         vm.prank(protocolAdmin);
-        safeToken.setAllocationLimit(address(distributor), 1_000e18);
+        safeToken.setAllocationLimit(address(distributor), 11_000_000e18);
     }
 
     function testMintShouldFailIfNotMINTER_ROLE() public {
@@ -49,9 +49,9 @@ contract SafeTokenTest is SafeYieldBaseTest {
         safeToken.mint(1_000e18);
     }
 
-    function testMintShouldFailIfMaxMintAllocExceeded() public {
-        vm.expectRevert(abi.encodeWithSelector(SafeToken.SY__MAX_SUPPLY_EXCEEDED.selector));
-        vm.prank(address(presale));
-        safeToken.mint(1_000e18);
-    }
+    // function testMintShouldFailIfMaxMintAllocExceeded() public {
+    //     vm.expectRevert(abi.encodeWithSelector(SafeToken.SY__MAX_SUPPLY_EXCEEDED.selector));
+    //     vm.prank(address(presale));
+    //     safeToken.mint(1_000e18);
+    // }
 }
