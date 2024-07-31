@@ -15,7 +15,7 @@ contract CoreContributorsLockUp is ICoreContributorsLockUp, Ownable2Step, Pausab
                         IMMUTABLES AND CONSTANTS
     //////////////////////////////////////////////////////////////*/
 
-    uint128 public constant CORE_CONTRIBUTORS_TOTAL_BRR_AMOUNT = 1_000_000e18;
+    uint128 public constant CORE_CONTRIBUTORS_TOTAL_SAY_AMOUNT = 1_000_000e18;
     uint48 public constant CORE_CONTRIBUTORS_VESTING_DURATION = 365 * 24 * 60 * 60 seconds; // 1 year
 
     /*//////////////////////////////////////////////////////////////
@@ -56,6 +56,7 @@ contract CoreContributorsLockUp is ICoreContributorsLockUp, Ownable2Step, Pausab
     }
 
     function claimSayTokens() external override whenNotPaused {
+        //@0xm00k check BRR
         uint256 releasableBRR = unlockedAmount(msg.sender);
 
         VestingSchedule storage schedule = schedules[msg.sender];
@@ -79,10 +80,11 @@ contract CoreContributorsLockUp is ICoreContributorsLockUp, Ownable2Step, Pausab
 
     function addMember(address _member, uint128 totalAmount) public override onlyOwner {
         if (_member == address(0)) revert SY_CCLU__INVALID_ADDRESS();
+        ///@0xm00k double check condition and decimals
         if (totalAmount > 1e6) revert SY_CCLU__INVALID_AMOUNT();
 
-        if (totalSayTokensAllocated + totalAmount > CORE_CONTRIBUTORS_TOTAL_BRR_AMOUNT) {
-            totalAmount = CORE_CONTRIBUTORS_TOTAL_BRR_AMOUNT - totalSayTokensAllocated;
+        if (totalSayTokensAllocated + totalAmount > CORE_CONTRIBUTORS_TOTAL_SAY_AMOUNT) {
+            totalAmount = CORE_CONTRIBUTORS_TOTAL_SAY_AMOUNT - totalSayTokensAllocated;
         }
 
         if (schedules[_member].start == 0) {
