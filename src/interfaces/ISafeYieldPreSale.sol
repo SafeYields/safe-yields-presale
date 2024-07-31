@@ -22,7 +22,7 @@ interface ISafeYieldPreSale {
 
     function setReferrerCommissionBps(uint128 _commissionUsdc, uint128 _commissionSafe) external;
 
-    function calculateSafeTokens(uint128 usdcAmount) external view returns (uint128);
+    function calculateSafeTokens(uint256 usdcAmount) external view returns (uint128);
 
     function mintPreSaleAllocation() external;
 
