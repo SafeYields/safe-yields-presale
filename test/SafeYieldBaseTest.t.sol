@@ -80,7 +80,15 @@ abstract contract SafeYieldBaseTest is Test {
         twap = new SafeYieldTWAP();
 
         presale = new SafeYieldPresale(
-            address(safeToken), address(usdc), address(staking), 1_000e18, 100_000e18, 1e18, 5_00, 5_00, protocolAdmin
+            address(safeToken),
+            address(usdc),
+            address(staking),
+            1_000e18,
+            uint128(PRE_SALE_MAX_SUPPLY),
+            1e18,
+            5_00,
+            5_00,
+            protocolAdmin
         );
 
         distributor = new SafeYieldRewardDistributorMock(
