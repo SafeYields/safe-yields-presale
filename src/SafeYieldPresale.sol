@@ -45,7 +45,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
     uint128 public tokenPrice;
     uint128 public referrerCommissionUsdcBps;
     uint128 public referrerCommissionSafeTokenBps;
-    uint128 public totalRedeemableReferrerUsdc;
+    uint128 public totalReferrersUsdc;
     uint128 public totalUsdcRaised; //total usdc raised in the presale minus the referrer commissions
 
     mapping(address userAddress => uint128 safeTokensAllocation) public investorAllocations;
@@ -298,8 +298,6 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
 
         uint256 usdcToRedeem = _referrerInfo.usdcVolume;
 
-        totalRedeemableReferrerUsdc -= uint128(usdcToRedeem);
-
         _referrerInfo.usdcVolume = 0;
 
         if (_referrerInfo.referrer != msg.sender) revert SYPS__UNKNOWN_REFERRER();
@@ -464,7 +462,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
                 referrerSafeTokenCommission = safeTokensAvailableForPurchase - safeTokensBought;
             }
 
-            totalRedeemableReferrerUsdc += referrerUsdcCommission;
+            totalReferrersUsdc += referrerUsdcCommission;
 
             _referrerInfo.usdcVolume += referrerUsdcCommission;
             _referrerInfo.safeTokenVolume += referrerSafeTokenCommission;
