@@ -435,7 +435,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
         usdcPurchaseAmount = usdcAmount;
 
         /// @dev refund the remaining usdc to the user
-        usdcToken.safeTransfer(investor, usdcToRefund);
+        if (usdcToRefund != 0) usdcToken.safeTransfer(investor, usdcToRefund);
 
         ///@notice referral commissions
         address referrerInvestor;
