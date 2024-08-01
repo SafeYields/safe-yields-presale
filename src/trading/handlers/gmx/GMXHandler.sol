@@ -11,6 +11,12 @@ import { IReader } from "./interfaces/IReader.sol";
 import { PositionProps } from "./types/PositionTypes.sol";
 import { OrderProps } from "./types/OrderTypes.sol";
 
+/**
+ * @title GMXHandler
+ * @dev Manages the opening, modification, and closing of trading strategies on the GMX exchange
+ *  including order fulfillment and cancellations.
+ * @author 0xm00k
+ */
 contract GMXHandler is BaseStrategyHandler {
     using SafeERC20 for IERC20;
     /*//////////////////////////////////////////////////////////////
@@ -19,16 +25,18 @@ contract GMXHandler is BaseStrategyHandler {
 
     IExchangeRouter public immutable exchangeRouter;
     IReader public immutable gmxReader;
-    address public constant orderVault = address(0x16);
-    address public constant dataStore = address(0x17);
 
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
+    address public orderVault;
+    address public dataStore;
 
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
+    event DataStoreUpdated(address indexed oldDataStore, address indexed newDataStore);
+    event OrderVaultUpdated(address indexed oldOrderVault, address indexed newOrderVault);
 
     /*//////////////////////////////////////////////////////////////
                                  ERRORS
@@ -50,11 +58,19 @@ contract GMXHandler is BaseStrategyHandler {
         address _usdc,
         address _controller,
         address _reader,
+        address _orderVault,
+        address _dataStore,
         string memory _exchangeName
     ) BaseStrategyHandler(_controller, _usdc, _exchangeName) {
-        if (_exchangeRouter == address(0) || _reader == address(0)) revert SY_HDL__INVALID_ADDRESS();
+        if (
+            _exchangeRouter == address(0) || _reader == address(0) || _orderVault == address(0)
+                || _dataStore == address(0)
+        ) revert SY_HDL__INVALID_ADDRESS();
 
         exchangeRouter = IExchangeRouter(_exchangeRouter);
+
+        orderVault = _orderVault;
+        dataStore = _dataStore;
 
         gmxReader = IReader(_reader);
     }
@@ -71,8 +87,9 @@ contract GMXHandler is BaseStrategyHandler {
         payable
         override
         onlyController(msg.sender)
+        returns (bytes32 orderId)
     {
-        (uint256 orderAmount, uint128 controllerStrategyId, address market, bool isLong, uint256 executionFee) =
+        (uint256 orderAmount, uint128 controllerStrategyId,,, uint256 executionFee) =
             abi.decode(handlerData, (uint256, uint128, address, bool, uint256));
 
         if (strategyPositionId[controllerStrategyId] != 0) revert SY_HDL__POSITION_EXIST();
@@ -94,7 +111,7 @@ contract GMXHandler is BaseStrategyHandler {
 
         bytes[] memory resultData = exchangeRouter.multicall(multicallData);
 
-        bytes32 orderId = abi.decode(resultData[2], (bytes32));
+        orderId = abi.decode(resultData[2], (bytes32));
     }
 
     /// @notice Exits a strategy by executing a series of operations on the GMX exchange router.
@@ -171,6 +188,23 @@ contract GMXHandler is BaseStrategyHandler {
         exchangeRouter.updateOrder(orderId, 0, acceptablePrice, triggerPrice, 0, false);
     }
 
+    //!we need an ownable??
+    function setOrderVault(address newOrderVault) external {
+        address oldOrderVault = orderVault;
+
+        orderVault = newOrderVault;
+
+        emit OrderVaultUpdated(oldOrderVault, newOrderVault);
+    }
+
+    function setDataStore(address newDataStore) external {
+        address oldDataStore = dataStore;
+
+        orderVault = newDataStore;
+
+        emit DataStoreUpdated(oldDataStore, newDataStore);
+    }
+
     function getGMXPositionKey(address account, address market, address collateralToken, bool isLong)
         public
         pure
@@ -182,8 +216,6 @@ contract GMXHandler is BaseStrategyHandler {
     function checkOrderExist(bytes32 orderId) internal view returns (bool) {
         OrderProps memory order = gmxReader.getOrder(dataStore, orderId);
 
-        if (order.addresses.account != address(0)) return true;
-
-        return false;
+        return order.addresses.account != address(0);
     }
 }
