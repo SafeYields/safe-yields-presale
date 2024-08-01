@@ -19,7 +19,6 @@ contract CoreContributorsLockUp is ICoreContributorsLockUp, Ownable2Step, Pausab
 
     uint128 public constant CORE_CONTRIBUTORS_TOTAL_SAY_AMOUNT = 1_000_000e18;
     uint48 public constant CORE_CONTRIBUTORS_VESTING_DURATION = 365 * 24 * 60 * 60 seconds; // 1 year
-
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
@@ -32,6 +31,7 @@ contract CoreContributorsLockUp is ICoreContributorsLockUp, Ownable2Step, Pausab
     //////////////////////////////////////////////////////////////*/
     event MemberAdded(address indexed member, uint128 indexed totalAmount);
     event SayTokensUnlocked(address indexed member, uint256 indexed releasableSAY);
+    event SayAllocationsMinted(uint256 indexed sayAllocation);
 
     /*//////////////////////////////////////////////////////////////
                                  ERRORS
@@ -68,6 +68,12 @@ contract CoreContributorsLockUp is ICoreContributorsLockUp, Ownable2Step, Pausab
         sayToken.safeTransfer(msg.sender, releasableSAY);
 
         emit SayTokensUnlocked(msg.sender, releasableSAY);
+    }
+
+    function mintSayAllocation() external override onlyOwner {
+        sayToken.mint(CORE_CONTRIBUTORS_TOTAL_SAY_AMOUNT);
+
+        emit SayAllocationsMinted(CORE_CONTRIBUTORS_TOTAL_SAY_AMOUNT);
     }
 
     function pause() external override onlyOwner {
