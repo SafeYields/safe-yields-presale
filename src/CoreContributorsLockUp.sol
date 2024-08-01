@@ -3,6 +3,7 @@
 pragma solidity 0.8.26;
 
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
 import { ICoreContributorsLockUp } from "./interfaces/ICoreContributorsLockUp.sol";
 import { ISafeToken } from "./interfaces/ISafeToken.sol";
@@ -11,6 +12,7 @@ import { Ownable2Step, Ownable } from "@openzeppelin/contracts/access/Ownable2St
 
 contract CoreContributorsLockUp is ICoreContributorsLockUp, Ownable2Step, Pausable {
     using Math for uint256;
+    using SafeERC20 for ISafeToken;
     /*//////////////////////////////////////////////////////////////
                         IMMUTABLES AND CONSTANTS
     //////////////////////////////////////////////////////////////*/
@@ -61,9 +63,9 @@ contract CoreContributorsLockUp is ICoreContributorsLockUp, Ownable2Step, Pausab
             revert SY_CCLU__NO_SAY_TO_UNLOCK();
         }
 
-        VestingSchedule storage schedule = schedules[msg.sender];
+        schedules[msg.sender].amountClaimed += uint128(releasableSAY);
 
-        schedule.amountClaimed += uint128(releasableSAY);
+        sayToken.safeTransfer(msg.sender, releasableSAY);
 
         emit SayTokensUnlocked(msg.sender, releasableSAY);
     }
