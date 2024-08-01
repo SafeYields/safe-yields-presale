@@ -47,7 +47,11 @@ contract CoreContributorsLockUp is ICoreContributorsLockUp, Ownable2Step, Pausab
         sayToken = ISafeToken(_sayToken);
     }
 
-    function addMultipleMembers(address[] calldata members, uint128[] calldata totalAmounts) external onlyOwner {
+    function addMultipleMembers(address[] calldata members, uint128[] calldata totalAmounts)
+        external
+        override
+        onlyOwner
+    {
         if (members.length != totalAmounts.length) revert SY_CCLU__LENGTH_MISMATCH();
 
         uint256 numOfMembers = members.length;
