@@ -10,6 +10,12 @@ import { ISafeToken } from "./interfaces/ISafeToken.sol";
 import { VestingSchedule } from "./types/SafeTypes.sol";
 import { Ownable2Step, Ownable } from "@openzeppelin/contracts/access/Ownable2Step.sol";
 
+/**
+ * @title CoreContributorsLockUp
+ * @dev This contract manages the vesting for 12 months and allocation of 1 Million SAY tokens for core contributors,
+ *   allowing claim and mint operations with pausable functionality.
+ * @author @0xm00k
+ */
 contract CoreContributorsLockUp is ICoreContributorsLockUp, Ownable2Step, Pausable {
     using Math for uint256;
     using SafeERC20 for ISafeToken;
