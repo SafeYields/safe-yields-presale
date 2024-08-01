@@ -22,7 +22,6 @@ contract CoreContributorsLockUp is ICoreContributorsLockUp, Ownable2Step, Pausab
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
     mapping(address user => VestingSchedule) public schedules;
-
     ISafeToken public sayToken;
     uint128 public totalSayTokensAllocated;
 
@@ -30,7 +29,7 @@ contract CoreContributorsLockUp is ICoreContributorsLockUp, Ownable2Step, Pausab
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
     event MemberAdded(address indexed member, uint128 indexed totalAmount);
-    event SayTokensUnlocked(address indexed member, uint256 indexed releasableBRR);
+    event SayTokensUnlocked(address indexed member, uint256 indexed releasableSAY);
 
     /*//////////////////////////////////////////////////////////////
                                  ERRORS
@@ -56,18 +55,17 @@ contract CoreContributorsLockUp is ICoreContributorsLockUp, Ownable2Step, Pausab
     }
 
     function claimSayTokens() external override whenNotPaused {
-        //@0xm00k check BRR
-        uint256 releasableBRR = unlockedAmount(msg.sender);
+        uint256 releasableSAY = unlockedAmount(msg.sender);
 
-        VestingSchedule storage schedule = schedules[msg.sender];
-
-        if (releasableBRR == 0) {
+        if (releasableSAY == 0) {
             revert SY_CCLU__NO_SAY_TO_UNLOCK();
         }
 
-        schedule.amountClaimed += uint128(releasableBRR);
+        VestingSchedule storage schedule = schedules[msg.sender];
 
-        emit SayTokensUnlocked(msg.sender, releasableBRR);
+        schedule.amountClaimed += uint128(releasableSAY);
+
+        emit SayTokensUnlocked(msg.sender, releasableSAY);
     }
 
     function pause() external override onlyOwner {
@@ -80,8 +78,7 @@ contract CoreContributorsLockUp is ICoreContributorsLockUp, Ownable2Step, Pausab
 
     function addMember(address _member, uint128 totalAmount) public override onlyOwner {
         if (_member == address(0)) revert SY_CCLU__INVALID_ADDRESS();
-        ///@0xm00k double check condition and decimals
-        if (totalAmount > 1e6) revert SY_CCLU__INVALID_AMOUNT();
+        if (totalAmount < 1e18) revert SY_CCLU__INVALID_AMOUNT();
 
         if (totalSayTokensAllocated + totalAmount > CORE_CONTRIBUTORS_TOTAL_SAY_AMOUNT) {
             totalAmount = CORE_CONTRIBUTORS_TOTAL_SAY_AMOUNT - totalSayTokensAllocated;
