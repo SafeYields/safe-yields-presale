@@ -21,7 +21,7 @@ contract CoreContributorsLockUp is ICoreContributorsLockUp, Ownable2Step, Pausab
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
-    mapping(address user => VestingSchedule) public schedules;
+    mapping(address user => VestingSchedule schedule) public schedules;
     ISafeToken public sayToken;
     uint128 public totalSayTokensAllocated;
 
