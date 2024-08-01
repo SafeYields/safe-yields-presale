@@ -18,14 +18,16 @@ contract StrategyController is /*IStrategyController,*/ Ownable2Step {
     uint128 public strategyCount;
     address[] public strategyHandlers;
     IStrategyFundManager public fundManager;
-    IERC20 public usdc;
+    IERC20 public usdcToken;
 
     mapping(uint256 strategyId => Strategy) public strategies;
     mapping(address strategyHandler => uint256 index) public strategyHandlerIndex;
 
+    /*//////////////////////////////////////////////////////////////
+                                 EVENTS
+    //////////////////////////////////////////////////////////////*/
     event StrategyHandlerAdded(address strategyHandler, uint256 index);
     event StrategyHandlerRemoved(address strategyHandler);
-
     event StrategyExited(uint128 indexed controllerStrategyId);
     event OrderCanceled(bytes indexed data);
     event OrderCreated(
@@ -41,20 +43,30 @@ contract StrategyController is /*IStrategyController,*/ Ownable2Step {
         bool autoCancel
     );
 
-    error SYSC_INVALID_ADDRESS();
-    error SYSC_DUPLICATE_HANDLER();
-    error SYSC_HANDLER_NOT_CONTRACT();
-    error SYSC_INVALID_HANDLER();
-    error SYSC_TRANSACTION_FAILED();
+    /*//////////////////////////////////////////////////////////////
+                                 ERRORS
+    //////////////////////////////////////////////////////////////*/
+    error SYSC__INVALID_ADDRESS();
+    error SYSC__DUPLICATE_HANDLER();
+    error SYSC__HANDLER_NOT_CONTRACT();
+    error SYSC__INVALID_HANDLER();
+    error SYSC__TRANSACTION_FAILED();
 
+    /*//////////////////////////////////////////////////////////////
+                               MODIFIERS
+    //////////////////////////////////////////////////////////////*/
     modifier onlyValidHandler(address handler) {
-        if (strategyHandlerIndex[handler] == 0 && strategyHandlers[0] != handler) revert SYSC_INVALID_HANDLER();
+        if (strategyHandlerIndex[handler] == 0 && strategyHandlers[0] != handler) revert SYSC__INVALID_HANDLER();
         _;
     }
 
-    constructor(address _usdc, address _fundManager, address _protocolAdmin) Ownable(_protocolAdmin) {
+    constructor(address _usdcToken, address _fundManager, address _protocolAdmin) Ownable(_protocolAdmin) {
+        if (_usdcToken == address(0) || _fundManager == address(0) || _protocolAdmin == address(0)) {
+            revert SYSC__INVALID_ADDRESS();
+        }
+
         fundManager = IStrategyFundManager(_fundManager);
-        usdc = IERC20(_usdc);
+        usdcToken = IERC20(_usdcToken);
     }
 
     function openStrategy(
@@ -76,7 +88,7 @@ contract StrategyController is /*IStrategyController,*/ Ownable2Step {
         strategies[strategyId].id = strategyId;
         strategies[strategyId].lastFMTotalDeposits = lastTotalDeposits;
         strategies[strategyId].orderType = orderType;
-        strategies[strategyId].token = address(usdc);
+        strategies[strategyId].token = address(usdcToken);
         strategies[strategyId].handler = strategyHandler;
         strategies[strategyId].lastFundedAt = uint48(block.timestamp);
         strategies[strategyId].isLong = isLong;
@@ -90,19 +102,19 @@ contract StrategyController is /*IStrategyController,*/ Ownable2Step {
     // }
 
     function addStrategyHandler(address strategyHandler) external onlyOwner {
-        if (strategyHandler == address(0)) revert SYSC_INVALID_ADDRESS();
+        if (strategyHandler == address(0)) revert SYSC__INVALID_ADDRESS();
 
         address[] memory handlers = strategyHandlers;
 
         if (strategyHandlerIndex[strategyHandler] != 0 || handlers[0] == strategyHandler) {
-            revert SYSC_DUPLICATE_HANDLER();
+            revert SYSC__DUPLICATE_HANDLER();
         }
 
         uint256 codeSize;
         assembly {
             codeSize := extcodesize(strategyHandler)
         }
-        if (codeSize == 0) revert SYSC_HANDLER_NOT_CONTRACT();
+        if (codeSize == 0) revert SYSC__HANDLER_NOT_CONTRACT();
 
         uint256 index = handlers.length;
 
@@ -115,7 +127,7 @@ contract StrategyController is /*IStrategyController,*/ Ownable2Step {
         address[] memory handlers = strategyHandlers;
         uint256 index = strategyHandlerIndex[strategyHandler];
 
-        if (index == 0 && handlers[0] != strategyHandler) revert SYSC_INVALID_HANDLER();
+        if (index == 0 && handlers[0] != strategyHandler) revert SYSC__INVALID_HANDLER();
         if (handlers.length == 1) {
             delete strategyHandlers;
         } else {
