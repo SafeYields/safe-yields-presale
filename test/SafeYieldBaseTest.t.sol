@@ -122,9 +122,9 @@ abstract contract SafeYieldBaseTest is Test {
                                 HELPERS
     //////////////////////////////////////////////////////////////*/
     function _mintUsdc2Users() internal {
-        usdc.mint(ALICE, 110_000e6);
-        usdc.mint(BOB, 110_000e6);
-        usdc.mint(CHARLIE, 110_000e6);
+        usdc.mint(ALICE, 2_001_000e6);
+        usdc.mint(BOB, 2_001_000e6);
+        usdc.mint(CHARLIE, 2_001_000e6);
     }
 
     function _createUniswapV3Pool() internal returns (address pool) {
