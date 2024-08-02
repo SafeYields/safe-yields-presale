@@ -89,6 +89,10 @@ contract StrategyFundManager is IStrategyFundManager, Ownable2Step {
 
     //TODO:
     function withdraw(uint128 amount) external override {
+        ///claim all your available funds to unutilized
+        claimProfit();
+
+        ///@dev if amount > amount unutilized, send what's available.
         emit AmountWithdrawn(msg.sender, amount);
     }
 
@@ -118,7 +122,8 @@ contract StrategyFundManager is IStrategyFundManager, Ownable2Step {
 
         if (pnl < 0) return 0;
 
-        usdc.safeTransfer(msg.sender, uint256(pnl));
+        ///@dev add the pnl along with the amount utilized back to the user's unutilized amount so that they can withdraw it
+        //usdc.safeTransfer(msg.sender, uint256(pnl));
 
         emit ProfitClaimed(msg.sender, uint256(pnl));
     }
