@@ -44,8 +44,21 @@ contract CoreContributorLockUpTest is SafeYieldBaseTest {
         totalAmounts[0] = 30_000e18;
         totalAmounts[1] = 10_000e18;
 
+        skip(10 minutes);
+
         vm.startPrank(protocolAdmin);
         contributorLockUp.addMultipleMembers(members, totalAmounts);
+
+        VestingSchedule memory aliceSchedule = contributorLockUp.getSchedules(ALICE);
+        VestingSchedule memory charlieSchedule = contributorLockUp.getSchedules(CHARLIE);
+
+        assertEq(aliceSchedule.totalAmount, 30_000e18);
+        assertEq(aliceSchedule.start, block.timestamp);
+        assertEq(aliceSchedule.duration, block.timestamp + contributorLockUp.CORE_CONTRIBUTORS_VESTING_DURATION());
+
+        assertEq(charlieSchedule.totalAmount, 10_000e18);
+        assertEq(charlieSchedule.start, block.timestamp);
+        assertEq(charlieSchedule.duration, block.timestamp + contributorLockUp.CORE_CONTRIBUTORS_VESTING_DURATION());
     }
 
     function testUnlockCoreMembersSayTokens() public {
