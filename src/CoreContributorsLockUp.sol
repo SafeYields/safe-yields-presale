@@ -161,4 +161,8 @@ contract CoreContributorsLockUp is ICoreContributorsLockUp, Ownable2Step, Pausab
             return totalVested;
         }
     }
+
+    function getSchedules(address user) external view returns (VestingSchedule memory schedule) {
+        return schedules[user];
+    }
 }
