@@ -46,6 +46,7 @@ contract CoreContributorsLockUp is ICoreContributorsLockUp, Ownable2Step, Pausab
     error SY_CCLU__LENGTH_MISMATCH();
     error SY_CCLU__NO_SAY_TO_UNLOCK();
     error SY_CCLU__INVALID_AMOUNT();
+    error SY_CCLU__NO_MORE_SAY();
 
     constructor(address protocolAdmin, address _sayToken) Ownable(protocolAdmin) {
         if (protocolAdmin == address(0) || _sayToken == address(0)) revert SY_CCLU__INVALID_ADDRESS();
@@ -101,6 +102,25 @@ contract CoreContributorsLockUp is ICoreContributorsLockUp, Ownable2Step, Pausab
         if (totalSayTokensAllocated + totalAmount > CORE_CONTRIBUTORS_TOTAL_SAY_AMOUNT) {
             totalAmount = CORE_CONTRIBUTORS_TOTAL_SAY_AMOUNT - totalSayTokensAllocated;
         }
+        /**
+         * @dev
+         * We avoid reverting in this function to prevent DOS.
+         * Instead, we simply return. For example, if there are 10 members to be added and 100,000e18
+         * tokens to be distributed among them, but only 5 members can be successfully allocated shares,
+         * the remaining members will not be added since there wouldn't be enough tokens left.
+         * - Suppose each member requires a different share.
+         * - If we have 6 members and 50,000e18 tokens:
+         *   - Member 1 requires 10,000e18 tokens.
+         *   - Member 2 requires 20,000e18 tokens.
+         *   - Member 3 requires 5,000e18 tokens.
+         *   - Member 4 requires 15,000e18 tokens.
+         *   - Member 5 requires 30,000e18 tokens.
+         *   - Member 6 requires 25,000e18 tokens.
+         * - Members 1, 2, and 3 can be successfully allocated shares (10,000e18 + 20,000e18 + 5,000e18 = 35,000e18).
+         * - Member 4 requires 15,000e18 tokens, but only 15,000e18 tokens are left.
+         * - Members 5 and 6 will not be added since there aren't enough tokens left for their shares.
+         */
+        if (totalAmount == 0) return;
 
         if (schedules[_member].start == 0) {
             schedules[_member].start = uint48(block.timestamp);
