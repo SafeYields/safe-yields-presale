@@ -6,8 +6,11 @@ import { console } from "forge-std/Test.sol";
 import { SafeYieldBaseTest } from "./SafeYieldBaseTest.t.sol";
 import { CoreContributorsLockUp } from "src/CoreContributorsLockUp.sol";
 import { VestingSchedule } from "src/types/SafeTypes.sol";
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
 contract CoreContributorLockUpTest is SafeYieldBaseTest {
+    using Math for uint256;
+
     function testSayTokenContractSetCorrectly() public view {
         assertEq(address(contributorLockUp.sayToken()), address(safeToken));
     }
@@ -46,6 +49,8 @@ contract CoreContributorLockUpTest is SafeYieldBaseTest {
     }
 
     function testUnlockCoreMembersSayTokens() public {
+        uint256 timeStart = block.timestamp;
+
         addCoreMember(BOB, 10_000e18);
 
         skip(10 days);
@@ -57,43 +62,101 @@ contract CoreContributorLockUpTest is SafeYieldBaseTest {
 
         uint256 bobSayBalanceAfter = safeToken.balanceOf(BOB);
 
-        assertGt(bobSayBalanceAfter, bobSayBalancePrior);
+        VestingSchedule memory bobSchedule = contributorLockUp.getSchedules(BOB);
+
+        uint256 timePassed = block.timestamp - timeStart;
+
+        uint256 expectedSayAmount = uint256(bobSchedule.totalAmount).mulDiv(timePassed, bobSchedule.duration);
+
+        assertEq(bobSayBalanceAfter, bobSayBalancePrior + expectedSayAmount);
     }
 
     function testCreateSchedulesForMembersMultipleOps() public {
         skip(5 minutes);
+
+        uint256 timeStarted = block.timestamp;
+
         vm.startPrank(protocolAdmin);
         contributorLockUp.addMember(ALICE, 10_000e18);
         contributorLockUp.addMember(BOB, 10_000e18);
         vm.stopPrank();
 
-        assertEq(safeToken.balanceOf(ALICE), 0, "Alice Balance should be 0");
-        assertEq(safeToken.balanceOf(BOB), 0, "Bob Balance should be 0");
+        uint256 aliceSayBalancePrior = safeToken.balanceOf(ALICE);
+        uint256 bobSayBalancePrior = safeToken.balanceOf(BOB);
+
+        assertEq(aliceSayBalancePrior, 0, "Alice Balance should be 0");
+        assertEq(bobSayBalancePrior, 0, "Bob Balance should be 0");
 
         skip(1 days);
         vm.startPrank(ALICE);
         contributorLockUp.claimSayTokens();
+
+        uint256 aliceSayBalanceAfterFirstUnlock = safeToken.balanceOf(ALICE);
+
+        VestingSchedule memory aliceSchedule = contributorLockUp.getSchedules(ALICE);
+
+        uint256 aliceFirstUnlockTimePassed = block.timestamp - timeStarted;
+
+        uint256 aliceFirstUnlockExpectedSayAmount =
+            uint256(aliceSchedule.totalAmount).mulDiv(aliceFirstUnlockTimePassed, aliceSchedule.duration);
+
         vm.stopPrank();
 
-        assertGt(safeToken.balanceOf(ALICE), 0, "Alice Balance should be greater than zero");
+        assertEq(
+            aliceSayBalanceAfterFirstUnlock,
+            aliceSayBalancePrior + aliceFirstUnlockExpectedSayAmount,
+            "Alice First Unlock should be equal to expected amount"
+        );
 
         skip(5 days);
         vm.startPrank(BOB);
         contributorLockUp.claimSayTokens();
         vm.stopPrank();
 
-        assertGt(safeToken.balanceOf(BOB), 0, "Bob Balance should be greater than zero");
+        uint256 bobSayBalanceAfterFirstUnlock = safeToken.balanceOf(BOB);
+
+        VestingSchedule memory bobSchedule = contributorLockUp.getSchedules(BOB);
+
+        uint256 bobFirstUnlockTimePassed = block.timestamp - timeStarted;
+
+        uint256 bobFirstUnlockExpectedSayAmount =
+            uint256(bobSchedule.totalAmount).mulDiv(bobFirstUnlockTimePassed, bobSchedule.duration);
+
+        vm.stopPrank();
+
+        assertEq(
+            bobSayBalanceAfterFirstUnlock,
+            bobSayBalancePrior + bobFirstUnlockExpectedSayAmount,
+            "Bob First Unlock should be equal to expected amount"
+        );
 
         skip(365 * 24 * 60 * 60 seconds);
+
         //alice unlocks 1 year later
         vm.startPrank(ALICE);
         contributorLockUp.claimSayTokens();
         vm.stopPrank();
 
+        uint256 aliceSayBalanceAfterLastUnlock = safeToken.balanceOf(ALICE);
+
+        uint256 aliceLastUnlockTimePassed = block.timestamp - timeStarted;
+
+        uint256 expectedAmountAfter1year = aliceSchedule.totalAmount - aliceFirstUnlockExpectedSayAmount;
+
+        assertEq(aliceSayBalanceAfterLastUnlock, aliceSayBalanceAfterFirstUnlock + expectedAmountAfter1year);
+
         //bob unlocks 1 year later
         vm.startPrank(BOB);
         contributorLockUp.claimSayTokens();
         vm.stopPrank();
+
+        uint256 bobSayBalanceAfterLastUnlock = safeToken.balanceOf(BOB);
+
+        uint256 bobLastUnlockTimePassed = block.timestamp - timeStarted;
+
+        uint256 bobExpectedAmountAfter1year = bobSchedule.totalAmount - bobFirstUnlockExpectedSayAmount;
+
+        assertEq(bobSayBalanceAfterLastUnlock, bobSayBalanceAfterFirstUnlock + bobExpectedAmountAfter1year);
 
         assertEq(safeToken.balanceOf(BOB), 10_000e18);
         assertEq(safeToken.balanceOf(ALICE), 10_000e18);
@@ -102,26 +165,47 @@ contract CoreContributorLockUpTest is SafeYieldBaseTest {
     function testFuzz__CreateSchedulesForCoreMembersMultipleOps(
         uint256 sayAllocation,
         uint256 numberOfMembers,
-        uint256 timePassed
+        uint256 time
     ) public {
         sayAllocation = bound(sayAllocation, 50_000e18, contributorLockUp.CORE_CONTRIBUTORS_TOTAL_SAY_AMOUNT());
         numberOfMembers = bound(numberOfMembers, 2, 20);
-        timePassed =
-            bound(timePassed, block.timestamp, block.timestamp + contributorLockUp.CORE_CONTRIBUTORS_VESTING_DURATION());
+        time = bound(time, block.timestamp, block.timestamp + contributorLockUp.CORE_CONTRIBUTORS_VESTING_DURATION());
 
         (address[] memory members, uint128[] memory totalAllocations) =
             getMembersAndAllocations(uint128(sayAllocation), numberOfMembers);
 
+        skip(10 minutes);
+
+        uint256 timeStarted = block.timestamp;
+
         vm.startPrank(protocolAdmin);
         contributorLockUp.addMultipleMembers(members, totalAllocations);
 
-        skip(timePassed);
+        skip(time);
 
+        //assertions
         for (uint256 i; i < members.length; i++) {
             if (contributorLockUp.unlockedAmount(address(uint160(i + 50))) != 0) {
                 vm.startPrank(address(uint160(i + 50)));
                 contributorLockUp.claimSayTokens();
                 vm.stopPrank();
+            } else {
+                continue;
+            }
+        }
+
+        uint256 timePassed = block.timestamp - timeStarted;
+
+        for (uint256 i; i < members.length; i++) {
+            VestingSchedule memory userSchedule = contributorLockUp.getSchedules(address(uint160(i + 50)));
+            if (userSchedule.totalAmount != 0) {
+                uint256 expectedSayAmount = block.timestamp >= userSchedule.duration
+                    ? userSchedule.totalAmount
+                    : uint256(userSchedule.totalAmount).mulDiv(timePassed, userSchedule.duration);
+
+                uint256 userBalance = safeToken.balanceOf(address(uint160(i + 50)));
+
+                assertEq(userBalance, expectedSayAmount, "User Balance should be equal to say balance");
             } else {
                 continue;
             }
