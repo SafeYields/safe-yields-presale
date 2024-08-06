@@ -21,11 +21,11 @@ contract SafeTokenTest is SafeYieldBaseTest {
         uint256 idoSupply = 2_000_000e18;
         uint256 stakingEmissionsSupply = 11_000_000e18;
 
-        uint256 totalSupply =
-            teamOperationsSupply + futureLiquiditySupply + earlyInvestorsSupply + idoSupply + stakingEmissionsSupply;
+        uint256 totalSupply = teamOperationsSupply + futureLiquiditySupply + earlyInvestorsSupply + idoSupply
+            + stakingEmissionsSupply + coreContributorsSupply;
         uint256 tokensRemaining = safeToken.MAX_SUPPLY() - totalSupply;
 
-        assertEq(tokensRemaining, coreContributorsSupply);
+        assertEq(tokensRemaining, 0);
         assertEq(safeToken.totalSupply(), totalSupply);
         assertEq(safeToken.balanceOf(safeToken.TEAM_OPERATIONS_IDO()), teamOperationsSupply + idoSupply);
         assertEq(safeToken.balanceOf(safeToken.FUTURE_LIQUIDITY()), futureLiquiditySupply);

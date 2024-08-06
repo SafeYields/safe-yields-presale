@@ -10,6 +10,8 @@ import { USDCMockToken } from "./mocks/USDCMockToken.sol";
 import { SafeYieldRewardDistributorMock } from "./mocks/SafeYieldRewardDistributorMock.sol";
 import { SafeYieldPresale } from "src/SafeYieldPresale.sol";
 import { SafeYieldStaking } from "src/SafeYieldStaking.sol";
+import { CoreContributorsLockUp } from "src/CoreContributorsLockUp.sol";
+
 import { SafeYieldTWAP } from "src/SafeYieldTWAP.sol";
 import { IUniswapV3Factory } from "src/uniswapV3/interfaces/IUniswapV3Factory.sol";
 import { IUniswapV3Pool } from "src/uniswapV3/interfaces/IUniswapV3Pool.sol";
@@ -21,6 +23,7 @@ import { GMXHandler } from "src/trading/handlers/gmx/GMXHandler.sol";
 abstract contract SafeYieldBaseTest is Test {
     uint256 public constant PRE_SALE_MAX_SUPPLY = 2_000_000e18;
     uint256 public constant STAKING_MAX_SUPPLY = 11_000_000e18;
+    uint128 public constant CORE_CONTRIBUTORS_TOTAL_SAY_AMOUNT = 1_000_000e18;
     address public constant UNISWAP_V3_POOL = 0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640;
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
@@ -41,6 +44,7 @@ abstract contract SafeYieldBaseTest is Test {
     address public USDC_WHALE = 0x4B16c5dE96EB2117bBE5fd171E4d203624B014aa;
 
     SafeYieldRewardDistributorMock public distributor;
+    CoreContributorsLockUp public contributorLockUp;
     SafeYieldPresale public presale;
     SafeYieldStaking public staking;
     SafeYieldTWAP public twap;
@@ -95,17 +99,19 @@ abstract contract SafeYieldBaseTest is Test {
             address(safeToken), address(usdc), teamOperations, usdcBuyback, address(staking), address(twap)
         );
 
+        contributorLockUp = new CoreContributorsLockUp(protocolAdmin, address(safeToken));
+
         safeToken.setAllocationLimit(address(distributor), STAKING_MAX_SUPPLY);
         safeToken.setAllocationLimit(address(presale), PRE_SALE_MAX_SUPPLY);
+        safeToken.setAllocationLimit(address(contributorLockUp), CORE_CONTRIBUTORS_TOTAL_SAY_AMOUNT);
 
         staking.setPresale(address(presale));
-
         staking.setRewardDistributor(address(distributor));
 
-        //mint
+        contributorLockUp.mintSayAllocation();
         presale.mintPreSaleAllocation();
-
         distributor.mintStakingEmissionAllocation();
+
         vm.stopPrank();
 
         //address uniswapV3Pool = _createUniswapV3Pool();
