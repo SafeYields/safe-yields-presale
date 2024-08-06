@@ -104,7 +104,7 @@ contract CoreContributorLockUpTest is SafeYieldBaseTest {
         uint256 numberOfMembers,
         uint256 timePassed
     ) public {
-        sayAllocation = bound(sayAllocation, 50_000e18, 1_000_000e18);
+        sayAllocation = bound(sayAllocation, 50_000e18, contributorLockUp.CORE_CONTRIBUTORS_TOTAL_SAY_AMOUNT());
         numberOfMembers = bound(numberOfMembers, 2, 20);
         timePassed =
             bound(timePassed, block.timestamp, block.timestamp + contributorLockUp.CORE_CONTRIBUTORS_VESTING_DURATION());
