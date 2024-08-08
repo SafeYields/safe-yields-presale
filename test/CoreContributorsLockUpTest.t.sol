@@ -19,6 +19,12 @@ contract CoreContributorLockUpTest is SafeYieldBaseTest {
         vm.prank(protocolAdmin);
 
         contributorLockUp.addMember(ALICE, 10_000e18);
+
+        VestingSchedule memory aliceSchedule = contributorLockUp.getSchedules(ALICE);
+
+        assertEq(aliceSchedule.totalAmount, 10_000e18);
+        assertEq(aliceSchedule.start, block.timestamp);
+        assertEq(aliceSchedule.duration, block.timestamp + contributorLockUp.CORE_CONTRIBUTORS_VESTING_DURATION());
     }
 
     function testAddMultipleCoreMembersShouldRevertIfArrayMismatch() public {
