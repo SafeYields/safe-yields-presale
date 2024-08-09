@@ -57,11 +57,12 @@ contract GMXHandler is BaseStrategyHandler {
         address _exchangeRouter,
         address _usdc,
         address _controller,
+        address _fundManager,
         address _reader,
         address _orderVault,
         address _dataStore,
         string memory _exchangeName
-    ) BaseStrategyHandler(_controller, _usdc, _exchangeName) {
+    ) BaseStrategyHandler(_controller, _usdc, _fundManager, _exchangeName) {
         if (
             _exchangeRouter == address(0) || _reader == address(0) || _orderVault == address(0)
                 || _dataStore == address(0)
@@ -137,6 +138,12 @@ contract GMXHandler is BaseStrategyHandler {
         exchangeRouter.multicall(multicallData);
     }
 
+    function confirmExitStrategy(bytes32 positionKey) external view onlyController(msg.sender) {
+        PositionProps memory position = gmxReader.getPosition(dataStore, positionKey);
+
+        if (position.addresses.account != address(0)) revert SY_HDL__ORDER_NOT_SETTLED();
+    }
+
     /// @notice Confirms the fulfillment of an order by verifying the position on the GMX exchange.
     /// @param controllerStrategyId The ID of the strategy in the controller.
     /// @param positionKey The key of the position to be confirmed.
@@ -151,6 +158,8 @@ contract GMXHandler is BaseStrategyHandler {
         if (position.addresses.account == address(0)) revert SY_HDL__ORDER_NOT_SETTLED();
 
         strategyPositionId[controllerStrategyId] = uint256(positionKey);
+
+        strategyCounts++;
     }
 
     /// @notice Cancels an existing order on the GMX exchange router.

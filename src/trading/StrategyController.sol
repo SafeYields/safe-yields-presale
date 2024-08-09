@@ -29,18 +29,18 @@ contract StrategyController is /*IStrategyController,*/ Ownable2Step {
     event StrategyHandlerAdded(address strategyHandler, uint256 index);
     event StrategyHandlerRemoved(address strategyHandler);
     event StrategyExited(uint128 indexed controllerStrategyId);
-    event OrderCanceled(bytes indexed data);
-    event OrderCreated(
-        address indexed market, uint128 indexed controllerStrategyId, bytes32 indexed orderId, bytes32 gmxPositionKey
+    event StrategyUpdated(uint128 indexed strategyId, address indexed strategyHandler, uint256 indexed triggerPrice);
+    event StrategyOpened(
+        uint128 indexed strategyId,
+        address indexed strategyHandler,
+        address indexed market,
+        uint256 amount,
+        bool isLong,
+        OrderType orderType,
+        bytes32 orderId
     );
-    event OrderFulfilled(bytes32 indexed positionKey);
-    event StrategyModified(
-        bytes32 indexed key,
-        uint256 indexed sizeDeltaUsd,
-        uint256 indexed acceptablePrice,
-        uint256 triggerPrice,
-        uint256 minOutputAmount,
-        bool autoCancel
+    event StrategyExited(
+        uint128 indexed strategyId, uint256 indexed amountRequested, uint256 indexed amountReturned, int256 pnl
     );
 
     /*//////////////////////////////////////////////////////////////
@@ -76,16 +76,17 @@ contract StrategyController is /*IStrategyController,*/ Ownable2Step {
         bool isLong,
         OrderType orderType,
         bytes memory exchangeData
-    ) external onlyValidHandler(strategyHandler) {
+    ) external payable onlyValidHandler(strategyHandler) {
         uint256 lastTotalDeposits = fundManager.fundStrategy(strategyHandler, amount);
 
         uint128 strategyId = ++strategyCount;
 
         bytes memory handlerData = abi.encode(amount, strategyId, market, isLong);
 
-        IBaseStrategyHandler(strategyHandler).openStrategy(handlerData, exchangeData);
+        bytes32 orderId = IBaseStrategyHandler(strategyHandler).openStrategy(handlerData, exchangeData);
 
         strategies[strategyId].id = strategyId;
+        strategies[strategyId].amountFunded = amount;
         strategies[strategyId].lastFMTotalDeposits = lastTotalDeposits;
         strategies[strategyId].orderType = orderType;
         strategies[strategyId].token = address(usdcToken);
@@ -93,13 +94,42 @@ contract StrategyController is /*IStrategyController,*/ Ownable2Step {
         strategies[strategyId].lastFundedAt = uint48(block.timestamp);
         strategies[strategyId].isLong = isLong;
         strategies[strategyId].isMatured = false;
+
+        emit StrategyOpened(strategyId, strategyHandler, market, amount, isLong, orderType, orderId);
     }
 
-    function updateStrategy(address strategyHandler, uint256 strategyId, bytes memory exchangeData) public { }
+    function updateStrategy(
+        address strategyHandler,
+        uint128 strategyId,
+        uint256 triggerPrice,
+        bytes memory exchangeData
+    ) public payable {
+        IBaseStrategyHandler(strategyHandler).modifyStrategy(exchangeData);
 
-    // function cancelOrder(bytes memory exchangeData) external {
-    //     IBaseStrategyHandler(strategyHandler).cancelOrder(exchangeData);
-    // }
+        strategies[strategyId].triggerPrice = triggerPrice;
+
+        emit StrategyUpdated(strategyId, strategyHandler, triggerPrice);
+    }
+
+    function exitStrategy(address strategyHandler, uint128 strategyId, bytes memory exchangeData) external payable {
+        IBaseStrategyHandler(strategyHandler).exitStrategy(strategyId, exchangeData);
+    }
+
+    //!review
+    function confirmExitStrategy(address strategyHandler, uint128 strategyId, bytes32 positionKey) external {
+        IBaseStrategyHandler(strategyHandler).confirmExitStrategy(positionKey);
+
+        uint256 fundsReturned = usdcToken.balanceOf(address(this));
+
+        usdcToken.safeIncreaseAllowance(address(fundManager), fundsReturned);
+
+        int256 pnl = int256(fundsReturned - strategies[strategyId].amountFunded);
+
+        strategies[strategyId].pnl = pnl;
+        strategies[strategyId].isMatured = true;
+
+        fundManager.returnStrategyFunds(strategyId, fundsReturned, pnl);
+    }
 
     function addStrategyHandler(address strategyHandler) external onlyOwner {
         if (strategyHandler == address(0)) revert SYSC__INVALID_ADDRESS();
@@ -121,6 +151,8 @@ contract StrategyController is /*IStrategyController,*/ Ownable2Step {
         strategyHandlers.push(strategyHandler);
 
         strategyHandlerIndex[strategyHandler] = index;
+
+        emit StrategyHandlerAdded(strategyHandler, index);
     }
 
     function removeStrategyHandler(address strategyHandler) external onlyOwner {
