@@ -7,9 +7,11 @@ import { IERC20 } from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol"
 abstract contract BaseStrategyHandler is IBaseStrategyHandler {
     string public override exchangeName;
     address public override strategyController;
+    address public fundManager;
     IERC20 public usdcToken;
 
     mapping(uint128 controllerStrategyId => uint256 positionId) internal strategyPositionId;
+    uint128 public strategyCounts;
 
     error SYSH_NOT_CONTROLLER();
     error SY_B_SH_UNIMPLEMENTED();
@@ -20,9 +22,10 @@ abstract contract BaseStrategyHandler is IBaseStrategyHandler {
         _;
     }
 
-    constructor(address _strategyController, address _usdcToken, string memory _exchangeName) {
+    constructor(address _strategyController, address _usdcToken, address _fundManager, string memory _exchangeName) {
         if (_strategyController == address(0) || _usdcToken == address(0)) revert SY_B_SH_INVALID_ADDRESS();
         strategyController = _strategyController;
+        fundManager = _fundManager;
         exchangeName = _exchangeName;
         usdcToken = IERC20(_usdcToken);
     }

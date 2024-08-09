@@ -17,6 +17,8 @@ interface IStrategyFundManager {
         external
         returns (uint256 totalDepositsAvailable);
 
+    function returnStrategyFunds(uint256 strategyId, uint256 fundsReturned, int256 pnl) external;
+
     function pendingRewards(address user) external view returns (int256 pendingPnl);
 
     function userDepositDetails(address user) external view returns (UserDepositDetails memory userDeposits);
