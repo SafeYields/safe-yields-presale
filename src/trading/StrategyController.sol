@@ -3,14 +3,16 @@ pragma solidity 0.8.26;
 
 import { IERC20 } from "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import { SafeERC20 } from "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
-import { Ownable2Step, Ownable } from "lib/openzeppelin-contracts/contracts/access/Ownable2Step.sol";
+import { AccessControl } from "lib/openzeppelin-contracts/contracts/access/AccessControl.sol";
 import { OrderType, Strategy } from "./types/StrategyControllerTypes.sol";
 import { IStrategyFundManager } from "./interfaces/IStrategyFundManager.sol";
 import { IStrategyController } from "./interfaces/IStrategyController.sol";
 import { IBaseStrategyHandler } from "./handlers/Base/interfaces/IBaseStrategyHandler.sol";
 
-contract StrategyController is /*IStrategyController,*/ Ownable2Step {
+contract StrategyController is /*IStrategyController,*/ AccessControl {
     using SafeERC20 for IERC20;
+
+    bytes32 public constant SAY_TRADER_ROLE = keccak256("SAY_TRADER_ROLE");
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
@@ -60,10 +62,12 @@ contract StrategyController is /*IStrategyController,*/ Ownable2Step {
         _;
     }
 
-    constructor(address _usdcToken, address _fundManager, address _protocolAdmin) Ownable(_protocolAdmin) {
+    constructor(address _usdcToken, address _fundManager, address _protocolAdmin, address _sayTrader) {
         if (_usdcToken == address(0) || _fundManager == address(0) || _protocolAdmin == address(0)) {
             revert SYSC__INVALID_ADDRESS();
         }
+        _grantRole(DEFAULT_ADMIN_ROLE, _protocolAdmin);
+        _grantRole(SAY_TRADER_ROLE, _sayTrader);
 
         fundManager = IStrategyFundManager(_fundManager);
         usdcToken = IERC20(_usdcToken);
@@ -76,7 +80,7 @@ contract StrategyController is /*IStrategyController,*/ Ownable2Step {
         bool isLong,
         OrderType orderType,
         bytes memory exchangeData
-    ) external payable onlyValidHandler(strategyHandler) {
+    ) external payable onlyRole(SAY_TRADER_ROLE) {
         uint256 lastTotalDeposits = fundManager.fundStrategy(strategyHandler, amount);
 
         uint128 strategyId = ++strategyCount;
@@ -103,7 +107,7 @@ contract StrategyController is /*IStrategyController,*/ Ownable2Step {
         uint128 strategyId,
         uint256 triggerPrice,
         bytes memory exchangeData
-    ) public payable {
+    ) external payable onlyRole(SAY_TRADER_ROLE) {
         IBaseStrategyHandler(strategyHandler).modifyStrategy(exchangeData);
 
         strategies[strategyId].triggerPrice = triggerPrice;
@@ -111,12 +115,19 @@ contract StrategyController is /*IStrategyController,*/ Ownable2Step {
         emit StrategyUpdated(strategyId, strategyHandler, triggerPrice);
     }
 
-    function exitStrategy(address strategyHandler, uint128 strategyId, bytes memory exchangeData) external payable {
+    function exitStrategy(address strategyHandler, uint128 strategyId, bytes memory exchangeData)
+        external
+        payable
+        onlyRole(SAY_TRADER_ROLE)
+    {
         IBaseStrategyHandler(strategyHandler).exitStrategy(strategyId, exchangeData);
     }
 
     //!review
-    function confirmExitStrategy(address strategyHandler, uint128 strategyId, bytes32 positionKey) external {
+    function confirmExitStrategy(address strategyHandler, uint128 strategyId, bytes32 positionKey)
+        external
+        onlyRole(SAY_TRADER_ROLE)
+    {
         IBaseStrategyHandler(strategyHandler).confirmExitStrategy(positionKey);
 
         uint256 fundsReturned = usdcToken.balanceOf(address(this));
@@ -131,7 +142,7 @@ contract StrategyController is /*IStrategyController,*/ Ownable2Step {
         fundManager.returnStrategyFunds(strategyId, fundsReturned, pnl);
     }
 
-    function addStrategyHandler(address strategyHandler) external onlyOwner {
+    function addStrategyHandler(address strategyHandler) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (strategyHandler == address(0)) revert SYSC__INVALID_ADDRESS();
 
         address[] memory handlers = strategyHandlers;
@@ -155,7 +166,7 @@ contract StrategyController is /*IStrategyController,*/ Ownable2Step {
         emit StrategyHandlerAdded(strategyHandler, index);
     }
 
-    function removeStrategyHandler(address strategyHandler) external onlyOwner {
+    function removeStrategyHandler(address strategyHandler) external onlyRole(DEFAULT_ADMIN_ROLE) {
         address[] memory handlers = strategyHandlers;
         uint256 index = strategyHandlerIndex[strategyHandler];
 
