@@ -242,6 +242,11 @@ contract StrategyFundManager is IStrategyFundManager, Ownable2Step {
         // Iterate over each strategy handler
         for (uint256 i = 1; i <= handlersCount; i++) {
             address strategyHandler = allHandlers[i];
+
+            //TODO: @dev get Strategy as an array of structs
+            //TODO: eg. Strategy[] memory strategies = controller.getStrategies();
+            //TODO: then iterate over the strategies array
+
             uint128 numberOfStrategies = IBaseStrategyHandler(strategyHandler).strategyCounts();
 
             // Iterate over each strategy under the current strategy handler
