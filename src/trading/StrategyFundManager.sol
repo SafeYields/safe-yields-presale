@@ -9,6 +9,7 @@ import { Ownable2Step, Ownable } from "lib/openzeppelin-contracts/contracts/acce
 import { UserDepositDetails, Strategy } from "./types/StrategyControllerTypes.sol";
 import { IStrategyFundManager } from "./interfaces/IStrategyFundManager.sol";
 import { IStrategyController } from "./interfaces/IStrategyController.sol";
+import { IBaseStrategyHandler } from "./handlers/Base/interfaces/IBaseStrategyHandler.sol";
 
 /**
  * @notice StrategyFundManager contract manages user deposits, allocates funds to strategies,
@@ -39,6 +40,7 @@ contract StrategyFundManager is IStrategyFundManager, Ownable2Step {
     event StrategyControllerSet(address indexed controllerAddress);
     event ProfitClaimed(address indexed user, uint256 indexed pnl);
     event StrategyFunded(address indexed controller, uint256 indexed amountToFund);
+    event StrategyFundsReturned(uint256 strategyId, uint256 fundsReturned, int256 pnl);
 
     /*//////////////////////////////////////////////////////////////
                                  ERRORS
@@ -92,7 +94,15 @@ contract StrategyFundManager is IStrategyFundManager, Ownable2Step {
         ///claim all your available funds to unutilized
         claimProfit();
 
+        uint128 amountUnUtilized = userStats[msg.sender].amountUnutilized;
+
         ///@dev if amount > amount unutilized, send what's available.
+        if (amount > amountUnUtilized) {
+            amount = amount - amountUnUtilized;
+        }
+
+        usdc.safeTransfer(msg.sender, amount);
+
         emit AmountWithdrawn(msg.sender, amount);
     }
 
@@ -115,15 +125,17 @@ contract StrategyFundManager is IStrategyFundManager, Ownable2Step {
      *       transfers the profit to the user and emits a ProfitClaimed event.
      * @return pnl The profit and loss (PNL) for the user. Returns 0 if PNL is negative.
      */
-    function claimProfit() external override returns (int256 pnl) {
+    function claimProfit() public override returns (int256 pnl) {
         updateUserDetails(msg.sender);
 
         pnl = pendingRewards(msg.sender);
 
+        ///@dev add the pnl along with the amount utilized back to the user's unutilized amount so that they can withdraw it
+        //userStats[msg.sender].amountUnutilized += (pnl + userStats[msg.sender].amountUtilized);
+
         if (pnl < 0) return 0;
 
-        ///@dev add the pnl along with the amount utilized back to the user's unutilized amount so that they can withdraw it
-        //usdc.safeTransfer(msg.sender, uint256(pnl));
+        usdc.safeTransfer(msg.sender, uint256(pnl));
 
         emit ProfitClaimed(msg.sender, uint256(pnl));
     }
@@ -151,16 +163,22 @@ contract StrategyFundManager is IStrategyFundManager, Ownable2Step {
         emit StrategyFunded(strategyHandler, amountRequested);
     }
 
-    function returnStrategyFunds(uint256 strategyId, int256 pnl) external onlyController(msg.sender) {
-        //!note make sure to update pnl strategy in controller
-        //strategies[strategyId].pnl = pnl;
-
+    function returnStrategyFunds(uint256 strategyId, uint256 fundsReturned, int256 pnl)
+        external
+        override
+        onlyController(msg.sender)
+    {
         Strategy memory currentStrategy = controller.getStrategy(strategyId);
         if (pnl < 0) {
             totalAmountsDeposited += (currentStrategy.amountFunded - uint256(-pnl));
         } else {
-            totalAmountsDeposited += currentStrategy.amountFunded;
+            totalAmountsDeposited += currentStrategy.amountFunded + uint256(pnl);
         }
+
+        //transfer funds to this contract.
+        usdc.safeTransferFrom(address(controller), address(this), fundsReturned);
+
+        emit StrategyFundsReturned(strategyId, fundsReturned, pnl);
     }
 
     function userDepositDetails(address user) external view override returns (UserDepositDetails memory userDeposits) {
@@ -189,13 +207,12 @@ contract StrategyFundManager is IStrategyFundManager, Ownable2Step {
         // Iterate over each strategy handler
         for (uint256 i = 1; i <= handlersCount; i++) {
             address strategyHandler = allHandlers[i];
-            uint128 strategiesCount = 1; //controller.strategyCounts(strategyHandler, i);
+            uint128 numberOfStrategies = IBaseStrategyHandler(strategyHandler).strategyCounts();
 
             // Iterate over each strategy under the current strategy handler
-            for (uint128 strategyId = 1; strategyId <= strategiesCount; strategyId++) {
+            for (uint128 strategyId = 1; strategyId <= numberOfStrategies; strategyId++) {
                 Strategy memory currentStrategy = controller.getStrategy(strategyId);
 
-                //! what's going on here?
                 if (userUtilizations[user][strategyId] == 0) continue;
 
                 int256 userUtilization = int256(uint256(userUtilizations[user][strategyId]));
@@ -225,7 +242,7 @@ contract StrategyFundManager is IStrategyFundManager, Ownable2Step {
         // Iterate over each strategy handler
         for (uint256 i = 1; i <= handlersCount; i++) {
             address strategyHandler = allHandlers[i];
-            uint128 numberOfStrategies = 1; //controller.strategyCounts(strategyHandler, i);
+            uint128 numberOfStrategies = IBaseStrategyHandler(strategyHandler).strategyCounts();
 
             // Iterate over each strategy under the current strategy handler
             for (uint128 strategyId = 1; strategyId <= numberOfStrategies; strategyId++) {
