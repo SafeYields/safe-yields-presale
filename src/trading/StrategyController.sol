@@ -190,4 +190,12 @@ contract StrategyController is /*IStrategyController,*/ AccessControl {
     function getStrategy(uint256 strategyId) external view returns (Strategy memory) {
         return strategies[strategyId];
     }
+
+    function getAllStrategies() external view returns (Strategy[] memory allStrategies) {
+        uint256 numberOfStrategies = strategyCount;
+
+        for (uint256 i = 1; i < numberOfStrategies; i++) {
+            allStrategies[i] = strategies[i];
+        }
+    }
 }

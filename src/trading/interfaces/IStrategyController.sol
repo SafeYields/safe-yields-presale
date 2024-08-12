@@ -22,6 +22,8 @@ interface IStrategyController {
 
     function strategyCount() external view returns (uint128);
 
+    function getAllStrategies() external view returns (Strategy[] memory allStrategies);
+
     function strategyCounts(address strategyHandler, uint256 index) external view returns (uint128);
 
     function getStrategyHandler(uint256 index) external view returns (address);
