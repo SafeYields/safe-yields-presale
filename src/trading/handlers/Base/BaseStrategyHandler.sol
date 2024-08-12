@@ -52,6 +52,8 @@ abstract contract BaseStrategyHandler is IBaseStrategyHandler {
         revert SY_B_SH_UNIMPLEMENTED();
     }
 
+    //function getStrategies() external view returns()
+
     function getStrategyPositionId(uint128 controllerStrategyId)
         external
         view
