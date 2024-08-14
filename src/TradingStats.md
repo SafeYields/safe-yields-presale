@@ -65,3 +65,26 @@ Replenish the emergency fund regularly to manage liquidity.
 Proportional Risk Allocation:
 Allocate risk proportionally based on each user's contribution to the total pool.
 Calculate the at-risk amount for each user based on their share in the strategy.
+
+
+Closing a strategy;
+1. Funds from exchange go back to respective handler
+2. If pnl is positive, a performance fee charged on only the positive pnl, if not, nothing is charged
+3. The controller then approves the fundManager to take the funds 
+4. The handler approves the fundManager to the funds for that strategy.
+5. The controller calls the fundManager to settle the strategy.
+6. FundManager pulls the funds out of the resp. handler directly to itself, notes the pnl and accounts accordingly.
+
+NB: For exchanges like GMX that require confirming orders in separate txs, no other withdrawals can be made
+until the existing one has been finalized and it's funds moved out.
+
+
+20k in pool
+StrategyA requires 50% => 10k
+All users in pool have 50% of their deposit being utilized.
+
+At end of strategyA, we have a total of 11k, 1k as profit.
+
+Assuming no one did anything, we should have 21k in the pool.
+
+StrategyB takes 10k
