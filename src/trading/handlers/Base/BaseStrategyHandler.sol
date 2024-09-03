@@ -17,6 +17,9 @@ abstract contract BaseStrategyHandler is IBaseStrategyHandler {
     error SY_B_SH_UNIMPLEMENTED();
     error SY_B_SH_INVALID_ADDRESS();
 
+    error SY_HDL__POSITION_EXIST();
+    error SY_HDL__CALL_FAILED();
+
     modifier onlyController(address _caller) {
         if (_caller != strategyController) revert SYSH_NOT_CONTROLLER();
         _;

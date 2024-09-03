@@ -17,6 +17,8 @@ interface IBaseStrategyHandler {
 
     function confirmExitStrategy(bytes32 positionKey) external;
 
+    function confirmOrderFulfillment(uint128 controllerStrategyId, bytes32 positionKey) external;
+
     function exitStrategy(uint128 controllerStrategyId, bytes memory exitStrategyData) external payable;
 
     function cancelOrder(bytes memory data) external;
