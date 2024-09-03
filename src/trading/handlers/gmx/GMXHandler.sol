@@ -45,8 +45,6 @@ contract GMXHandler is BaseStrategyHandler {
     error SY_HDL__INVALID_ADDRESS();
     error SY_HDL__ORDER_NOT_SETTLED();
     error SY_HDL__NO_ORDER();
-    error SY_HDL__CALL_FAILED();
-    error SY_HDL__POSITION_EXIST();
     error SY_HDL__NOT_LIMIT_ORDER();
 
     /*//////////////////////////////////////////////////////////////
