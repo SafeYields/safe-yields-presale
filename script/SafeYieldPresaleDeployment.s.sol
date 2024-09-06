@@ -40,9 +40,10 @@ contract SafeYieldPresaleDeployment is Script {
         staking = new SafeYieldStaking(address(safeToken), address(usdc));
 
         presale = new SafeYieldPresale(
-            address(safeToken), 
+            address(safeToken),
             address(usdc),
             address(staking),
+            address(0x1), //!note change to lockUp
             5e18,
             100_000e18,
             1e18,

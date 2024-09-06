@@ -50,6 +50,7 @@ contract SafeYieldPresaleDeploymentPatch4 is Script {
             address(safeToken),
             USDC,
             address(staking),
+            address(0x1), //!note change to lockUp
             minAllocationPerWallet,
             maxAllocationPerWallet,
             tokenPrice,
