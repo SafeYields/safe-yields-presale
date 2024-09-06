@@ -124,7 +124,7 @@ contract CoreContributorsLockUp is ICoreContributorsLockUp, Ownable2Step, Pausab
 
         if (schedules[_member].start == 0) {
             schedules[_member].start = uint48(block.timestamp);
-            schedules[_member].duration = uint48(block.timestamp) + CORE_CONTRIBUTORS_VESTING_DURATION;
+            schedules[_member].duration = CORE_CONTRIBUTORS_VESTING_DURATION;
         }
 
         schedules[_member].totalAmount += totalAmount;
@@ -150,7 +150,7 @@ contract CoreContributorsLockUp is ICoreContributorsLockUp, Ownable2Step, Pausab
 
         if (block.timestamp < schedule.cliff) {
             return 0;
-        } else if (block.timestamp >= schedule.duration) {
+        } else if (block.timestamp >= schedule.start + schedule.duration) {
             return schedule.totalAmount;
         } else {
             uint256 durationPassed = block.timestamp - schedule.start;
