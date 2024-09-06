@@ -11,6 +11,8 @@ import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { ISafeYieldStaking } from "./interfaces/ISafeYieldStaking.sol";
 import { ISafeYieldPreSale } from "./interfaces/ISafeYieldPreSale.sol";
+import { ISafeYieldLockUp } from "./interfaces/ISafeYieldLockUp.sol";
+
 import { ISafeToken } from "./interfaces/ISafeToken.sol";
 import { PreSaleState, ReferrerInfo, ReferrerRecipient } from "./types/SafeTypes.sol";
 
@@ -30,6 +32,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
     uint64 public constant USDC_PRECISION = 1e6;
 
     ISafeYieldStaking public immutable safeYieldStaking;
+    ISafeYieldLockUp public immutable safeYieldLockUp;
     ISafeToken public immutable safeToken;
     IERC20 public immutable usdcToken;
 
@@ -95,6 +98,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
     error SYPS__PRESALE_NOT_LIVE();
     error SYPS__INVALID_ADDRESS();
     error SYPS__ZERO_BALANCE();
+    error SYPS__NO_UNLOCK();
 
     /*//////////////////////////////////////////////////////////////
                                MODIFIERS
@@ -117,6 +121,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
         address _safeToken,
         address _usdcToken,
         address _safeYieldStaking,
+        address _safeYieldLockUp,
         uint128 _minAllocationPerWallet,
         uint128 _maxAllocationPerWallet,
         uint128 _tokenPrice,
@@ -136,7 +141,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
 
         if (
             _safeToken == address(0) || _usdcToken == address(0) || _safeYieldStaking == address(0)
-                || _protocolMultisig == address(0)
+                || _protocolMultisig == address(0) || _safeYieldLockUp == address(0)
         ) {
             revert SYPS__INVALID_ADDRESS();
         }
@@ -147,6 +152,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
         usdcToken = IERC20(_usdcToken);
 
         safeYieldStaking = ISafeYieldStaking(_safeYieldStaking);
+        safeYieldLockUp = ISafeYieldLockUp(_safeYieldLockUp);
 
         minAllocationPerWallet = _minAllocationPerWallet;
         maxAllocationPerWallet = _maxAllocationPerWallet;
@@ -523,10 +529,15 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
          * else stake the safe tokens bought for the investor only.
          */
         if (referrerInvestor != address(0)) {
+            //todo call vest user amounts
+            safeYieldLockUp.vestFor(investor, safeTokensBought);
+            safeYieldLockUp.vestFor(referrerInvestor, referrerSafeTokenCommission);
+
             safeYieldStaking.autoStakeForBothReferrerAndRecipient(
                 investor, safeTokensBought, referrerInvestor, referrerSafeTokenCommission
             );
         } else {
+            safeYieldLockUp.vestFor(investor, safeTokensBought);
             safeYieldStaking.stakeFor(investor, totalSafeTokensToStake);
         }
     }
