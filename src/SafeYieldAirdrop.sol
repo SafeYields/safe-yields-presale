@@ -93,7 +93,7 @@ contract SafeYieldAirdrop is ISafeYieldAirdrop, Ownable2Step, Pausable {
 
     function clawBackSayTokens(uint256 amount) external override onlyOwner {
         if (amount == 0) revert SYA__INVALID_AMOUNT();
-
+        //!Why burn? why not transfer to owner?
         sayToken.burn(address(this), amount);
 
         emit SayTokensClawedBack(msg.sender, amount);

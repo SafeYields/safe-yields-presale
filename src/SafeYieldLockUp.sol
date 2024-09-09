@@ -50,6 +50,7 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
                                MODIFIERS
     //////////////////////////////////////////////////////////////*/
     modifier lockIfNotPresaleOrAirdrop(address caller) {
+        //! no need for parameter, use msg.sender
         if (caller != safeYieldPresale || caller != safeYieldAirdrop) revert SYLU__NOT_PRESALE_OR_AIRDROP();
         _;
     }
@@ -152,6 +153,7 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
              * unlockedPercentagePerMonthsElapsed = 2.5 * 20% = 50%
              * total vested = (1000 * 50 ) / 100 = 500
              */
+            //! double check the math, careful with the division.
             uint256 monthsElapsed = durationPassed / ONE_MONTH;
 
             uint256 unlockedPercentagePerMonthsElapsed = monthsElapsed.mulDiv(unlockPercentagePerMonth, BPS);
