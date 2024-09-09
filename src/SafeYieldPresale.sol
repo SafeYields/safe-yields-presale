@@ -317,21 +317,38 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
         return keccak256(abi.encodePacked(msg.sender));
     }
 
+    // /**
+    //  * @dev Claim safe tokens
+    //  * @notice This function can only be called when the presale has ended
+    //  */
+    // function claimSafeTokens() external override whenNotPaused preSaleEnded {
+    //     uint128 safeTokens = safeYieldStaking.getUserStake(msg.sender).stakeAmount;
+    //     if (safeTokens == 0) revert SYPS__ZERO_BALANCE();
+
+    //     investorAllocations[msg.sender] = 0;
+
+    //     referrerInfo[keccak256(abi.encodePacked(msg.sender))].safeTokenVolume = 0;
+
+    //     safeYieldStaking.unStakeFor(msg.sender, safeTokens);
+
+    //     emit SafeTokensClaimed(msg.sender, safeTokens);
+    // }
+
     /**
      * @dev Claim safe tokens
      * @notice This function can only be called when the presale has ended
      */
-    function claimSafeTokens() external override whenNotPaused preSaleEnded {
-        uint128 safeTokens = safeYieldStaking.getUserStake(msg.sender).stakeAmount;
-        if (safeTokens == 0) revert SYPS__ZERO_BALANCE();
+    function claimAndUnStakeSafeTokens() external override whenNotPaused preSaleEnded {
+        uint256 sayTokensUnlocked = safeYieldLockUp.unlockSayTokensFor(msg.sender);
 
-        investorAllocations[msg.sender] = 0;
+        investorAllocations[msg.sender] -= uint128(sayTokensUnlocked); 
 
+        ///@note remove this
         referrerInfo[keccak256(abi.encodePacked(msg.sender))].safeTokenVolume = 0;
 
-        safeYieldStaking.unStakeFor(msg.sender, safeTokens);
+        safeYieldStaking.unStakeFor(msg.sender, uint128(sayTokensUnlocked));
 
-        emit SafeTokensClaimed(msg.sender, safeTokens);
+        emit SafeTokensClaimed(msg.sender, uint128(sayTokensUnlocked));
     }
 
     function safeTokensAvailable() public view override returns (uint128) {
