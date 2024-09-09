@@ -87,6 +87,7 @@ abstract contract SafeYieldBaseTest is Test {
             address(safeToken),
             address(usdc),
             address(staking),
+            address(0x1), //!note change to lockUp
             1_000e18,
             uint128(PRE_SALE_MAX_SUPPLY),
             1e18,

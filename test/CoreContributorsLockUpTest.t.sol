@@ -158,7 +158,7 @@ contract CoreContributorLockUpTest is SafeYieldBaseTest {
 
         uint256 aliceSayBalanceAfterLastUnlock = safeToken.balanceOf(ALICE);
 
-        uint256 aliceLastUnlockTimePassed = block.timestamp - timeStarted;
+        // uint256 aliceLastUnlockTimePassed = block.timestamp - timeStarted;
 
         uint256 expectedAmountAfter1year = aliceSchedule.totalAmount - aliceFirstUnlockExpectedSayAmount;
 
@@ -171,7 +171,7 @@ contract CoreContributorLockUpTest is SafeYieldBaseTest {
 
         uint256 bobSayBalanceAfterLastUnlock = safeToken.balanceOf(BOB);
 
-        uint256 bobLastUnlockTimePassed = block.timestamp - timeStarted;
+        //uint256 bobLastUnlockTimePassed = block.timestamp - timeStarted;
 
         uint256 bobExpectedAmountAfter1year = bobSchedule.totalAmount - bobFirstUnlockExpectedSayAmount;
 
