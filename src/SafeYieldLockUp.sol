@@ -27,6 +27,8 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
     //////////////////////////////////////////////////////////////*/
     IERC20 public sayToken;
     ISafeYieldStaking public staking;
+    address public safeYieldPresale;
+    address public safeYieldAirdrop;
     uint48 public unlockPercentagePerMonth = 2_000; //20%
     mapping(address user => VestingSchedule schedule) public schedules;
 
@@ -42,14 +44,31 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
     error SYLU__INVALID_ADDRESS();
     error SYLU__INVALID_AMOUNT();
     error SYLU__NO_SAY_TO_UNLOCK();
+    error SYLU__NOT_PRESALE_OR_AIRDROP();
 
-    constructor(address protocolAdmin, address _sayToken, address _staking) Ownable(protocolAdmin) {
-        if (protocolAdmin == address(0) || _sayToken == address(0) || _staking == address(0)) {
+    /*//////////////////////////////////////////////////////////////
+                               MODIFIERS
+    //////////////////////////////////////////////////////////////*/
+    modifier lockIfNotPresaleOrAirdrop(address caller) {
+        if (caller != safeYieldPresale || caller != safeYieldAirdrop) revert SYLU__NOT_PRESALE_OR_AIRDROP();
+        _;
+    }
+
+    constructor(address protocolAdmin, address _presale, address _airdrop, address _sayToken, address _staking)
+        Ownable(protocolAdmin)
+    {
+        if (
+            protocolAdmin == address(0) || _sayToken == address(0) || _presale == address(0) || _airdrop == address(0)
+                || _staking == address(0)
+        ) {
             revert SYLU__INVALID_ADDRESS();
         }
 
         sayToken = IERC20(_sayToken);
         staking = ISafeYieldStaking(_staking);
+
+        safeYieldPresale = _presale;
+        safeYieldAirdrop = _airdrop;
     }
 
     function vestFor(address user, uint256 amount) external override {
@@ -66,18 +85,32 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
         emit TokensVestedFor(user, amount);
     }
 
-    function claimAndUnStakeSayTokens() external whenNotPaused {
-        uint256 sayTokensAvailable = unlockedSayAmount(msg.sender);
+    function unlockSayTokensFor(address user)
+        external
+        override
+        whenNotPaused
+        lockIfNotPresaleOrAirdrop(msg.sender)
+        returns (uint256 sayTokensAvailable)
+    {
+        sayTokensAvailable = unlockedSayAmount(user);
 
         if (sayTokensAvailable == 0) revert SYLU__NO_SAY_TO_UNLOCK();
 
-        schedules[msg.sender].amountClaimed += uint128(sayTokensAvailable);
-
-        //unstake
-        staking.unStakeFor(msg.sender, uint128(sayTokensAvailable));
-
-        emit SayTokensClaimedAndUnStaked(msg.sender, sayTokensAvailable);
+        schedules[user].amountClaimed += uint128(sayTokensAvailable);
     }
+
+    // function unlockSayTokens() external whenNotPaused {
+    //     uint256 sayTokensAvailable = unlockedSayAmount(msg.sender);
+
+    //     if (sayTokensAvailable == 0) revert SYLU__NO_SAY_TO_UNLOCK();
+
+    //     schedules[msg.sender].amountClaimed += uint128(sayTokensAvailable);
+
+    //     //unstake
+    //     staking.unStakeFor(msg.sender, uint128(sayTokensAvailable));
+
+    //     emit SayTokensClaimedAndUnStaked(msg.sender, sayTokensAvailable);
+    // }
 
     function pause() external override onlyOwner {
         _pause();
