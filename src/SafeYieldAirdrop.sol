@@ -61,7 +61,7 @@ contract SafeYieldAirdrop is ISafeYieldAirdrop, Ownable2Step, Pausable {
         merkleRoot = _merkleRoot;
     }
 
-    function claimSay(uint256 amount, bytes32[] calldata merkleProof) external override whenNotPaused {
+    function vestAndStakeSayTokens(uint256 amount, bytes32[] calldata merkleProof) external override whenNotPaused {
         if (amount == 0) revert SYA__INVALID_AMOUNT();
         if (merkleProof.length == 0) revert SYA__INVALID_PROOF();
 
@@ -81,6 +81,8 @@ contract SafeYieldAirdrop is ISafeYieldAirdrop, Ownable2Step, Pausable {
 
         emit sayTokenAirdropClaimed(msg.sender, amount);
     }
+
+    //todo: claim unlocked tokens
 
     function mintAllSayTokens(uint256 totalAmount) external override onlyOwner {
         if (totalAmount == 0) revert SYA__INVALID_AMOUNT();

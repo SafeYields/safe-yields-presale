@@ -3,7 +3,7 @@
 pragma solidity 0.8.26;
 
 interface ISafeYieldAirdrop {
-    function claimSay(uint256 amount, bytes32[] calldata merkleProof) external;
+    function vestAndStakeSayTokens(uint256 amount, bytes32[] calldata merkleProof) external;
 
     function mintAllSayTokens(uint256 amount) external;
 
