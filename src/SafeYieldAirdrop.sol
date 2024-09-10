@@ -31,6 +31,8 @@ contract SafeYieldAirdrop is ISafeYieldAirdrop, Ownable2Step, Pausable {
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
     event AllSayMinted(uint256 indexed amount);
+    event SayTokenAddressUpdated(address indexed newSayToken);
+    event StakingAddressUpdated(address indexed newStaking);
     event SayTokensClawedBack(address indexed admin, uint256 indexed amount);
     event sayTokenAirdropClaimed(address indexed user, uint256 indexed amount);
     /*//////////////////////////////////////////////////////////////
@@ -41,9 +43,7 @@ contract SafeYieldAirdrop is ISafeYieldAirdrop, Ownable2Step, Pausable {
     error SYA__INVALID_PROOF();
     error SYA__INVALID_AMOUNT();
     error SYA__INVALID_MERKLE_ROOT();
-    /// @notice Thrown if address has already claimed
     error SYA__TOKENS_CLAIMED();
-    /// @notice Thrown if address/amount are not part of Merkle tree
     error SYA__INVALID_CLAIM();
 
     constructor(address _sayToken, address _staking, bytes32 _merkleRoot, address protocolAdmin)
@@ -75,6 +75,22 @@ contract SafeYieldAirdrop is ISafeYieldAirdrop, Ownable2Step, Pausable {
         sayToken.approve(address(staking), amount);
 
         staking.stakeFor(msg.sender, uint128(amount));
+    }
+
+    function updateSayToken(address newSayToken) external onlyOwner {
+        if (newSayToken == address(0)) revert SYA_INVALID_ADDRESS();
+
+        sayToken = ISafeToken(newSayToken);
+
+        emit SayTokenAddressUpdated(newSayToken);
+    }
+
+    function updateStaking(address newStaking) external onlyOwner {
+        if (newStaking == address(0)) revert SYA_INVALID_ADDRESS();
+
+        staking = ISafeYieldStaking(newStaking);
+
+        emit StakingAddressUpdated(newStaking);
     }
 
     function mintAllSayTokens(uint256 totalAmount) external override onlyOwner {
