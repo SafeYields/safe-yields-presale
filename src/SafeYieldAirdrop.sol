@@ -25,8 +25,7 @@ contract SafeYieldAirdrop is ISafeYieldAirdrop, Ownable2Step, Pausable {
     //////////////////////////////////////////////////////////////*/
     ISafeToken public sayToken;
     ISafeYieldStaking public staking;
-    ISafeYieldLockUp public lockUp;
-    mapping(address user => bool) public hasClaimed;
+    mapping(address user => bool claimed) public hasClaimed;
 
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
@@ -47,10 +46,10 @@ contract SafeYieldAirdrop is ISafeYieldAirdrop, Ownable2Step, Pausable {
     /// @notice Thrown if address/amount are not part of Merkle tree
     error SYA__INVALID_CLAIM();
 
-    constructor(address _sayToken, address _lockUp, address _staking, bytes32 _merkleRoot, address protocolAdmin)
+    constructor(address _sayToken, address _staking, bytes32 _merkleRoot, address protocolAdmin)
         Ownable(protocolAdmin)
     {
-        if (_sayToken == address(0) || protocolAdmin == address(0) || _lockUp == address(0) || _staking == address(0)) {
+        if (_sayToken == address(0) || protocolAdmin == address(0) || _staking == address(0)) {
             revert SYA_INVALID_ADDRESS();
         }
         if (_merkleRoot == bytes32(0)) revert SYA__INVALID_MERKLE_ROOT();
@@ -73,16 +72,10 @@ contract SafeYieldAirdrop is ISafeYieldAirdrop, Ownable2Step, Pausable {
 
         hasClaimed[msg.sender] = true;
 
-        lockUp.vestFor(msg.sender, amount);
-
         sayToken.approve(address(staking), amount);
 
         staking.stakeFor(msg.sender, uint128(amount));
-
-        emit sayTokenAirdropClaimed(msg.sender, amount);
     }
-
-    //todo: claim unlocked tokens
 
     function mintAllSayTokens(uint256 totalAmount) external override onlyOwner {
         if (totalAmount == 0) revert SYA__INVALID_AMOUNT();
@@ -93,8 +86,8 @@ contract SafeYieldAirdrop is ISafeYieldAirdrop, Ownable2Step, Pausable {
 
     function clawBackSayTokens(uint256 amount) external override onlyOwner {
         if (amount == 0) revert SYA__INVALID_AMOUNT();
-        //!Why burn? why not transfer to owner?
-        sayToken.burn(address(this), amount);
+
+        sayToken.transfer(owner(), amount);
 
         emit SayTokensClawedBack(msg.sender, amount);
     }
