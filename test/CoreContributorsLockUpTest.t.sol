@@ -24,7 +24,7 @@ contract CoreContributorLockUpTest is SafeYieldBaseTest {
 
         assertEq(aliceSchedule.totalAmount, 10_000e18);
         assertEq(aliceSchedule.start, block.timestamp);
-        assertEq(aliceSchedule.duration, block.timestamp + contributorLockUp.CORE_CONTRIBUTORS_VESTING_DURATION());
+        assertEq(aliceSchedule.duration, contributorLockUp.CORE_CONTRIBUTORS_VESTING_DURATION());
     }
 
     function testAddMultipleCoreMembersShouldRevertIfArrayMismatch() public {
@@ -60,11 +60,11 @@ contract CoreContributorLockUpTest is SafeYieldBaseTest {
 
         assertEq(aliceSchedule.totalAmount, 30_000e18);
         assertEq(aliceSchedule.start, block.timestamp);
-        assertEq(aliceSchedule.duration, block.timestamp + contributorLockUp.CORE_CONTRIBUTORS_VESTING_DURATION());
+        assertEq(aliceSchedule.duration, contributorLockUp.CORE_CONTRIBUTORS_VESTING_DURATION());
 
         assertEq(charlieSchedule.totalAmount, 10_000e18);
         assertEq(charlieSchedule.start, block.timestamp);
-        assertEq(charlieSchedule.duration, block.timestamp + contributorLockUp.CORE_CONTRIBUTORS_VESTING_DURATION());
+        assertEq(charlieSchedule.duration, contributorLockUp.CORE_CONTRIBUTORS_VESTING_DURATION());
     }
 
     function testUnlockCoreMembersSayTokens() public {
@@ -188,7 +188,7 @@ contract CoreContributorLockUpTest is SafeYieldBaseTest {
     ) public {
         sayAllocation = bound(sayAllocation, 50_000e18, contributorLockUp.CORE_CONTRIBUTORS_TOTAL_SAY_AMOUNT());
         numberOfMembers = bound(numberOfMembers, 2, 20);
-        time = bound(time, block.timestamp, block.timestamp + contributorLockUp.CORE_CONTRIBUTORS_VESTING_DURATION());
+        time = bound(time, block.timestamp, contributorLockUp.CORE_CONTRIBUTORS_VESTING_DURATION());
 
         (address[] memory members, uint128[] memory totalAllocations) =
             getMembersAndAllocations(uint128(sayAllocation), numberOfMembers);
@@ -218,7 +218,7 @@ contract CoreContributorLockUpTest is SafeYieldBaseTest {
         for (uint256 i; i < members.length; i++) {
             VestingSchedule memory userSchedule = contributorLockUp.getSchedules(address(uint160(i + 50)));
             if (userSchedule.totalAmount != 0) {
-                uint256 expectedSayAmount = block.timestamp >= userSchedule.duration
+                uint256 expectedSayAmount = block.timestamp >= block.timestamp + userSchedule.duration
                     ? userSchedule.totalAmount
                     : uint256(userSchedule.totalAmount).mulDiv(timePassed, userSchedule.duration);
 

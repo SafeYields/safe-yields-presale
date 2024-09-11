@@ -12,6 +12,8 @@ import { SafeYieldPresale } from "src/SafeYieldPresale.sol";
 import { SafeYieldStaking } from "src/SafeYieldStaking.sol";
 import { CoreContributorsLockUp } from "src/CoreContributorsLockUp.sol";
 
+import { SafeYieldLockUp } from "src/SafeYieldLockUp.sol";
+
 import { SafeYieldTWAP } from "src/SafeYieldTWAP.sol";
 import { IUniswapV3Factory } from "src/uniswapV3/interfaces/IUniswapV3Factory.sol";
 import { IUniswapV3Pool } from "src/uniswapV3/interfaces/IUniswapV3Pool.sol";
@@ -44,6 +46,7 @@ abstract contract SafeYieldBaseTest is Test {
     address public USDC_WHALE = 0x4B16c5dE96EB2117bBE5fd171E4d203624B014aa;
 
     SafeYieldRewardDistributorMock public distributor;
+    SafeYieldLockUp public safeYieldLockUp;
     CoreContributorsLockUp public contributorLockUp;
     SafeYieldPresale public presale;
     SafeYieldStaking public staking;
@@ -87,7 +90,6 @@ abstract contract SafeYieldBaseTest is Test {
             address(safeToken),
             address(usdc),
             address(staking),
-            address(0x1), //!note change to lockUp
             1_000e18,
             uint128(PRE_SALE_MAX_SUPPLY),
             1e18,
@@ -95,6 +97,8 @@ abstract contract SafeYieldBaseTest is Test {
             5_00,
             protocolAdmin
         );
+
+        safeYieldLockUp = new SafeYieldLockUp(protocolAdmin, address(presale), address(safeToken), address(staking));
 
         distributor = new SafeYieldRewardDistributorMock(
             address(safeToken), address(usdc), teamOperations, usdcBuyback, address(staking), address(twap)

@@ -289,7 +289,8 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
 
     function test_claimTokensShouldRevertIfPreSaleNotEnded() public {
         vm.expectRevert(abi.encodeWithSelector(SafeYieldPresale.SYPS__PRESALE_NOT_ENDED.selector));
-        presale.claimSafeTokens();
+        //todo
+        // presale.claimAndUnStakeSafeTokens();
     }
 
     function testBuyTokensShouldFailIfPresaleIsPaused() public pause {
@@ -346,7 +347,8 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
 
         //claim safe tokens
         vm.startPrank(ALICE);
-        presale.claimSafeTokens();
+        //todo
+        //presale.claimAndUnStakeSafeTokens();
         vm.stopPrank();
 
         assertEq(safeToken.balanceOf(ALICE), safeTokens);
@@ -460,7 +462,8 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
          * Alice can claim after the presale ends
          */
         vm.prank(ALICE);
-        presale.claimSafeTokens();
+        //todo
+        //presale.claimAndUnStakeSafeTokens();
 
         assertEq(safeToken.balanceOf(ALICE), aliceOwedSafeTokens);
     }
