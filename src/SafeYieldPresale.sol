@@ -11,7 +11,6 @@ import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { ISafeYieldStaking } from "./interfaces/ISafeYieldStaking.sol";
 import { ISafeYieldPreSale } from "./interfaces/ISafeYieldPreSale.sol";
-import { ISafeYieldLockUp } from "./interfaces/ISafeYieldLockUp.sol";
 
 import { ISafeToken } from "./interfaces/ISafeToken.sol";
 import { PreSaleState, ReferrerInfo, ReferrerRecipient } from "./types/SafeTypes.sol";
@@ -31,15 +30,14 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
     uint64 public constant BPS_MAX = 10_000; //100_00 is 100% in this context
     uint64 public constant USDC_PRECISION = 1e6;
 
-    ISafeYieldStaking public immutable safeYieldStaking;
-    ISafeYieldLockUp public immutable safeYieldLockUp;
-    ISafeToken public immutable safeToken;
     IERC20 public immutable usdcToken;
 
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
     PreSaleState public currentPreSaleState;
+    ISafeYieldStaking public safeYieldStaking;
+    ISafeToken public safeToken;
     address public protocolMultisig;
     uint128 public totalSold;
     uint128 public minAllocationPerWallet;
@@ -72,7 +70,6 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
         uint128 indexed referrerCommissionUsdcBps, uint128 indexed referrerCommissionSafeTokenBps
     );
     event UsdcCommissionRedeemed(address indexed referrer, uint128 indexed usdcAmount);
-    event SafeTokensClaimed(address indexed investor, uint128 indexed safeTokens);
     event UsdcWithdrawn(address indexed receiver, uint256 indexed amount);
     event TokenPriceSet(uint128 indexed tokenPrice);
     event PreSaleStarted(PreSaleState indexed currentState);
@@ -81,7 +78,8 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
     event ProtocolMultisigSet(address indexed protocolMultisig);
     event PreSaleAllocationsMinted(uint256 indexed amount);
     event AllocationsPerWalletSet(uint128 indexed minAllocationPerWallet, uint128 indexed maxAllocationPerWallet);
-
+    event SafeTokenUpdated(address indexed newSafeToken);
+    event SafeStakingUpdated(address indexed newStaking);
     /*//////////////////////////////////////////////////////////////
                                  ERRORS
     //////////////////////////////////////////////////////////////*/
@@ -121,7 +119,6 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
         address _safeToken,
         address _usdcToken,
         address _safeYieldStaking,
-        address _safeYieldLockUp,
         uint128 _minAllocationPerWallet,
         uint128 _maxAllocationPerWallet,
         uint128 _tokenPrice,
@@ -141,7 +138,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
 
         if (
             _safeToken == address(0) || _usdcToken == address(0) || _safeYieldStaking == address(0)
-                || _protocolMultisig == address(0) || _safeYieldLockUp == address(0)
+                || _protocolMultisig == address(0)
         ) {
             revert SYPS__INVALID_ADDRESS();
         }
@@ -152,7 +149,6 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
         usdcToken = IERC20(_usdcToken);
 
         safeYieldStaking = ISafeYieldStaking(_safeYieldStaking);
-        safeYieldLockUp = ISafeYieldLockUp(_safeYieldLockUp);
 
         minAllocationPerWallet = _minAllocationPerWallet;
         maxAllocationPerWallet = _maxAllocationPerWallet;
@@ -259,6 +255,22 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
         emit TokenPriceSet(_price);
     }
 
+    function updateSafeToken(address _newSafeToken) external override onlyOwner {
+        if (_newSafeToken == address(0)) revert SYPS__INVALID_ADDRESS();
+
+        safeToken = ISafeToken(_newSafeToken);
+
+        emit SafeTokenUpdated(_newSafeToken);
+    }
+
+    function updateSafeStaking(address _newStaking) external override onlyOwner {
+        if (_newStaking == address(0)) revert SYPS__INVALID_ADDRESS();
+
+        safeYieldStaking = ISafeYieldStaking(_newStaking);
+
+        emit SafeStakingUpdated(_newStaking);
+    }
+
     /**
      * @dev Set the min and max allocations per wallet
      * @param _min The minimum allocation per wallet
@@ -315,40 +327,6 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
 
     function getReferrerID() public view override isValidInvestor(msg.sender) returns (bytes32) {
         return keccak256(abi.encodePacked(msg.sender));
-    }
-
-    // /**
-    //  * @dev Claim safe tokens
-    //  * @notice This function can only be called when the presale has ended
-    //  */
-    // function claimSafeTokens() external override whenNotPaused preSaleEnded {
-    //     uint128 safeTokens = safeYieldStaking.getUserStake(msg.sender).stakeAmount;
-    //     if (safeTokens == 0) revert SYPS__ZERO_BALANCE();
-
-    //     investorAllocations[msg.sender] = 0;
-
-    //     referrerInfo[keccak256(abi.encodePacked(msg.sender))].safeTokenVolume = 0;
-
-    //     safeYieldStaking.unStakeFor(msg.sender, safeTokens);
-
-    //     emit SafeTokensClaimed(msg.sender, safeTokens);
-    // }
-
-    /**
-     * @dev Claim safe tokens
-     * @notice This function can only be called when the presale has ended
-     */
-    function claimAndUnStakeSafeTokens() external override whenNotPaused preSaleEnded {
-        uint256 sayTokensUnlocked = safeYieldLockUp.unlockSayTokensFor(msg.sender);
-
-        investorAllocations[msg.sender] -= uint128(sayTokensUnlocked); 
-
-        ///@note remove this
-        referrerInfo[keccak256(abi.encodePacked(msg.sender))].safeTokenVolume = 0;
-
-        safeYieldStaking.unStakeFor(msg.sender, uint128(sayTokensUnlocked));
-
-        emit SafeTokensClaimed(msg.sender, uint128(sayTokensUnlocked));
     }
 
     function safeTokensAvailable() public view override returns (uint128) {
@@ -546,15 +524,10 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
          * else stake the safe tokens bought for the investor only.
          */
         if (referrerInvestor != address(0)) {
-            //todo call vest user amounts
-            safeYieldLockUp.vestFor(investor, safeTokensBought);
-            safeYieldLockUp.vestFor(referrerInvestor, referrerSafeTokenCommission);
-
             safeYieldStaking.autoStakeForBothReferrerAndRecipient(
                 investor, safeTokensBought, referrerInvestor, referrerSafeTokenCommission
             );
         } else {
-            safeYieldLockUp.vestFor(investor, safeTokensBought);
             safeYieldStaking.stakeFor(investor, totalSafeTokensToStake);
         }
     }
