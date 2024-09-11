@@ -72,7 +72,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
                                  ERRORS
     //////////////////////////////////////////////////////////////*/
 
-    error SYST__UNSTAKING_LOCKED();
+    error SYST__STAKING_LOCKED();
     error SYST__INVALID_STAKE_AMOUNT();
     error SYST__INSUFFICIENT_STAKE();
     error SYST__INVALID_ADDRESS();
@@ -88,7 +88,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
 
     modifier lockStaking() {
         if ((safeYieldPresale.currentPreSaleState() != PreSaleState.Ended) || safeYieldLP == address(0)) {
-            revert SYST__UNSTAKING_LOCKED();
+            revert SYST__STAKING_LOCKED();
         }
         _;
     }
