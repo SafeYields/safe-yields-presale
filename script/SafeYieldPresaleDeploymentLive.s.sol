@@ -49,7 +49,6 @@ contract SafeYieldPresaleDeployment is Script {
             address(safeToken),
             USDC,
             address(staking),
-            address(0x1), //!note change to lockUp
             minAllocationPerWallet,
             maxAllocationPerWallet,
             tokenPrice,
@@ -111,7 +110,7 @@ contract SafeYieldPresaleDeployment is Script {
         require(address(staking.safeToken()) == address(safeToken), "Invalid safeToken token address");
         require(address(staking.usdc()) == USDC, "Invalid usdc address");
         require(address(staking.distributor()) == address(distributor), "Invalid distributor address");
-        require(address(staking.presale()) == address(presale), "Invalid presale address");
+        require(address(staking.safeYieldPresale()) == address(presale), "Invalid presale address");
 
         //validate distributor configuration
         require(safeToken.balanceOf(address(presale)) == PRE_SALE_MAX_SUPPLY, "Invalid presale allocation");

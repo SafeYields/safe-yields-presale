@@ -48,7 +48,6 @@ contract SafeYieldPresaleDeploymentPatch3 is Script {
             address(safeToken),
             USDC,
             OldStaking,
-            address(0x1), //!note change to lockUp
             minAllocationPerWallet,
             maxAllocationPerWallet,
             tokenPrice,
