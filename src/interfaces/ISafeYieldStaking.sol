@@ -6,6 +6,14 @@ import { Stake } from "../types/SafeTypes.sol";
 interface ISafeYieldStaking {
     function totalStaked() external view returns (uint128);
 
+    function approveStakingAgent(address agent) external;
+
+    function setLpAddress(address lp) external;
+
+    function setLockUp(address _lockUp) external;
+
+    function updateSafeToken(address newSafeToken) external;
+
     function updateRewards() external;
 
     function stakeFor(address user, uint128 amount) external;

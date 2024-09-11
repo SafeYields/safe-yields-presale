@@ -11,6 +11,7 @@ import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { PreSaleState, Stake, StakingEmissionState } from "./types/SafeTypes.sol";
 import { ISafeYieldStaking } from "./interfaces/ISafeYieldStaking.sol";
+import { ISafeYieldLockUp } from "./interfaces/ISafeYieldLockUp.sol";
 import { ISafeYieldPreSale } from "./interfaces/ISafeYieldPreSale.sol";
 import { ISafeYieldRewardDistributor } from "./interfaces/ISafeYieldRewardDistributor.sol";
 
@@ -31,23 +32,26 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
                         IMMUTABLES & CONSTANTS
     //////////////////////////////////////////////////////////////*/
     uint128 public constant PRECISION = 1e18;
-    IERC20 public immutable safeToken;
     IERC20 public immutable usdc;
 
     /*//////////////////////////////////////////////////////////////
                         STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
-    ISafeYieldPreSale public presale;
+    ISafeYieldPreSale public safeYieldPresale;
     ISafeYieldRewardDistributor public distributor;
+    ISafeYieldLockUp public safeYieldLockUp;
+    IERC20 public safeToken;
+    address public safeYieldLP;
 
     uint128 public usdcAccumulatedRewardsPerStake; //@dev accumulated usdc per safe staked.
     uint128 public safeAccumulatedRewardsPerStake; //@dev accumulated safe per safe staked.
-    uint128 public totalStaked;
+    uint128 public override totalStaked;
     uint48 public lastUpdateRewardsTimestamp;
     uint256 public lastSafeTokenBalance;
     uint256 public lastUsdcBalance;
 
     mapping(address user => Stake stake) public userStake;
+    mapping(address user => bool approved) public approvedStakingAgent;
 
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
@@ -60,35 +64,47 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
     event RewardsClaimed(address indexed user, uint128 indexed safeRewards, uint128 indexed usdcRewards);
     event RewardDistributorSet(address indexed distributor);
     event PresaleSet(address indexed presale);
+    event SafeYieldLpSet(address indexed lp);
+    event LockUpSet(address indexed lockUp);
+    event SafeTokenUpdated(address indexed newSafeToken);
+    event StakingAgentApproved(address indexed agent, bool indexed isApproved);
     /*//////////////////////////////////////////////////////////////
                                  ERRORS
     //////////////////////////////////////////////////////////////*/
 
-    error SYST__STAKING_LOCKED();
-    error SYST__ONLY_PRESALE();
+    error SYST__UNSTAKING_LOCKED();
     error SYST__INVALID_STAKE_AMOUNT();
     error SYST__INSUFFICIENT_STAKE();
     error SYST__INVALID_ADDRESS();
+    error SYST__NOT_APPROVED();
+    error SYST__ID0_NOT_ENDED();
+    error SYST__ONLY_LOCKUP();
+    error SYST__ONLY_PRESALE();
     error SYST__STAKED_SAFE_TRANSFER_NOT_ALLOWED();
 
     /*//////////////////////////////////////////////////////////////
                                MODIFIERS
     //////////////////////////////////////////////////////////////*/
-    /**
-     * @dev Modifier to lock staking during the presale.
-     * If the presale is live, only the presale contract can call the function.
-     */
+
     modifier lockStaking() {
-        if (presale.currentPreSaleState() != PreSaleState.Ended) {
-            if (msg.sender != address(presale)) {
-                revert SYST__STAKING_LOCKED();
-            }
+        if ((safeYieldPresale.currentPreSaleState() != PreSaleState.Ended) || safeYieldLP == address(0)) {
+            revert SYST__UNSTAKING_LOCKED();
         }
         _;
     }
 
-    modifier onlyPresale() {
-        if (msg.sender != address(presale)) revert SYST__ONLY_PRESALE();
+    modifier onlySafeYieldLockUp() {
+        if (msg.sender != address(safeYieldLockUp)) revert SYST__ONLY_LOCKUP();
+        _;
+    }
+
+    modifier onlySafeYieldPresale() {
+        if (msg.sender != address(safeYieldPresale)) revert SYST__ONLY_PRESALE();
+        _;
+    }
+
+    modifier isValidStakingAgent() {
+        if (!approvedStakingAgent[msg.sender]) revert SYST__NOT_APPROVED();
         _;
     }
 
@@ -101,43 +117,8 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
         usdc = IERC20(_usdc);
     }
 
-    function updateRewards() public override whenNotPaused {
-        if (totalStaked == 0) {
-            lastUpdateRewardsTimestamp = uint48(block.timestamp);
-            return;
-        }
-
-        if (uint48(block.timestamp) > lastUpdateRewardsTimestamp) {
-            /**
-             * @dev Distribute rewards to the staking contract.
-             * if its during stake emission, rewards are distributed in SafeToken.
-             * (35% of the value of safe tokens are minted)
-             * Any other state, rewards are distributed in USDC.(60% USDC)
-             */
-            uint256 shareableRewards = distributor.distributeToContract(address(this));
-
-            uint256 contractUsdcBalance = usdc.balanceOf(address(this));
-
-            uint256 usdcDiff = contractUsdcBalance - lastUsdcBalance;
-
-            if (usdcDiff != 0) {
-                usdcAccumulatedRewardsPerStake += SafeCast.toUint128(usdcDiff.mulDiv(PRECISION, totalStaked));
-
-                lastUsdcBalance = contractUsdcBalance;
-            }
-
-            if (distributor.isSafeRewardsDistributed()) {
-                if (shareableRewards != 0) {
-                    safeAccumulatedRewardsPerStake +=
-                        SafeCast.toUint128(shareableRewards.mulDiv(PRECISION, totalStaked));
-                }
-            }
-
-            lastUpdateRewardsTimestamp = uint48(block.timestamp);
-        }
-    }
-
-    function stakeFor(address user, uint128 amount) public override lockStaking {
+    function stakeFor(address user, uint128 amount) external override whenNotPaused isValidStakingAgent {
+        if (user == address(0)) revert SYST__INVALID_ADDRESS();
         if (amount == 0) revert SYST__INVALID_STAKE_AMOUNT();
 
         safeToken.safeTransferFrom(msg.sender, address(this), amount);
@@ -145,6 +126,10 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
         updateRewards();
 
         _stake(user, amount);
+
+        _mint(address(safeYieldLockUp), amount);
+
+        safeYieldLockUp.vestFor(user, amount);
 
         emit Staked(user, amount);
     }
@@ -154,7 +139,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
         uint128 recipientAmount,
         address referrer,
         uint128 referrerAmount
-    ) external override onlyPresale {
+    ) external override onlySafeYieldPresale {
         safeToken.safeTransferFrom(msg.sender, address(this), recipientAmount + referrerAmount);
 
         updateRewards();
@@ -166,24 +151,37 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
         emit AutoStakedFor(recipient, recipientAmount, referrer, referrerAmount);
     }
 
-    /**
-     * @notice called by presale contract to unstake and redeem tokens bought during presale,
-     *  only callable by the presale contract.
-     * @param user is the user address
-     * @param amount is the number of safe tokens to unstake
-     */
-    function unStakeFor(address user, uint128 amount) external override onlyPresale {
+    function unStakeFor(address user, uint128 amount) external override onlySafeYieldLockUp {
+        if (user == address(0)) revert SYST__INVALID_ADDRESS();
         if (amount == 0) revert SYST__INVALID_STAKE_AMOUNT();
+
         if (userStake[user].stakeAmount < amount) revert SYST__INSUFFICIENT_STAKE();
 
         claimRewards(user);
 
         _unStake(user, amount);
 
+        _burn(address(safeYieldLockUp), amount);
+
+        safeToken.safeTransfer(user, amount);
+
         emit UnStaked(user, amount);
     }
 
-    function unStake(uint128 amount) external override lockStaking {
+    function stake(uint128 amount) external whenNotPaused lockStaking {
+        if (safeYieldLP == address(0)) revert SYST__ID0_NOT_ENDED();
+        if (amount == 0) revert SYST__INVALID_STAKE_AMOUNT();
+
+        safeToken.safeTransferFrom(msg.sender, address(this), amount);
+
+        _stake(msg.sender, amount);
+
+        _mint(msg.sender, amount);
+
+        emit Staked(msg.sender, amount);
+    }
+
+    function unStake(uint128 amount) external override whenNotPaused lockStaking {
         if (amount == 0) revert SYST__INVALID_STAKE_AMOUNT();
         if (userStake[msg.sender].stakeAmount < amount) revert SYST__INSUFFICIENT_STAKE();
 
@@ -191,22 +189,62 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
 
         _unStake(msg.sender, amount);
 
+        _burn(msg.sender, amount);
+
+        safeToken.safeTransfer(msg.sender, amount);
+
         emit UnStaked(msg.sender, amount);
     }
 
+    function approveStakingAgent(address agent) external override onlyOwner {
+        if (agent == address(0)) revert SYST__INVALID_ADDRESS();
+
+        approvedStakingAgent[agent] ? approvedStakingAgent[agent] = false : approvedStakingAgent[agent] = true;
+
+        emit StakingAgentApproved(agent, approvedStakingAgent[agent]);
+    }
+
+    function setLpAddress(address lp) external override onlyOwner {
+        if (lp == address(0)) revert SYST__INVALID_ADDRESS();
+
+        safeYieldLP = lp;
+
+        emit SafeYieldLpSet(lp);
+    }
+
+    function updateSafeToken(address newSafeToken) external override onlyOwner {
+        if (newSafeToken == address(0)) revert SYST__INVALID_ADDRESS();
+
+        safeToken = IERC20(newSafeToken);
+
+        emit SafeTokenUpdated(newSafeToken);
+    }
+
+    //todo: token distributor callbacks for stake and unstake ops.
+
     function setPresale(address _presale) external override onlyOwner {
         if (_presale == address(0)) revert SYST__INVALID_ADDRESS();
-        presale = ISafeYieldPreSale(_presale);
+
+        safeYieldPresale = ISafeYieldPreSale(_presale);
 
         emit PresaleSet(_presale);
     }
+
+    function setLockUp(address _lockUp) external override onlyOwner {
+        if (_lockUp == address(0)) revert SYST__INVALID_ADDRESS();
+
+        safeYieldLockUp = ISafeYieldLockUp(_lockUp);
+
+        emit LockUpSet(_lockUp);
+    }
+
     /**
      * @notice Set the reward distributor contract.
      * @param _distributor The address of the reward distributor contract.
      */
-
     function setRewardDistributor(address _distributor) external override onlyOwner {
         if (_distributor == address(0)) revert SYST__INVALID_ADDRESS();
+
         distributor = ISafeYieldRewardDistributor(_distributor);
 
         emit RewardDistributorSet(_distributor);
@@ -230,42 +268,6 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
 
     function getUserStake(address _user) external view override returns (Stake memory) {
         return userStake[_user];
-    }
-
-    function claimRewards(address user) public override {
-        if (userStake[user].stakeAmount == 0) return;
-
-        updateRewards();
-
-        (
-            uint128 pendingUsdcRewards,
-            uint128 pendingSafeRewards,
-            int128 accumulateUsdcRewards,
-            int128 accumulateSafeRewards
-        ) = calculatePendingRewards(user);
-
-        /**
-         * @dev Transfers pending rewards to the user if available.
-         * Users can claim their pending USDC and SAFE rewards at any time.
-         * Example: If a user has accrued 100 SAFE rewards during the staking emissions
-         *       but has not claimed them, they can return after the staking period ends
-         *       and still claim the 100 SAFE rewards along with 100 USDC rewards.
-         */
-        if (pendingSafeRewards != 0) {
-            userStake[user].safeRewardsDebt = accumulateSafeRewards;
-
-            //safe rewards
-            safeToken.safeTransfer(user, pendingSafeRewards);
-        }
-        if (pendingUsdcRewards != 0) {
-            userStake[user].usdcRewardsDebt = accumulateUsdcRewards;
-
-            lastUsdcBalance -= pendingUsdcRewards;
-            //usdc rewards
-            usdc.safeTransfer(user, pendingUsdcRewards);
-        }
-
-        emit RewardsClaimed(user, pendingSafeRewards, pendingUsdcRewards);
     }
 
     function calculatePendingRewards(address user)
@@ -325,6 +327,86 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
             SafeCast.toUint128(SafeCast.toUint256(int256(accumulateSafeRewards - _userStake.safeRewardsDebt)));
     }
 
+    function claimRewards(address user) public override whenNotPaused {
+        if (userStake[user].stakeAmount == 0) return;
+
+        updateRewards();
+
+        (
+            uint128 pendingUsdcRewards,
+            uint128 pendingSafeRewards,
+            int128 accumulateUsdcRewards,
+            int128 accumulateSafeRewards
+        ) = calculatePendingRewards(user);
+
+        /**
+         * @dev Transfers pending rewards to the user if available.
+         * Users can claim their pending USDC and SAFE rewards at any time.
+         * Example: If a user has accrued 100 SAFE rewards during the staking emissions
+         *       but has not claimed them, they can return after the staking period ends
+         *       and still claim the 100 SAFE rewards along with 100 USDC rewards.
+         */
+        if (pendingSafeRewards != 0) {
+            userStake[user].safeRewardsDebt = accumulateSafeRewards;
+
+            //safe rewards
+            safeToken.safeTransfer(user, pendingSafeRewards);
+        }
+        if (pendingUsdcRewards != 0) {
+            userStake[user].usdcRewardsDebt = accumulateUsdcRewards;
+
+            lastUsdcBalance -= pendingUsdcRewards;
+            //usdc rewards
+            usdc.safeTransfer(user, pendingUsdcRewards);
+        }
+
+        emit RewardsClaimed(user, pendingSafeRewards, pendingUsdcRewards);
+    }
+
+    function updateRewards() public override whenNotPaused {
+        if (totalStaked == 0) {
+            lastUpdateRewardsTimestamp = uint48(block.timestamp);
+            return;
+        }
+
+        if (uint48(block.timestamp) > lastUpdateRewardsTimestamp) {
+            /**
+             * @dev Distribute rewards to the staking contract.
+             * if its during stake emission, rewards are distributed in SafeToken.
+             * (35% of the value of safe tokens are minted)
+             * Any other state, rewards are distributed in USDC.(60% USDC)
+             */
+            uint256 shareableRewards = distributor.distributeToContract(address(this));
+
+            uint256 contractUsdcBalance = usdc.balanceOf(address(this));
+
+            uint256 usdcDiff = contractUsdcBalance - lastUsdcBalance;
+
+            if (usdcDiff != 0) {
+                usdcAccumulatedRewardsPerStake += SafeCast.toUint128(usdcDiff.mulDiv(PRECISION, totalStaked));
+
+                lastUsdcBalance = contractUsdcBalance;
+            }
+
+            if (distributor.isSafeRewardsDistributed()) {
+                if (shareableRewards != 0) {
+                    safeAccumulatedRewardsPerStake +=
+                        SafeCast.toUint128(shareableRewards.mulDiv(PRECISION, totalStaked));
+                }
+            }
+
+            lastUpdateRewardsTimestamp = uint48(block.timestamp);
+        }
+    }
+
+    function _update(address from, address to, uint256 value) internal override {
+        if (from != address(0) && to != address(0)) {
+            revert SYST__STAKED_SAFE_TRANSFER_NOT_ALLOWED();
+        }
+
+        super._update(from, to, value);
+    }
+
     function _stake(address _user, uint128 amount) internal {
         userStake[_user].stakeAmount += amount;
 
@@ -337,8 +419,6 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
         );
 
         totalStaked += amount;
-
-        _mint(_user, amount);
     }
 
     function _unStake(address _user, uint128 _amount) internal {
@@ -365,18 +445,5 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
         }
 
         totalStaked -= _amount;
-
-        _burn(_user, _amount);
-
-        safeToken.safeTransfer(_user, _amount);
-    }
-
-    ///@dev disable sSafeToken transfer
-    function _update(address from, address to, uint256 value) internal override {
-        if (from != address(0) && to != address(0)) {
-            revert SYST__STAKED_SAFE_TRANSFER_NOT_ALLOWED();
-        }
-
-        super._update(from, to, value);
     }
 }
