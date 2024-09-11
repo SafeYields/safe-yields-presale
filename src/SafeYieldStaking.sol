@@ -76,7 +76,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
     error SYST__INVALID_STAKE_AMOUNT();
     error SYST__INSUFFICIENT_STAKE();
     error SYST__INVALID_ADDRESS();
-    error SYST__NOT_APPROVED();
+    error SYST__AGENT_NOT_APPROVED();
     error SYST__ID0_NOT_ENDED();
     error SYST__ONLY_LOCKUP();
     error SYST__ONLY_PRESALE();
@@ -104,7 +104,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
     }
 
     modifier isValidStakingAgent() {
-        if (!approvedStakingAgent[msg.sender]) revert SYST__NOT_APPROVED();
+        if (!approvedStakingAgent[msg.sender]) revert SYST__AGENT_NOT_APPROVED();
         _;
     }
 
