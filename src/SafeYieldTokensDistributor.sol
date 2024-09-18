@@ -160,4 +160,8 @@ contract SafeYieldTokensDistributor is ISafeYieldTokensDistributor, Ownable2Step
             pendingTokenRewards[i] = uint256(userAccumulatedRewards - userRewardDebt[user]);
         }
     }
+
+    function handleActionBefore(address _user, bytes4 _selector) external { }
+
+    function handleActionAfter(address _user, bytes4 _selector) external { }
 }
