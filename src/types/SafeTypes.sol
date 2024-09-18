@@ -57,3 +57,8 @@ struct VestingSchedule {
     uint48 cliff;
     uint48 duration;
 }
+
+struct RewardToken {
+    uint256 accRewardPerShare;
+    bool isRewardToken;
+}
