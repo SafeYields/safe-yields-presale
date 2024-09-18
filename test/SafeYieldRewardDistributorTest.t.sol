@@ -8,7 +8,7 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeMockToken } from "./mocks/SafeMockToken.sol";
 import { USDCMockToken } from "./mocks/USDCMockToken.sol";
 import { SafeYieldRewardDistributor } from "src/SafeYieldRewardDistributor.sol";
-import { SafeYieldBaseTest } from "./SafeYieldBaseTest.t.sol";
+import { SafeYieldBaseTest } from "./setup/SafeYieldBaseTest.t.sol";
 import { ContractShare } from "src/types/SafeTypes.sol";
 import { IUniswapV3Pool } from "src/uniswapV3/interfaces/IUniswapV3Pool.sol";
 import { ISwapRouter } from "src/uniswapV3/interfaces/ISwapRouter.sol";

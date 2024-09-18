@@ -4,14 +4,14 @@ pragma solidity 0.8.26;
 
 import { Test, console } from "forge-std/Test.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { SafeMockToken } from "./mocks/SafeMockToken.sol";
+import { SafeMockToken } from "../mocks/SafeMockToken.sol";
 import { SafeToken } from "src/SafeToken.sol";
-import { USDCMockToken } from "./mocks/USDCMockToken.sol";
-import { SafeYieldRewardDistributorMock } from "./mocks/SafeYieldRewardDistributorMock.sol";
+import { USDCMockToken } from "../mocks/USDCMockToken.sol";
+import { SafeYieldRewardDistributorMock } from "../mocks/SafeYieldRewardDistributorMock.sol";
 import { SafeYieldPresale } from "src/SafeYieldPresale.sol";
 import { SafeYieldStaking } from "src/SafeYieldStaking.sol";
 import { CoreContributorsLockUp } from "src/CoreContributorsLockUp.sol";
-
+import { SafeYieldTokenDistributor } from "src/SafeYieldTokenDistributorV2.sol";
 import { SafeYieldLockUp } from "src/SafeYieldLockUp.sol";
 
 import { SafeYieldTWAP } from "src/SafeYieldTWAP.sol";
@@ -34,6 +34,7 @@ abstract contract SafeYieldBaseTest is Test {
     IUniswapV3Factory public uniswapV3Factory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
     INonFungiblePositionManager public nonFungiblePositionManager =
         INonFungiblePositionManager(0xC36442b4a4522E871399CD717aBDD847Ab11FE88);
+    SafeYieldTokenDistributor public tokensDistributor;
 
     address public teamOperations = makeAddr("teamOperations");
     address public usdcBuyback = makeAddr("usdcBuyback");
@@ -84,6 +85,8 @@ abstract contract SafeYieldBaseTest is Test {
 
         staking = new SafeYieldStaking(address(safeToken), address(usdc));
 
+        tokensDistributor = new SafeYieldTokenDistributor(protocolAdmin, address(staking));
+
         twap = new SafeYieldTWAP();
 
         presale = new SafeYieldPresale(
@@ -93,8 +96,8 @@ abstract contract SafeYieldBaseTest is Test {
             1_000e18,
             uint128(PRE_SALE_MAX_SUPPLY),
             1e18,
-            5_00,
-            5_00,
+            500,
+            500,
             protocolAdmin
         );
 
@@ -112,6 +115,10 @@ abstract contract SafeYieldBaseTest is Test {
 
         staking.setPresale(address(presale));
         staking.setRewardDistributor(address(distributor));
+        staking.addCallback(address(tokensDistributor));
+
+        staking.approveStakingAgent(address(presale), true);
+        staking.setLockUp(address(safeYieldLockUp));
 
         contributorLockUp.mintSayAllocation();
         presale.mintPreSaleAllocation();

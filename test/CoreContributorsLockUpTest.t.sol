@@ -3,7 +3,7 @@
 pragma solidity 0.8.26;
 
 import { console } from "forge-std/Test.sol";
-import { SafeYieldBaseTest } from "./SafeYieldBaseTest.t.sol";
+import { SafeYieldBaseTest } from "./setup/SafeYieldBaseTest.t.sol";
 import { CoreContributorsLockUp } from "src/CoreContributorsLockUp.sol";
 import { VestingSchedule } from "src/types/SafeTypes.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
