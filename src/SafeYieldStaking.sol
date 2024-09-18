@@ -7,6 +7,7 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { Ownable2Step } from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { PreSaleState, Stake, StakingEmissionState } from "./types/SafeTypes.sol";
@@ -14,6 +15,8 @@ import { ISafeYieldStaking } from "./interfaces/ISafeYieldStaking.sol";
 import { ISafeYieldLockUp } from "./interfaces/ISafeYieldLockUp.sol";
 import { ISafeYieldPreSale } from "./interfaces/ISafeYieldPreSale.sol";
 import { ISafeYieldRewardDistributor } from "./interfaces/ISafeYieldRewardDistributor.sol";
+import { ISafeYieldStakingCallback } from "./interfaces/ISafeYieldStakingCallback.sol";
+import { console2 } from "forge-std/Test.sol";
 
 /**
  * @title SafeYieldStaking contract
@@ -26,6 +29,8 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
     using Math for int256;
     using Math for uint128;
 
+    using EnumerableSet for EnumerableSet.AddressSet;
+
     using SafeERC20 for IERC20;
 
     /*//////////////////////////////////////////////////////////////
@@ -37,6 +42,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
     /*//////////////////////////////////////////////////////////////
                         STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
+    EnumerableSet.AddressSet private callbacks;
     ISafeYieldPreSale public safeYieldPresale;
     ISafeYieldRewardDistributor public distributor;
     ISafeYieldLockUp public safeYieldLockUp;
@@ -68,6 +74,8 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
     event LockUpSet(address indexed lockUp);
     event SafeTokenUpdated(address indexed newSafeToken);
     event StakingAgentApproved(address indexed agent, bool indexed isApproved);
+    event CallBackAdded(address indexed callback);
+    event CallBackRemoved(address indexed callback);
     /*//////////////////////////////////////////////////////////////
                                  ERRORS
     //////////////////////////////////////////////////////////////*/
@@ -81,6 +89,9 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
     error SYST__ONLY_LOCKUP();
     error SYST__ONLY_PRESALE();
     error SYST__STAKED_SAFE_TRANSFER_NOT_ALLOWED();
+    error SYST__CALLBACK_ALREADY_REGISTERED();
+    error SYST__NO_CALLBACK_INDEX();
+    error SYST__CALLBACK_NOT_FOUND();
 
     /*//////////////////////////////////////////////////////////////
                                MODIFIERS
@@ -123,11 +134,27 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
 
         safeToken.safeTransferFrom(msg.sender, address(this), amount);
 
+        uint256 len = callbacks.length();
+
+        for (uint256 i; i < len;) {
+            ISafeYieldStakingCallback(callbacks.at(i)).handleActionBefore(user, SafeYieldStaking.stakeFor.selector);
+            unchecked {
+                ++i;
+            }
+        }
+
         updateRewards();
 
         _stake(user, amount);
 
         _mint(address(safeYieldLockUp), amount);
+
+        for (uint256 i; i < len;) {
+            ISafeYieldStakingCallback(callbacks.at(i)).handleActionAfter(user, SafeYieldStaking.stakeFor.selector);
+            unchecked {
+                ++i;
+            }
+        }
 
         safeYieldLockUp.vestFor(user, amount);
 
@@ -157,11 +184,31 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
 
         if (userStake[user].stakeAmount < amount) revert SYST__INSUFFICIENT_STAKE();
 
+        uint256 len = callbacks.length();
+
+        for (uint256 i; i < len;) {
+            ISafeYieldStakingCallback(callbacks.at(i)).handleActionBefore(
+                msg.sender, SafeYieldStaking.unStakeFor.selector
+            );
+            unchecked {
+                ++i;
+            }
+        }
+
         claimRewards(user);
 
         _unStake(user, amount);
 
         _burn(address(safeYieldLockUp), amount);
+
+        for (uint256 i; i < len;) {
+            ISafeYieldStakingCallback(callbacks.at(i)).handleActionAfter(
+                msg.sender, SafeYieldStaking.unStakeFor.selector
+            );
+            unchecked {
+                ++i;
+            }
+        }
 
         safeToken.safeTransfer(user, amount);
 
@@ -172,11 +219,26 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
         if (safeYieldLP == address(0)) revert SYST__ID0_NOT_ENDED();
         if (amount == 0) revert SYST__INVALID_STAKE_AMOUNT();
 
+        uint256 len = callbacks.length();
+        for (uint256 i; i < len;) {
+            ISafeYieldStakingCallback(callbacks.at(i)).handleActionBefore(msg.sender, SafeYieldStaking.stake.selector);
+            unchecked {
+                ++i;
+            }
+        }
+
         safeToken.safeTransferFrom(msg.sender, address(this), amount);
 
         _stake(msg.sender, amount);
 
         _mint(msg.sender, amount);
+
+        for (uint256 i; i < len;) {
+            ISafeYieldStakingCallback(callbacks.at(i)).handleActionAfter(msg.sender, SafeYieldStaking.stake.selector);
+            unchecked {
+                ++i;
+            }
+        }
 
         emit Staked(msg.sender, amount);
     }
@@ -185,23 +247,38 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
         if (amount == 0) revert SYST__INVALID_STAKE_AMOUNT();
         if (userStake[msg.sender].stakeAmount < amount) revert SYST__INSUFFICIENT_STAKE();
 
+        uint256 len = callbacks.length();
+        for (uint256 i; i < len;) {
+            ISafeYieldStakingCallback(callbacks.at(i)).handleActionBefore(msg.sender, SafeYieldStaking.unStake.selector);
+            unchecked {
+                ++i;
+            }
+        }
+
         claimRewards(msg.sender);
 
         _unStake(msg.sender, amount);
 
         _burn(msg.sender, amount);
 
+        for (uint256 i; i < len;) {
+            ISafeYieldStakingCallback(callbacks.at(i)).handleActionAfter(msg.sender, SafeYieldStaking.unStake.selector);
+            unchecked {
+                ++i;
+            }
+        }
+
         safeToken.safeTransfer(msg.sender, amount);
 
         emit UnStaked(msg.sender, amount);
     }
 
-    function approveStakingAgent(address agent) external override onlyOwner {
+    function approveStakingAgent(address agent, bool isApproved) external override onlyOwner {
         if (agent == address(0)) revert SYST__INVALID_ADDRESS();
 
-        approvedStakingAgent[agent] ? approvedStakingAgent[agent] = false : approvedStakingAgent[agent] = true;
+        approvedStakingAgent[agent] = isApproved;
 
-        emit StakingAgentApproved(agent, approvedStakingAgent[agent]);
+        emit StakingAgentApproved(agent, isApproved);
     }
 
     function setLpAddress(address lp) external override onlyOwner {
@@ -219,8 +296,6 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
 
         emit SafeTokenUpdated(newSafeToken);
     }
-
-    //todo: token distributor callbacks for stake and unstake ops.
 
     function setPresale(address _presale) external override onlyOwner {
         if (_presale == address(0)) revert SYST__INVALID_ADDRESS();
@@ -248,6 +323,36 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
         distributor = ISafeYieldRewardDistributor(_distributor);
 
         emit RewardDistributorSet(_distributor);
+    }
+
+    function getCallback(uint256 index) public view returns (address) {
+        if (index >= callbacks.length()) {
+            revert SYST__NO_CALLBACK_INDEX();
+        }
+        return callbacks.at(index);
+    }
+
+    function getAllCallbacks() public view returns (address[] memory) {
+        return callbacks.values();
+    }
+
+    function addCallback(address callback) external override onlyOwner {
+        bool added = callbacks.add(callback);
+
+        if (!added) {
+            revert SYST__CALLBACK_ALREADY_REGISTERED();
+        }
+        emit CallBackAdded(callback);
+    }
+
+    function removeCallback(address callback) external override onlyOwner {
+        bool removed = callbacks.remove(callback);
+
+        if (!removed) {
+            revert SYST__CALLBACK_NOT_FOUND();
+        }
+
+        emit CallBackRemoved(callback);
     }
 
     /**
