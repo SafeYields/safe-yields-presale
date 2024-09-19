@@ -179,42 +179,42 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
     }
 
     //@note needed??
-    // function unStakeFor(address user, uint128 amount) external override onlySafeYieldLockUp {
-    //     if (user == address(0)) revert SYST__INVALID_ADDRESS();
-    //     if (amount == 0) revert SYST__INVALID_STAKE_AMOUNT();
+    function unStakeFor(address user, uint128 amount) external override onlySafeYieldLockUp {
+        if (user == address(0)) revert SYST__INVALID_ADDRESS();
+        if (amount == 0) revert SYST__INVALID_STAKE_AMOUNT();
 
-    //     if (userStake[user].stakeAmount < amount) revert SYST__INSUFFICIENT_STAKE();
+        if (userStake[user].stakeAmount < amount) revert SYST__INSUFFICIENT_STAKE();
 
-    //     uint256 len = callbacks.length();
+        uint256 len = callbacks.length();
 
-    //     for (uint256 i; i < len;) {
-    //         ISafeYieldStakingCallback(callbacks.at(i)).handleActionBefore(
-    //             msg.sender, SafeYieldStaking.unStakeFor.selector
-    //         );
-    //         unchecked {
-    //             ++i;
-    //         }
-    //     }
+        for (uint256 i; i < len;) {
+            ISafeYieldStakingCallback(callbacks.at(i)).handleActionBefore(
+                msg.sender, SafeYieldStaking.unStakeFor.selector
+            );
+            unchecked {
+                ++i;
+            }
+        }
 
-    //     claimRewards(user);
+        claimRewards(user);
 
-    //     _unStake(user, amount);
+        _unStake(user, amount);
 
-    //     _burn(address(safeYieldLockUp), amount);
+        _burn(address(safeYieldLockUp), amount);
 
-    //     for (uint256 i; i < len;) {
-    //         ISafeYieldStakingCallback(callbacks.at(i)).handleActionAfter(
-    //             msg.sender, SafeYieldStaking.unStakeFor.selector
-    //         );
-    //         unchecked {
-    //             ++i;
-    //         }
-    //     }
+        for (uint256 i; i < len;) {
+            ISafeYieldStakingCallback(callbacks.at(i)).handleActionAfter(
+                msg.sender, SafeYieldStaking.unStakeFor.selector
+            );
+            unchecked {
+                ++i;
+            }
+        }
 
-    //     safeToken.safeTransfer(user, amount);
+        safeToken.safeTransfer(user, amount);
 
-    //     emit UnStaked(user, amount);
-    // }
+        emit UnStaked(user, amount);
+    }
 
     function stake(uint128 amount) external whenNotPaused lockStaking {
         if (amount == 0) revert SYST__INVALID_STAKE_AMOUNT();
