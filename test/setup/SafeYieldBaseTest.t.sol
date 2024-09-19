@@ -118,6 +118,7 @@ abstract contract SafeYieldBaseTest is Test {
         staking.addCallback(address(tokensDistributor));
 
         staking.approveStakingAgent(address(presale), true);
+        staking.approveStakingAgent(protocolAdmin, true);
         staking.setLockUp(address(safeYieldLockUp));
 
         contributorLockUp.mintSayAllocation();
