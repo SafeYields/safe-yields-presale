@@ -32,6 +32,7 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
 
     uint48 public unlockPercentagePerMonth = 2_000; //20%
     mapping(address user => VestingSchedule schedule) public schedules;
+    mapping(address user => bool approved) public approvedVestingAgents;
 
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
@@ -41,6 +42,7 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
     event SayTokenAddressUpdated(address indexed newSayToken);
     event PreSaleAddressUpdated(address indexed newPresale);
     event StakingAddressUpdated(address indexed newStaking);
+    event VestingAgentApproved(address indexed agent, bool indexed isApproved);
 
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
@@ -51,6 +53,7 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
     error SYLU__NOT_PRESALE_OR_AIRDROP();
     error SYLU__ONLY_STAKING();
     error SYLU__CANNOT_CLAIM();
+    error SYLU__AGENT_NOT_APPROVED();
 
     /*//////////////////////////////////////////////////////////////
                                MODIFIERS
@@ -65,6 +68,11 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
         _;
     }
 
+    modifier isValidVestingAgent() {
+        if (!approvedVestingAgents[msg.sender]) revert SYLU__AGENT_NOT_APPROVED();
+        _;
+    }
+
     constructor(address protocolAdmin, address _presale, address _sayToken, address _staking) Ownable(protocolAdmin) {
         if (protocolAdmin == address(0) || _sayToken == address(0) || _presale == address(0) || _staking == address(0))
         {
@@ -76,11 +84,11 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
         safeYieldPresale = ISafeYieldPreSale(_presale);
     }
 
-    function vestFor(address user, uint256 amount) external override whenNotPaused onlyStaking {
+    function vestFor(address user, uint256 amount) external override whenNotPaused isValidVestingAgent {
         if (user == address(0)) revert SYLU__INVALID_ADDRESS();
         if (amount == 0) revert SYLU__INVALID_AMOUNT();
 
-        if (schedules[user].start == 0) {
+        if (block.timestamp >= schedules[user].start + schedules[user].duration) {
             schedules[user].start = uint48(block.timestamp);
             schedules[user].duration = VESTING_DURATION;
         }
