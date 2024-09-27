@@ -528,7 +528,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
                 investor, safeTokensBought, referrerInvestor, referrerSafeTokenCommission
             );
         } else {
-            safeYieldStaking.stakeFor(investor, totalSafeTokensToStake);
+            safeYieldStaking.stakeFor(investor, totalSafeTokensToStake, true);
         }
     }
 

@@ -76,9 +76,6 @@ abstract contract SafeYieldBaseTest is Test {
     }
 
     function setUp() public virtual {
-        // uint256 ethFork = vm.createFork(vm.envString("MAINNET_RPC_URL"));
-        // vm.selectFork(ethFork);
-
         vm.startPrank(protocolAdmin);
         usdc = new USDCMockToken("USDC", "USDC", 6);
         safeToken = new SafeToken();
@@ -124,6 +121,8 @@ abstract contract SafeYieldBaseTest is Test {
         contributorLockUp.mintSayAllocation();
         presale.mintPreSaleAllocation();
         distributor.mintStakingEmissionAllocation();
+
+        safeYieldLockUp.approveStakingAgent(address(staking), true);
 
         vm.stopPrank();
 

@@ -128,7 +128,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
         usdc = IERC20(_usdc);
     }
 
-    function stakeFor(address user, uint128 amount) external override whenNotPaused isValidStakingAgent {
+    function stakeFor(address user, uint128 amount, bool lockUp) external override whenNotPaused isValidStakingAgent {
         if (user == address(0)) revert SYST__INVALID_ADDRESS();
         if (amount == 0) revert SYST__INVALID_STAKE_AMOUNT();
 
@@ -147,7 +147,12 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
 
         _stake(user, amount);
 
-        _mint(address(safeYieldLockUp), amount);
+        if (lockUp) {
+            _mint(address(safeYieldLockUp), amount);
+            safeYieldLockUp.vestFor(user, amount);
+        } else {
+            _mint(address(msg.sender), amount);
+        }
 
         for (uint256 i; i < len;) {
             ISafeYieldStakingCallback(callbacks.at(i)).handleActionAfter(user, SafeYieldStaking.stakeFor.selector);
@@ -156,11 +161,10 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
             }
         }
 
-        safeYieldLockUp.vestFor(user, amount);
-
         emit Staked(user, amount);
     }
 
+    //todo: add callbacks and vest too
     function autoStakeForBothReferrerAndRecipient(
         address recipient,
         uint128 recipientAmount,

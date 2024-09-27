@@ -254,7 +254,7 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
 
         vm.startPrank(protocolAdmin);
         safeToken.approve(address(staking), 5_000e18);
-        staking.stakeFor(ALICE, 2_000e18);
+        staking.stakeFor(ALICE, 2_000e18, true);
         vm.stopPrank();
 
         skip(30 * 24 * 60 * 60 seconds); //1 month

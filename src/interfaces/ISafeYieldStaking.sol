@@ -16,7 +16,7 @@ interface ISafeYieldStaking {
 
     function updateRewards() external;
 
-    function stakeFor(address user, uint128 amount) external;
+    function stakeFor(address user, uint128 amount, bool lockUp) external;
 
     function autoStakeForBothReferrerAndRecipient(
         address recipient,
