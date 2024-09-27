@@ -98,7 +98,7 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
         emit TokensVestedFor(user, amount);
     }
 
-    function approveStakingAgent(address agent, bool isApproved) external override onlyOwner {
+    function approveVestingAgent(address agent, bool isApproved) external override onlyOwner {
         if (agent == address(0)) revert SYLU__INVALID_ADDRESS();
 
         approvedVestingAgents[agent] = isApproved;

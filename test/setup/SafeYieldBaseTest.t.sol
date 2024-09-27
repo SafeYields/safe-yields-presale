@@ -122,7 +122,7 @@ abstract contract SafeYieldBaseTest is Test {
         presale.mintPreSaleAllocation();
         distributor.mintStakingEmissionAllocation();
 
-        safeYieldLockUp.approveStakingAgent(address(staking), true);
+        safeYieldLockUp.approveVestingAgent(address(staking), true);
 
         vm.stopPrank();
 
