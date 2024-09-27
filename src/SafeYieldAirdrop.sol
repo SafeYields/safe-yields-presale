@@ -60,7 +60,7 @@ contract SafeYieldAirdrop is ISafeYieldAirdrop, Ownable2Step, Pausable {
         merkleRoot = _merkleRoot;
     }
 
-    function vestAndStakeSayTokens(uint256 amount, bytes32[] calldata merkleProof) external override whenNotPaused {
+    function stakeAndVestSayTokens(uint256 amount, bytes32[] calldata merkleProof) external override whenNotPaused {
         if (amount == 0) revert SYA__INVALID_AMOUNT();
         if (merkleProof.length == 0) revert SYA__INVALID_PROOF();
 
@@ -74,7 +74,7 @@ contract SafeYieldAirdrop is ISafeYieldAirdrop, Ownable2Step, Pausable {
 
         sayToken.approve(address(staking), amount);
 
-        staking.stakeFor(msg.sender, uint128(amount));
+        staking.stakeFor(msg.sender, uint128(amount), true);
     }
 
     function updateSayToken(address newSayToken) external onlyOwner {
@@ -91,13 +91,6 @@ contract SafeYieldAirdrop is ISafeYieldAirdrop, Ownable2Step, Pausable {
         staking = ISafeYieldStaking(newStaking);
 
         emit StakingAddressUpdated(newStaking);
-    }
-
-    function mintAllSayTokens(uint256 totalAmount) external override onlyOwner {
-        if (totalAmount == 0) revert SYA__INVALID_AMOUNT();
-        sayToken.mint(totalAmount);
-
-        emit AllSayMinted(totalAmount);
     }
 
     function clawBackSayTokens(uint256 amount) external override onlyOwner {
