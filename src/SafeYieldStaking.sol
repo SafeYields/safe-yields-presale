@@ -16,13 +16,13 @@ import { ISafeYieldLockUp } from "./interfaces/ISafeYieldLockUp.sol";
 import { ISafeYieldPreSale } from "./interfaces/ISafeYieldPreSale.sol";
 import { ISafeYieldRewardDistributor } from "./interfaces/ISafeYieldRewardDistributor.sol";
 import { ISafeYieldStakingCallback } from "./interfaces/ISafeYieldStakingCallback.sol";
-import { console2 } from "forge-std/Test.sol";
 
 /**
  * @title SafeYieldStaking contract
  * @dev This contract is used for staking SafeToken.
  * users receive sSafeToken as receipt tokens.
  * Users can earn SafeToken and USDC as rewards.
+ * @author 0xm00k
  */
 contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
     using Math for uint256;
@@ -85,7 +85,6 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
     error SYST__INSUFFICIENT_STAKE();
     error SYST__INVALID_ADDRESS();
     error SYST__AGENT_NOT_APPROVED();
-    error SYST__ID0_NOT_ENDED();
     error SYST__ONLY_LOCKUP();
     error SYST__ONLY_PRESALE();
     error SYST__STAKED_SAFE_TRANSFER_NOT_ALLOWED();
@@ -143,15 +142,13 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
             }
         }
 
-        updateRewards();
-
         _stake(user, amount);
 
         if (lockUp) {
             _mint(address(safeYieldLockUp), amount);
             safeYieldLockUp.vestFor(user, amount);
         } else {
-            _mint(address(msg.sender), amount);
+            _mint(user, amount);
         }
 
         for (uint256 i; i < len;) {
@@ -162,24 +159,6 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
         }
 
         emit Staked(user, amount);
-    }
-
-    //todo: add callbacks and vest too
-    function autoStakeForBothReferrerAndRecipient(
-        address recipient,
-        uint128 recipientAmount,
-        address referrer,
-        uint128 referrerAmount
-    ) external override onlySafeYieldPresale {
-        safeToken.safeTransferFrom(msg.sender, address(this), recipientAmount + referrerAmount);
-
-        updateRewards();
-
-        _stake(recipient, recipientAmount);
-
-        _stake(referrer, referrerAmount);
-
-        emit AutoStakedFor(recipient, recipientAmount, referrer, referrerAmount);
     }
 
     //@note needed??
@@ -436,6 +415,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
             SafeCast.toUint128(SafeCast.toUint256(int256(accumulateSafeRewards - _userStake.safeRewardsDebt)));
     }
 
+    //@todo: possible issue with claiming for users??
     function claimRewards(address user) public override whenNotPaused {
         if (userStake[user].stakeAmount == 0) return;
 
@@ -472,6 +452,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
         emit RewardsClaimed(user, pendingSafeRewards, pendingUsdcRewards);
     }
 
+    //@todo: possible issue with the rewardDebt calculations, if rewards are transferred before stakers stake??
     function updateRewards() public override whenNotPaused {
         if (totalStaked == 0) {
             lastUpdateRewardsTimestamp = uint48(block.timestamp);
@@ -517,7 +498,11 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
     }
 
     function _stake(address _user, uint128 amount) internal {
+        updateRewards();
+
         userStake[_user].stakeAmount += amount;
+
+        totalStaked += amount;
 
         userStake[_user].usdcRewardsDebt += SafeCast.toInt128(
             SafeCast.toInt256((amount.mulDiv(usdcAccumulatedRewardsPerStake, PRECISION, Math.Rounding.Floor)))
@@ -526,8 +511,6 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
         userStake[_user].safeRewardsDebt += SafeCast.toInt128(
             SafeCast.toInt256((amount.mulDiv(safeAccumulatedRewardsPerStake, PRECISION, Math.Rounding.Floor)))
         );
-
-        totalStaked += amount;
     }
 
     function _unStake(address _user, uint128 _amount) internal {

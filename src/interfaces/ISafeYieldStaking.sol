@@ -18,13 +18,6 @@ interface ISafeYieldStaking {
 
     function stakeFor(address user, uint128 amount, bool lockUp) external;
 
-    function autoStakeForBothReferrerAndRecipient(
-        address recipient,
-        uint128 recipientAmount,
-        address referrer,
-        uint128 referrerAmount
-    ) external;
-
     function addCallback(address callback) external;
 
     function removeCallback(address callback) external;
