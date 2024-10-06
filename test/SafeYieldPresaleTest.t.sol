@@ -230,11 +230,36 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         vm.startPrank(BOB);
         usdc.approve(address(presale), 100_000e6);
 
-        //uint256 bobUsdcBalancePrior = usdc.balanceOf(BOB);
+        uint256 bobUsdcBalancePrior = usdc.balanceOf(BOB);
         presale.deposit(99_000e6, refId);
-        //uint256 bobUsdcBalanceAfter = usdc.balanceOf(BOB);
+        uint256 bobUsdcBalanceAfter = usdc.balanceOf(BOB);
 
+        /**
+         * 5% of the Bob USDC deposited
+         */
+        uint256 aliceReferralUsdcCommission = (99_000e6 * 500) / 10_000;
+        console.log("aliceReferralUsdcCommission", aliceReferralUsdcCommission);
         console.log("Safe Tokens Remaining After selling to 19 users", presale.safeTokensAvailable());
+
+        assertEq(bobUsdcBalanceAfter, bobUsdcBalancePrior - 99_000e6);
+        assertEq(usdc.balanceOf(address(presale)), aliceReferralUsdcCommission);
+
+        /**
+         * since bob is buying the remaining safe left,
+         * buyer and referrer
+         * share the remaining safe tokens.
+         * BuyerBps = 10_000(100%)
+         * referrer = 500 (5%)
+         * totalBps = 10_500
+         */
+        uint256 bobBps = 10_000;
+        uint256 aliceBps = 500;
+
+        uint256 bobCalculatedSafeOwed = (99_000e18 * bobBps) / (bobBps + aliceBps);
+        uint256 aliceSafeCommissionOwed = (99_000e18 * aliceBps) / (bobBps + aliceBps);
+
+        assertApproxEqAbs(presale.getTotalSafeTokensOwed(BOB), bobCalculatedSafeOwed, 1);
+        assertApproxEqAbs(presale.getTotalSafeTokensOwed(ALICE), aliceSafeCommissionOwed + 1_000e18, 1);
     }
 
     function testBuyTokensWhenBuyerWantsToBuyMoreThanMaxPerWalletWithReferrer() public startPresale {
@@ -257,8 +282,27 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
 
         assertEq(bobUsdcBalanceAfter, bobUsdcBalancePrior - 1_999_000e6);
         assertEq(usdc.balanceOf(address(presale)), presale.totalReferrersUsdc());
-        // assertEq(presale.getTotalSafeTokensOwed(BOB), 1_999_000e18, "Bob is Owed 100_000e18");
-        assertGt(presale.getTotalSafeTokensOwed(ALICE), 1_000e18, "Alice is Owed 1_000e18 + Safe Commissions");
+
+        /**
+         * 5% of the Bob USDC deposited
+         */
+
+        /**
+         * since bob is buying the remaining safe left,
+         * buyer and referrer
+         * share the remaining safe tokens.
+         * BuyerBps = 10_000(100%)
+         * referrer = 500 (5%)
+         * totalBps = 10_500
+         */
+        uint256 bobBps = 10_000;
+        uint256 aliceBps = 500;
+
+        uint256 bobCalculatedSafeOwed = (1_999_000e18 * bobBps) / (bobBps + aliceBps);
+        uint256 aliceSafeCommissionOwed = (1_999_000e18 * aliceBps) / (bobBps + aliceBps);
+
+        assertApproxEqAbs(presale.getTotalSafeTokensOwed(BOB), bobCalculatedSafeOwed, 1);
+        assertApproxEqAbs(presale.getTotalSafeTokensOwed(ALICE), aliceSafeCommissionOwed + 1_000e18, 1);
     }
 
     function testBuySafeTokensWhenBuyerWantsToBuyMoreThanThePreSaleCAPWithReferrer() public startPresale {
@@ -292,7 +336,6 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         usdc.approve(address(presale), 1_000e6);
 
         vm.expectRevert(EnforcedPause.selector);
-
         presale.deposit(1_000e6, bytes32(0));
     }
 
@@ -309,11 +352,11 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         presale.deposit(1_500e6, bytes32(0));
     }
 
-    function testBuySafeTokensWithReferrer() public startPresale {
+    function testBuySafeTokensWithReferrerAndClaimSafeTokensFromLockUp() public startPresale {
         vm.startPrank(ALICE);
-        usdc.approve(address(presale), 1_000e6);
+        usdc.approve(address(presale), 1_500e6);
 
-        presale.deposit(1_000e6, bytes32(0));
+        presale.deposit(1_500e6, bytes32(0));
 
         //create a referrer ID
         bytes32 refId = presale.getReferrerID();
@@ -322,7 +365,6 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
 
         vm.startPrank(BOB);
         usdc.approve(address(presale), 1_000e6);
-
         presale.deposit(1_000e6, refId);
 
         skip(1 minutes);
@@ -337,58 +379,73 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         presale.endPresale();
         vm.stopPrank();
 
-        uint128 safeTokens = presale.getTotalSafeTokensOwed(ALICE);
+        /**
+         * alice claims after 1.5 month
+         */
+        skip(45 * 24 * 60 * 60 seconds);
 
-        //claim safe tokens
         vm.startPrank(ALICE);
-        //todo
-        //presale.claimAndUnStakeSafeTokens();
+        //claim safe tokens
+        /**
+         * 20% of SAFE tokens are unlocked each month.
+         * In the first month, Alice receives the full 20%.
+         * In the second month, she receives half of that (10%).
+         * Example: If Alice has 1,500 SAFE tokens:
+         *      Month 1: 20% of 1,500 = 300
+         *      Month 2: 10% of 1,500 = 150
+         *      Total: 300 + 150 = 450 SAFE tokens.
+         */
+        uint256 aliceCommissionFromBOB = (500 * 1_000e18) / 10_000;
+
+        uint256 aliceTotalStaked = aliceCommissionFromBOB + 1_500e18;
+
+        uint256 aliceFirstMonthCalculated = (2_000 * aliceTotalStaked) / 10_000;
+        uint256 aliceSecondMonthCalculated = (1_000 * aliceTotalStaked) / 10_000;
+
+        safeYieldLockUp.unlockSayTokens();
         vm.stopPrank();
 
-        //assertEq(safeToken.balanceOf(ALICE), safeTokens);
+        assertEq(safeToken.balanceOf(ALICE), aliceFirstMonthCalculated + aliceSecondMonthCalculated);
     }
 
     function testBuySafeWithMultipleReferrers() public startPresale {
         vm.startPrank(ALICE);
         usdc.approve(address(presale), 10_000e6);
-
         presale.deposit(1_000e6, bytes32(0));
-
-        //create a referrer ID
-        bytes32 refId = presale.getReferrerID();
-
+        bytes32 aliceRefId = presale.getReferrerID();
         vm.stopPrank();
 
         vm.startPrank(BOB);
         usdc.approve(address(presale), 10_000e6);
-
-        presale.deposit(1_000e6, refId);
-
+        presale.deposit(1_000e6, aliceRefId);
         bytes32 bobRefId = presale.getReferrerID();
-
         vm.stopPrank();
 
         vm.startPrank(CHARLIE);
         usdc.approve(address(presale), 10_000e6);
-
-        console.log("Charlie bought");
-        presale.deposit(1_000e6, refId);
-        console.log("Charlie bought again");
-        presale.deposit(1_000e6, refId);
-
-        vm.stopPrank();
-
-        vm.startPrank(BOB);
-
-        presale.deposit(1_000e6, refId);
-
+        presale.deposit(1_500e6, aliceRefId);
+        presale.deposit(1_500e6, bobRefId);
         vm.stopPrank();
 
         vm.startPrank(ALICE);
-
         presale.deposit(1_000e6, bobRefId);
-
         vm.stopPrank();
+
+        uint256 aliceSafeCommissionFromBob = (500 * 1_000e18) / 10_000;
+        uint256 aliceSafeCommissionFromCharlie = (500 * 1_500e18) / 10_000;
+        assertEq(
+            presale.getTotalSafeTokensOwed(ALICE),
+            2_000e18 + aliceSafeCommissionFromBob + aliceSafeCommissionFromCharlie
+        );
+
+        uint256 bobSafeCommissionFromCharlie = (500 * 1_500e18) / 10_000;
+        uint256 bobSafeCommissionFromAlice = (500 * 1_000e18) / 10_000;
+
+        assertEq(
+            presale.getTotalSafeTokensOwed(BOB), 1_000e18 + bobSafeCommissionFromCharlie + bobSafeCommissionFromAlice
+        );
+
+        assertEq(presale.getTotalSafeTokensOwed(CHARLIE), 3_000e18);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -400,7 +457,6 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
 
         vm.startPrank(ALICE);
         usdc.approve(address(presale), usdcAmount);
-
         presale.deposit(uint128(usdcAmount), bytes32(0));
 
         uint256 safeTokensBought = (usdcAmount * 1e18) / 1e6;
@@ -415,19 +471,15 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
 
         vm.startPrank(ALICE);
         usdc.approve(address(presale), usdcAmount);
-
         presale.deposit(uint128(usdcAmount), bytes32(0));
 
         //create a referrer ID
-        bytes32 refId = presale.getReferrerID();
-
+        bytes32 aliceRefId = presale.getReferrerID();
         vm.stopPrank();
 
         vm.startPrank(BOB);
         usdc.approve(address(presale), usdcAmount);
-
-        presale.deposit(uint128(usdcAmount), refId);
-
+        presale.deposit(uint128(usdcAmount), aliceRefId);
         vm.stopPrank();
 
         uint256 safeTokensBought = (usdcAmount * 1e18) / 1e6;
@@ -438,7 +490,6 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         assertEq(usdc.balanceOf(address(presale)), presale.totalReferrersUsdc());
         assertEq(presale.getTotalSafeTokensOwed(ALICE), safeTokensBought + referrerSafeCommission);
         assertEq(presale.getTotalSafeTokensOwed(BOB), safeTokensBought);
-
         assertEq(referrerUSdcCommission, presale.totalReferrersUsdc());
 
         //referrer claim usdc
@@ -450,16 +501,50 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         vm.prank(protocolAdmin);
         presale.endPresale();
 
-        uint256 aliceOwedSafeTokens = presale.getTotalSafeTokensOwed(ALICE);
+        /**
+         * Bob can start claiming after presale ends
+         */
+        skip(2 * 30 * 24 * 60 * 60 seconds); //2 months;
+        vm.prank(BOB);
+        safeYieldLockUp.unlockSayTokens();
+
+        uint256 bobFirstMonthCalculated = (2_000 * safeTokensBought) / 10_000;
+        uint256 bobSecondMonthCalculated = (2_000 * safeTokensBought) / 10_000;
+
+        assertEq(safeToken.balanceOf(BOB), bobFirstMonthCalculated + bobSecondMonthCalculated);
 
         /**
-         * Alice can claim after the presale ends
+         * Alice can start claiming after presale ends and
+         * after 3 months
          */
+        skip(30 * 24 * 60 * 60 seconds); //3  months;
         vm.prank(ALICE);
-        //todo
-        //presale.claimAndUnStakeSafeTokens();
+        safeYieldLockUp.unlockSayTokens();
 
-        // assertEq(safeToken.balanceOf(ALICE), aliceOwedSafeTokens);
+        /**
+         * 20% of SAFE tokens are unlocked each month.
+         * In the first month, Alice receives the full 20%.
+         * In the second month, she receives full (20%).
+         * In the third month, she receives full (20%).
+         * Example: If Alice has 1,500 SAFE tokens:
+         *      Month 1: 20% of 1,500 = 300
+         *      Month 2: 20% of 1,500 = 300
+         *      Month 3: 20& of 1_500 = 300
+         *      Total: 300 + 300 + 300 = 900 SAFE tokens.
+         */
+        uint256 aliceSafeCommissionFromBob = (500 * safeTokensBought) / 10_000;
+        uint256 aliceTotalVested = aliceSafeCommissionFromBob + safeTokensBought;
+
+        assertEq(presale.getTotalSafeTokensOwed(ALICE), aliceTotalVested);
+
+        uint256 aliceFirstMonthCalculated = (2_000 * aliceTotalVested) / 10_000;
+        uint256 aliceSecondMonthCalculated = (2_000 * aliceTotalVested) / 10_000;
+        uint256 aliceThirdMonthCalculated = (2_000 * aliceTotalVested) / 10_000;
+
+        assertEq(
+            safeToken.balanceOf(ALICE),
+            aliceFirstMonthCalculated + aliceSecondMonthCalculated + aliceThirdMonthCalculated
+        );
     }
 
     function test_mintUsdcAndDepositMultipleAddresses(uint256 numberOfAddress, uint256 amount, bool isSwitchRef)
@@ -498,4 +583,6 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
             counter++;
         }
     }
+
+    //todo: test out stake and vest claiming
 }
