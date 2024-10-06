@@ -48,10 +48,4 @@ contract SafeTokenTest is SafeYieldBaseTest {
         vm.prank(NOT_MINTER);
         safeToken.mint(1_000e18);
     }
-
-    // function testMintShouldFailIfMaxMintAllocExceeded() public {
-    //     vm.expectRevert(abi.encodeWithSelector(SafeToken.SY__MAX_SUPPLY_EXCEEDED.selector));
-    //     vm.prank(address(presale));
-    //     safeToken.mint(1_000e18);
-    // }
 }
