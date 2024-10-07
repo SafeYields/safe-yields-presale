@@ -415,7 +415,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
             SafeCast.toUint128(SafeCast.toUint256(int256(accumulateSafeRewards - _userStake.safeRewardsDebt)));
     }
 
-    //@todo: possible issue with claiming for users??
+    //@todo: should we allow claiming for?
     function claimRewards(address user) public override whenNotPaused {
         if (userStake[user].stakeAmount == 0) return;
 
