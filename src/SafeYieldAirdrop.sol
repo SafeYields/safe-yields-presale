@@ -44,7 +44,7 @@ contract SafeYieldAirdrop is ISafeYieldAirdrop, Ownable2Step, Pausable {
     error SYA__INVALID_AMOUNT();
     error SYA__INVALID_MERKLE_ROOT();
     error SYA__TOKENS_CLAIMED();
-    error SYA__INVALID_CLAIM();
+    error SYA__INVALID_PROOF_LENGTH();
 
     constructor(address _sayToken, address _staking, bytes32 _merkleRoot, address protocolAdmin)
         Ownable(protocolAdmin)
@@ -62,14 +62,14 @@ contract SafeYieldAirdrop is ISafeYieldAirdrop, Ownable2Step, Pausable {
 
     function stakeAndVestSayTokens(uint256 amount, bytes32[] calldata merkleProof) external override whenNotPaused {
         if (amount == 0) revert SYA__INVALID_AMOUNT();
-        if (merkleProof.length == 0) revert SYA__INVALID_PROOF();
+        if (merkleProof.length == 0) revert SYA__INVALID_PROOF_LENGTH();
 
         if (hasClaimed[msg.sender]) revert SYA__TOKENS_CLAIMED();
 
         bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(msg.sender, amount))));
 
         if (!MerkleProof.verify(merkleProof, merkleRoot, leaf)) {
-            revert SYA__INVALID_CLAIM();
+            revert SYA__INVALID_PROOF();
         }
 
         hasClaimed[msg.sender] = true;
