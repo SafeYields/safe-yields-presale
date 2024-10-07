@@ -30,11 +30,10 @@ contract SafeYieldAirdrop is ISafeYieldAirdrop, Ownable2Step, Pausable {
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
-    event AllSayMinted(uint256 indexed amount);
     event SayTokenAddressUpdated(address indexed newSayToken);
     event StakingAddressUpdated(address indexed newStaking);
     event SayTokensClawedBack(address indexed admin, uint256 indexed amount);
-    event sayTokenAirdropClaimed(address indexed user, uint256 indexed amount);
+    event SayTokensStakedAndVested(address indexed receiver, uint256 indexed amount);
     /*//////////////////////////////////////////////////////////////
                                  ERRORS
     //////////////////////////////////////////////////////////////*/
@@ -77,6 +76,8 @@ contract SafeYieldAirdrop is ISafeYieldAirdrop, Ownable2Step, Pausable {
         sayToken.approve(address(staking), amount);
 
         staking.stakeFor(msg.sender, uint128(amount), true);
+
+        emit SayTokensStakedAndVested(msg.sender, amount);
     }
 
     function updateSayToken(address newSayToken) external onlyOwner {

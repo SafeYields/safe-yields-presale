@@ -7,7 +7,7 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { ISafeYieldPreSale } from "./interfaces/ISafeYieldPreSale.sol";
 import { ISafeToken } from "./interfaces/ISafeToken.sol";
-import { StakingEmissionState, PreSaleState, ContractShare } from "./types/SafeTypes.sol";
+import { StakingEmissionState, ContractShare } from "./types/SafeTypes.sol";
 import { ISafeYieldRewardDistributor } from "./interfaces/ISafeYieldRewardDistributor.sol";
 import { SafeYieldTWAP } from "./SafeYieldTWAP.sol";
 import { ISafeYieldStaking } from "./interfaces/ISafeYieldStaking.sol";

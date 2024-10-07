@@ -5,8 +5,7 @@ import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
 import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-import { Ownable2Step } from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import { Ownable2Step, Ownable } from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { ISafeYieldStaking } from "./interfaces/ISafeYieldStaking.sol";
@@ -70,7 +69,6 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
         uint128 indexed referrerCommissionUsdcBps, uint128 indexed referrerCommissionSafeTokenBps
     );
     event UsdcCommissionRedeemed(address indexed referrer, uint128 indexed usdcAmount);
-    event UsdcWithdrawn(address indexed receiver, uint256 indexed amount);
     event TokenPriceSet(uint128 indexed tokenPrice);
     event PreSaleStarted(PreSaleState indexed currentState);
     event PreSaleEnded(PreSaleState indexed currentState);
@@ -107,11 +105,11 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
         _;
     }
 
-    modifier isValidInvestor(address caller) {
+    modifier isValidInvestor() {
         /**
          * @dev check if the referrer has invested
          */
-        if (investorAllocations[caller] == 0) revert SYPS__ZERO_BALANCE();
+        if (investorAllocations[msg.sender] == 0) revert SYPS__ZERO_BALANCE();
 
         _;
     }
@@ -326,7 +324,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
         emit UsdcCommissionRedeemed(msg.sender, uint128(usdcToRedeem));
     }
 
-    function getReferrerID() public view override isValidInvestor(msg.sender) returns (bytes32) {
+    function getReferrerID() public view override isValidInvestor returns (bytes32) {
         return keccak256(abi.encodePacked(msg.sender));
     }
 
@@ -539,7 +537,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
     }
 
     function transferRemainingSayToken(address recipient) external override onlyOwner {
-        //  if (currentPreSaleState != PreSaleState.Ended) revert SYPS__PRESALE_LIVE();
+        if (currentPreSaleState != PreSaleState.Ended) revert SYPS__PRESALE_LIVE();
 
         if (recipient == address(0)) revert SYPS__INVALID_ADDRESS();
 

@@ -9,9 +9,9 @@ import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
 import { RewardToken } from "./types/SafeTypes.sol";
 import { ISafeYieldStaking } from "../src/interfaces/ISafeYieldStaking.sol";
 import { ISafeYieldStakingCallback } from "./interfaces/ISafeYieldStakingCallback.sol";
-import { ISafeYieldTokensDistributorV2 } from "./interfaces/ISafeYieldTokensDistributor.sol";
+import { ISafeYieldTokensDistributor } from "./interfaces/ISafeYieldTokensDistributor.sol";
 
-contract SafeYieldTokenDistributor is ISafeYieldTokensDistributorV2, Ownable2Step, Pausable {
+contract SafeYieldTokenDistributor is ISafeYieldTokensDistributor, Ownable2Step, Pausable {
     using SafeERC20 for IERC20;
 
     /*//////////////////////////////////////////////////////////////

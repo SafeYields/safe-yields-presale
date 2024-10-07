@@ -50,7 +50,6 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
     error SYLU__INVALID_ADDRESS();
     error SYLU__INVALID_AMOUNT();
     error SYLU__NO_SAY_TO_UNLOCK();
-    error SYLU__NOT_PRESALE_OR_AIRDROP();
     error SYLU__ONLY_STAKING();
     error SYLU__CANNOT_CLAIM();
     error SYLU__AGENT_NOT_APPROVED();
@@ -58,11 +57,6 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
     /*//////////////////////////////////////////////////////////////
                                MODIFIERS
     //////////////////////////////////////////////////////////////*/
-    modifier onlyStaking() {
-        if (msg.sender != address(staking)) revert SYLU__ONLY_STAKING();
-        _;
-    }
-
     modifier canClaim() {
         if (safeYieldPresale.currentPreSaleState() != PreSaleState.Ended) revert SYLU__CANNOT_CLAIM();
         _;
@@ -91,9 +85,11 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
         if (block.timestamp >= schedules[user].start + schedules[user].duration) {
             schedules[user].start = uint48(block.timestamp);
             schedules[user].duration = VESTING_DURATION;
+            schedules[user].amountClaimed = 0;
+            schedules[user].totalAmount = uint128(amount);
+        } else {
+            schedules[user].totalAmount += uint128(amount);
         }
-
-        schedules[user].totalAmount += uint128(amount);
 
         emit TokensVestedFor(user, amount);
     }

@@ -5,12 +5,11 @@ import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-import { Ownable2Step } from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import { Ownable2Step, Ownable } from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import { PreSaleState, Stake, StakingEmissionState } from "./types/SafeTypes.sol";
+import { PreSaleState, Stake } from "./types/SafeTypes.sol";
 import { ISafeYieldStaking } from "./interfaces/ISafeYieldStaking.sol";
 import { ISafeYieldLockUp } from "./interfaces/ISafeYieldLockUp.sol";
 import { ISafeYieldPreSale } from "./interfaces/ISafeYieldPreSale.sol";
@@ -53,7 +52,6 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
     uint128 public safeAccumulatedRewardsPerStake; //@dev accumulated safe per safe staked.
     uint128 public override totalStaked;
     uint48 public lastUpdateRewardsTimestamp;
-    uint256 public lastSafeTokenBalance;
     uint256 public lastUsdcBalance;
 
     mapping(address user => Stake stake) public userStake;
@@ -63,9 +61,6 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
     event Staked(address indexed user, uint128 indexed amount);
-    event AutoStakedFor(
-        address indexed investor, uint128 indexed investorAmount, address indexed referrer, uint128 referrerAmount
-    );
     event UnStaked(address indexed user, uint128 indexed amount);
     event RewardsClaimed(address indexed user, uint128 indexed safeRewards, uint128 indexed usdcRewards);
     event RewardDistributorSet(address indexed distributor);
@@ -105,11 +100,6 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
 
     modifier onlySafeYieldLockUp() {
         if (msg.sender != address(safeYieldLockUp)) revert SYST__ONLY_LOCKUP();
-        _;
-    }
-
-    modifier onlySafeYieldPresale() {
-        if (msg.sender != address(safeYieldPresale)) revert SYST__ONLY_PRESALE();
         _;
     }
 
