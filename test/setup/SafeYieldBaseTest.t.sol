@@ -11,7 +11,7 @@ import { SafeYieldRewardDistributorMock } from "../mocks/SafeYieldRewardDistribu
 import { SafeYieldPresale } from "src/SafeYieldPresale.sol";
 import { SafeYieldStaking } from "src/SafeYieldStaking.sol";
 import { CoreContributorsLockUp } from "src/CoreContributorsLockUp.sol";
-import { SafeYieldTokenDistributor } from "src/SafeYieldTokenDistributorV2.sol";
+import { SafeYieldTokenDistributor } from "src/SafeYieldTokenDistributor.sol";
 import { SafeYieldLockUp } from "src/SafeYieldLockUp.sol";
 import { SafeYieldAirdrop } from "src/SafeYieldAirdrop.sol";
 import { SafeYieldTWAP } from "src/SafeYieldTWAP.sol";

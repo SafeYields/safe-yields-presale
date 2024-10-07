@@ -3,7 +3,6 @@ pragma solidity 0.8.26;
 
 import { console } from "forge-std/Test.sol";
 import { SafeYieldPresale } from "src/SafeYieldPresale.sol";
-import { PreSaleState } from "src/types/SafeTypes.sol";
 import { SafeYieldBaseTest } from "./setup/SafeYieldBaseTest.t.sol";
 import { SafeYieldStaking, Stake } from "src/SafeYieldStaking.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";

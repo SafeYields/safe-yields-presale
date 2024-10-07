@@ -4,7 +4,6 @@ pragma solidity 0.8.26;
 
 import { SafeYieldBaseTest } from "./setup/SafeYieldBaseTest.t.sol";
 import { SafeToken } from "src/SafeToken.sol";
-import { console } from "forge-std/Test.sol";
 
 contract SafeTokenTest is SafeYieldBaseTest {
     /**

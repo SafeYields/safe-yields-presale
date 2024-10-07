@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
-import { console } from "forge-std/Test.sol";
 import { SafeYieldAirdrop } from "src/SafeYieldAirdrop.sol";
-import { PreSaleState } from "src/types/SafeTypes.sol";
 import { SafeYieldBaseTest } from "./setup/SafeYieldBaseTest.t.sol";
 
 contract SafeYieldAirdropTest is SafeYieldBaseTest {
@@ -24,6 +22,11 @@ contract SafeYieldAirdropTest is SafeYieldBaseTest {
     }
 
     function testShouldFailIfUserAlreadyClaimed() public {
+        //end presale
+        vm.startPrank(protocolAdmin);
+        presale.endPresale();
+        vm.stopPrank();
+
         vm.prank(protocolAdmin);
         presale.transferRemainingSayToken(address(airdrop));
 
@@ -56,6 +59,11 @@ contract SafeYieldAirdropTest is SafeYieldBaseTest {
     }
 
     function testStakeAndVest() public {
+        //end presale
+        vm.startPrank(protocolAdmin);
+        presale.endPresale();
+        vm.stopPrank();
+
         vm.prank(protocolAdmin);
         presale.transferRemainingSayToken(address(airdrop));
 
@@ -65,11 +73,6 @@ contract SafeYieldAirdropTest is SafeYieldBaseTest {
 
         vm.prank(ALICE);
         airdrop.stakeAndVestSayTokens(1_000e18, aliceMerkleProof);
-
-        //end presale
-        vm.startPrank(protocolAdmin);
-        presale.endPresale();
-        vm.stopPrank();
 
         /**
          * alice claims after 1.5 month
