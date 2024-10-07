@@ -268,15 +268,15 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
     }
 
     function testStakeSafeTokensForNoVest() public startEndPresale {
+        vm.prank(protocolAdmin);
+        staking.setLpAddress(makeAddr("safeYieldLP"));
+        vm.stopPrank();
+
         _transferSafeTokens(protocolAdmin, 10_000e18);
 
         vm.startPrank(protocolAdmin);
         safeToken.approve(address(staking), 5_000e18);
         staking.stakeFor(ALICE, 2_000e18, false);
-        vm.stopPrank();
-
-        vm.prank(protocolAdmin);
-        staking.setLpAddress(makeAddr("safeYieldLP"));
         vm.stopPrank();
 
         skip(1 days);
@@ -494,10 +494,7 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
     function testFuzz_StakeFor(address user, uint256 amount) public startEndPresale {
         amount = bound(amount, 2e18, 10_000e18);
 
-        vm.assume(user != address(0));
-        vm.assume(user != address(staking));
-        vm.assume(user != protocolAdmin);
-        vm.assume(safeToken.balanceOf(user) == 0);
+        user = makeAddr("userA");
 
         _transferSafeTokens(protocolAdmin, 10_000e18);
 
@@ -527,10 +524,8 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         vm.stopPrank();
 
         amount = bound(amount, 2e18, 100_000e18);
-
-        vm.assume(userA != address(0));
-        vm.assume(userB != address(0));
-        vm.assume(userA != userB);
+        userA = makeAddr("userA");
+        userB = makeAddr("userB");
 
         _transferSafeTokens(userA, uint128(amount));
         _transferSafeTokens(userB, uint128(amount / 2));
@@ -565,9 +560,8 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
 
         amount = bound(amount, 2e18, 100_000e18);
 
-        vm.assume(userA != address(0));
-        vm.assume(userB != address(0));
-        vm.assume(userA != userB);
+        userA = makeAddr("userA");
+        userB = makeAddr("userB");
 
         _transferSafeTokens(userA, uint128(amount));
         _transferSafeTokens(userB, uint128(amount / 2));
@@ -616,11 +610,8 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         vm.stopPrank();
 
         amount = bound(amount, 2e18, 1_000_000e18);
-
-        vm.assume(userA != address(0));
-        vm.assume(userB != address(0));
-        vm.assume(userA != userB);
-        vm.assume(userB != address(staking));
+        userA = makeAddr("userA");
+        userB = makeAddr("userB");
 
         uint256 userBAmount = amount.mulDiv(1, 2, Math.Rounding.Ceil);
 
@@ -653,8 +644,8 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         uint256 userBcalculatedPendingRewards =
             (userBAmount).mulDiv(6_000e6, staking.totalStaked(), Math.Rounding.Floor);
 
-        assertApproxEqAbs(pendingRewardsUserA, userAcalculatedPendingRewards, 1e6);
-        assertApproxEqAbs(pendingRewardsUserB, userBcalculatedPendingRewards, 1e6);
+        assertApproxEqAbs(pendingRewardsUserA, userAcalculatedPendingRewards, 1e6, "user A pending rewards invalid");
+        assertApproxEqAbs(pendingRewardsUserB, userBcalculatedPendingRewards, 1e6, "user B pending rewards invalid");
 
         uint256 userAUsdcBalancePrior = usdc.balanceOf(userA);
         uint256 userBUsdcBalancePrior = usdc.balanceOf(userB);
@@ -667,8 +658,18 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
 
         assertEq(safeToken.balanceOf(userA), userASafeBalancePrior + amount);
         assertEq(safeToken.balanceOf(userB), userBSafeBalancePrior + userBAmount);
-        assertApproxEqAbs(usdc.balanceOf(userA), userAcalculatedPendingRewards + userAUsdcBalancePrior, 1e6);
-        assertApproxEqAbs(usdc.balanceOf(userB), userBcalculatedPendingRewards + userBUsdcBalancePrior, 1e6);
+        assertApproxEqAbs(
+            usdc.balanceOf(userA),
+            userAcalculatedPendingRewards + userAUsdcBalancePrior,
+            1e6,
+            "user A pending rewards invalid"
+        );
+        assertApproxEqAbs(
+            usdc.balanceOf(userB),
+            userBcalculatedPendingRewards + userBUsdcBalancePrior,
+            1e6,
+            "user B pending rewards invalid"
+        );
     }
 
     function testFuzz_UnStakeTokensWithSafeRewardsAvailable(address userA, address userB, uint256 amount)
@@ -686,11 +687,8 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         vm.stopPrank();
 
         amount = bound(amount, 2e18, 1_000_000e18);
-
-        vm.assume(userA != address(0));
-        vm.assume(userB != address(0));
-        vm.assume(userA != userB);
-        vm.assume(userB != address(staking));
+        userA = makeAddr("userA");
+        userB = makeAddr("userB");
 
         uint256 userBAmount = amount.mulDiv(1, 2, Math.Rounding.Ceil);
 

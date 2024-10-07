@@ -384,7 +384,6 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
          */
         skip(45 * 24 * 60 * 60 seconds);
 
-        vm.startPrank(ALICE);
         //claim safe tokens
         /**
          * 20% of SAFE tokens are unlocked each month.
@@ -402,6 +401,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         uint256 aliceFirstMonthCalculated = (2_000 * aliceTotalStaked) / 10_000;
         uint256 aliceSecondMonthCalculated = (1_000 * aliceTotalStaked) / 10_000;
 
+        vm.startPrank(ALICE);
         safeYieldLockUp.unlockSayTokens();
         vm.stopPrank();
 
@@ -583,6 +583,4 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
             counter++;
         }
     }
-
-    //todo: test out stake and vest claiming
 }
