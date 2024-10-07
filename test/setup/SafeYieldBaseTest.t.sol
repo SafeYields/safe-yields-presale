@@ -13,7 +13,7 @@ import { SafeYieldStaking } from "src/SafeYieldStaking.sol";
 import { CoreContributorsLockUp } from "src/CoreContributorsLockUp.sol";
 import { SafeYieldTokenDistributor } from "src/SafeYieldTokenDistributorV2.sol";
 import { SafeYieldLockUp } from "src/SafeYieldLockUp.sol";
-
+import { SafeYieldAirdrop } from "src/SafeYieldAirdrop.sol";
 import { SafeYieldTWAP } from "src/SafeYieldTWAP.sol";
 import { IUniswapV3Factory } from "src/uniswapV3/interfaces/IUniswapV3Factory.sol";
 import { IUniswapV3Pool } from "src/uniswapV3/interfaces/IUniswapV3Pool.sol";
@@ -45,12 +45,14 @@ abstract contract SafeYieldBaseTest is Test {
     address public NOT_ADMIN = makeAddr("notAdmin");
     address public NOT_MINTER = makeAddr("notMinter");
     address public USDC_WHALE = 0x4B16c5dE96EB2117bBE5fd171E4d203624B014aa;
+    bytes32 public merkleRoot = 0x09d4267a42b2b82ffc3599f877a3305637af8394f4d19ffb1fafdc9ab482c47b;
 
     SafeYieldRewardDistributorMock public distributor;
     SafeYieldLockUp public safeYieldLockUp;
     CoreContributorsLockUp public contributorLockUp;
     SafeYieldPresale public presale;
     SafeYieldStaking public staking;
+    SafeYieldAirdrop public airdrop;
     SafeYieldTWAP public twap;
     SafeToken public safeToken;
     USDCMockToken public usdc;
@@ -104,6 +106,8 @@ abstract contract SafeYieldBaseTest is Test {
             address(safeToken), address(usdc), teamOperations, usdcBuyback, address(staking), address(twap)
         );
 
+        airdrop = new SafeYieldAirdrop(address(safeToken), address(staking), merkleRoot, protocolAdmin);
+
         contributorLockUp = new CoreContributorsLockUp(protocolAdmin, address(safeToken));
 
         safeToken.setAllocationLimit(address(distributor), STAKING_MAX_SUPPLY);
@@ -116,6 +120,8 @@ abstract contract SafeYieldBaseTest is Test {
 
         staking.approveStakingAgent(address(presale), true);
         staking.approveStakingAgent(protocolAdmin, true);
+        staking.approveStakingAgent(address(airdrop), true);
+
         staking.setLockUp(address(safeYieldLockUp));
 
         contributorLockUp.mintSayAllocation();

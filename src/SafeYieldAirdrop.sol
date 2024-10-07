@@ -66,7 +66,9 @@ contract SafeYieldAirdrop is ISafeYieldAirdrop, Ownable2Step, Pausable {
 
         if (hasClaimed[msg.sender]) revert SYA__TOKENS_CLAIMED();
 
-        if (!MerkleProof.verify(merkleProof, merkleRoot, keccak256(abi.encodePacked(msg.sender, amount)))) {
+        bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(msg.sender, amount))));
+
+        if (!MerkleProof.verify(merkleProof, merkleRoot, leaf)) {
             revert SYA__INVALID_CLAIM();
         }
 
