@@ -80,6 +80,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
     event AllocationsPerWalletSet(uint128 indexed minAllocationPerWallet, uint128 indexed maxAllocationPerWallet);
     event SafeTokenUpdated(address indexed newSafeToken);
     event SafeStakingUpdated(address indexed newStaking);
+    event RemainingSayTokensTransferred(address indexed recipient, uint256 indexed remainingBalance);
     /*//////////////////////////////////////////////////////////////
                                  ERRORS
     //////////////////////////////////////////////////////////////*/
@@ -96,7 +97,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
     error SYPS__PRESALE_NOT_LIVE();
     error SYPS__INVALID_ADDRESS();
     error SYPS__ZERO_BALANCE();
-    error SYPS__NO_UNLOCK();
+    error SYPS__PRESALE_LIVE();
 
     /*//////////////////////////////////////////////////////////////
                                MODIFIERS
@@ -535,5 +536,19 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
         safeToken.mint(PRE_SALE_CAP);
 
         emit PreSaleAllocationsMinted(PRE_SALE_CAP);
+    }
+
+    function transferRemainingSayToken(address recipient) external override onlyOwner {
+        //  if (currentPreSaleState != PreSaleState.Ended) revert SYPS__PRESALE_LIVE();
+
+        if (recipient == address(0)) revert SYPS__INVALID_ADDRESS();
+
+        uint256 remainingBalance = safeToken.balanceOf(address(this));
+
+        if (remainingBalance != 0) {
+            safeToken.transfer(recipient, remainingBalance);
+        }
+
+        emit RemainingSayTokensTransferred(recipient, remainingBalance);
     }
 }

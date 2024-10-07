@@ -18,6 +18,8 @@ interface ISafeYieldPreSale {
 
     function setTokenPrice(uint128 _price) external;
 
+    function transferRemainingSayToken(address recipient) external;
+
     function getReferrerID() external view returns (bytes32);
 
     function setProtocolMultisig(address _protocolMultisig) external;
