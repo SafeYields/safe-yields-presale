@@ -5,7 +5,7 @@ import { console } from "forge-std/Test.sol";
 import { SafeYieldPresale } from "src/SafeYieldPresale.sol";
 import { PreSaleState } from "src/types/SafeTypes.sol";
 import { SafeYieldBaseTest } from "./setup/SafeYieldBaseTest.t.sol";
-import { SafeYieldStaking } from "src/SafeYieldStaking.sol";
+import { SafeYieldStaking, Stake } from "src/SafeYieldStaking.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
 contract SafeYieldStakingTest is SafeYieldBaseTest {
@@ -487,6 +487,53 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         assertEq(pendingRewardsBob2, pendingRewardsBob3);
     }
 
+    function testStakePOC_RewardsDebtCalculations() public startEndPresale {
+        vm.prank(protocolAdmin);
+        staking.setLpAddress(makeAddr("safeYieldLP"));
+        vm.stopPrank();
+
+        _transferSafeTokens(ALICE, 10_000e18);
+        _transferSafeTokens(BOB, 10_000e18);
+
+        skip(5 minutes);
+
+        vm.prank(protocolAdmin);
+        usdc.mint(address(distributor), 10_000e6);
+
+        skip(5 minutes);
+
+        vm.startPrank(ALICE);
+        safeToken.approve(address(staking), 10_000e18);
+        staking.stake(1_000e18);
+        vm.stopPrank();
+
+        Stake memory aliceStake = staking.getUserStake(ALICE);
+
+        console.log("alice reward debt", uint256(int256(aliceStake.usdcRewardsDebt)));
+
+        skip(5 minutes);
+
+        vm.startPrank(BOB);
+        safeToken.approve(address(staking), 10_000e18);
+        staking.stake(1_000e18);
+        vm.stopPrank();
+
+        Stake memory bobStake = staking.getUserStake(BOB);
+
+        console.log("bob reward debt", uint256(int256(bobStake.usdcRewardsDebt)));
+
+        skip(10 days);
+
+        vm.prank(protocolAdmin);
+        usdc.mint(address(distributor), 10_000e6);
+
+        (uint128 pendingUsdcRewardsAlice,,,) = staking.calculatePendingRewards(address(ALICE));
+        (uint128 pendingUsdcRewardsBob,,,) = staking.calculatePendingRewards(address(BOB));
+
+        console.log("Alice pending usdc rewards", pendingUsdcRewardsAlice);
+        console.log("Bob pending usdc rewards", pendingUsdcRewardsBob);
+    }
+
     /*//////////////////////////////////////////////////////////////
                                FUZZ TESTS
     //////////////////////////////////////////////////////////////*/
@@ -705,8 +752,8 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         staking.stake(uint128(userBAmount));
         vm.stopPrank();
 
-        uint256 userASafeBalancePrior = safeToken.balanceOf(userA);
-        uint256 userBSafeBalancePrior = safeToken.balanceOf(userB);
+        // uint256 userASafeBalancePrior = safeToken.balanceOf(userA);
+        // uint256 userBSafeBalancePrior = safeToken.balanceOf(userB);
 
         skip(10 minutes);
         usdc.mint(address(distributor), 10_000e6);
