@@ -4,7 +4,7 @@
 
 SAY Staking
 Allow protocol approved addresses to stake for anyone.
-Integrate with token distributor contract(s), using callback hooks to update these contracts of stake and unstake operations.
+Integrate with token distributor contract(s), using callback hooks to update these contracts of stake and unstake operations.??
 UnStaking should not be possible while presale / IDO is live.
 
 SAY is staked
@@ -18,20 +18,6 @@ User buys say tokens:
 
 1. tokens gets staked and vested
 
-After 
-## Airdrop flow:
+Tests:
 
-In Airdrop contract:
-claimSayToken-> vest tokens -> stake tokens
-
-Claim tokens:
-In vesting contract:
-claimAndUnstakeSayTokens -> unlock vest Amount -> unstake amount
-
-## Presale Flow:
-
-buy tokens -> vest tokens -> stake tokens
-
-claim tokens :
-
-unlock amount -> unstake amount
+- test for revesting
