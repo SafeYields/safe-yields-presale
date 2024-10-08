@@ -7,6 +7,7 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeMockToken } from "../mocks/SafeMockToken.sol";
 import { SafeToken } from "src/SafeToken.sol";
 import { USDCMockToken } from "../mocks/USDCMockToken.sol";
+import { RewardMockToken } from "../mocks/RewardMockToken.sol";
 import { SafeYieldRewardDistributorMock } from "../mocks/SafeYieldRewardDistributorMock.sol";
 import { SafeYieldPresale } from "src/SafeYieldPresale.sol";
 import { SafeYieldStaking } from "src/SafeYieldStaking.sol";
@@ -56,6 +57,7 @@ abstract contract SafeYieldBaseTest is Test {
     SafeYieldTWAP public twap;
     SafeToken public safeToken;
     USDCMockToken public usdc;
+    RewardMockToken rewardToken;
     GMXHandler gmxHandler;
 
     error AccessControlUnauthorizedAccount(address account, bytes32 neededRole);
@@ -80,6 +82,9 @@ abstract contract SafeYieldBaseTest is Test {
     function setUp() public virtual {
         vm.startPrank(protocolAdmin);
         usdc = new USDCMockToken("USDC", "USDC", 6);
+
+        rewardToken = new RewardMockToken("RewardToken", "RT", 6);
+
         safeToken = new SafeToken();
 
         staking = new SafeYieldStaking(address(safeToken), address(usdc));
@@ -138,6 +143,8 @@ abstract contract SafeYieldBaseTest is Test {
         distributor.updateSafePool(address(0));
 
         _mintUsdc2Users();
+
+        rewardToken.mint(protocolAdmin, 10_000e18);
 
         vm.stopPrank();
     }
