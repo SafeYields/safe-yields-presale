@@ -6,7 +6,7 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
 
-import { RewardToken } from "./types/SafeTypes.sol";
+import { RewardToken, Rewards } from "./types/SafeTypes.sol";
 import { ISafeYieldStaking } from "../src/interfaces/ISafeYieldStaking.sol";
 import { ISafeYieldStakingCallback } from "./interfaces/ISafeYieldStakingCallback.sol";
 import { ISafeYieldTokensDistributor } from "./interfaces/ISafeYieldTokensDistributor.sol";
@@ -33,6 +33,7 @@ contract SafeYieldTokenDistributor is ISafeYieldTokensDistributor, Ownable2Step,
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
     event RewardDeposited(address indexed owner, address indexed rewardAsset, uint256 indexed amount);
+    event RewardsClaimed(address indexed user, address indexed rewardAsset, uint256 indexed _pendingReward);
 
     /*//////////////////////////////////////////////////////////////
                                  ERROR
@@ -104,8 +105,6 @@ contract SafeYieldTokenDistributor is ISafeYieldTokensDistributor, Ownable2Step,
             //unstaking
             uint256 _withdrawn = _userLastsSayBalance - _userBalance;
 
-            ///NB: @dev if a user trigger an operation which would reduce their bPls balance, should we claim their rewards?
-
             address[] memory _rewardTokens = allRewardTokens;
 
             for (uint256 i; i < _rewardTokens.length; i++) {
@@ -117,6 +116,95 @@ contract SafeYieldTokenDistributor is ISafeYieldTokensDistributor, Ownable2Step,
 
             lastStakeBalance[_user] = _userBalance;
         }
+    }
+
+    function claimRewards(address rewardAsset) external override {
+        if (rewardAsset == address(0)) revert SYTD__INVALID_ADDRESS();
+
+        uint256 _pendingReward = pendingRewards(msg.sender, rewardAsset);
+
+        if (_pendingReward != 0) {
+            userTokenRewardDebt[msg.sender][rewardAsset] =
+                int256(_calculateAccRewards(rewardTokens[rewardAsset].accRewardPerShare, lastStakeBalance[msg.sender]));
+
+            IERC20(rewardAsset).safeTransfer(msg.sender, _pendingReward);
+
+            emit RewardsClaimed(msg.sender, rewardAsset, _pendingReward);
+        }
+    }
+
+    function getUserRewardDebt(address user, address rewardAsset) external view override returns (int256) {
+        return userTokenRewardDebt[user][rewardAsset];
+    }
+
+    function claimAllRewards() external override {
+        address[] memory _rewardTokens = allRewardTokens;
+
+        for (uint256 i; i < _rewardTokens.length; i++) {
+            address _rewardToken = _rewardTokens[i];
+
+            uint256 _pendingReward = pendingRewards(msg.sender, _rewardToken);
+
+            if (_pendingReward != 0) {
+                userTokenRewardDebt[msg.sender][_rewardToken] = int256(
+                    _calculateAccRewards(rewardTokens[_rewardToken].accRewardPerShare, lastStakeBalance[msg.sender])
+                );
+
+                IERC20(_rewardToken).safeTransfer(msg.sender, _pendingReward);
+
+                emit RewardsClaimed(msg.sender, _rewardToken, _pendingReward);
+            }
+        }
+    }
+
+    function pendingRewards(address user, address rewardAsset) public view returns (uint256) {
+        uint256 _accRewardPerShare = rewardTokens[rewardAsset].accRewardPerShare;
+
+        return uint256(
+            int256(_calculateAccRewards(_accRewardPerShare, lastStakeBalance[user]))
+                - userTokenRewardDebt[user][rewardAsset]
+        );
+    }
+
+    function allPendingRewards(address user) external view override returns (Rewards[] memory) {
+        address[] memory _rewardTokens = allRewardTokens;
+        uint256 tokenCount = _rewardTokens.length;
+
+        Rewards[] memory _pendingRewards = new Rewards[](tokenCount);
+
+        for (uint256 i; i < tokenCount; i++) {
+            address _rewardToken = _rewardTokens[i];
+
+            uint256 _rewards = pendingRewards(user, _rewardToken);
+
+            _pendingRewards[i] = Rewards(_rewardToken, _rewards);
+        }
+
+        return _pendingRewards;
+    }
+
+    function retrieve(address token, uint256 amount) external override onlyOwner {
+        if ((address(this).balance) != 0) {
+            payable(owner()).transfer(address(this).balance);
+        }
+
+        IERC20(token).transfer(owner(), amount);
+    }
+
+    function getRewardTokens(address yieldAsset) external view returns (RewardToken memory) {
+        return rewardTokens[yieldAsset];
+    }
+
+    function getAllRewardTokens() external view override returns (address[] memory) {
+        return allRewardTokens;
+    }
+
+    function getLastStakeBalance(address user) external view returns (uint256) {
+        return lastStakeBalance[user];
+    }
+
+    function existingLastStakeBalance(address user) public view returns (uint256) {
+        return lastStakeBalance[user] != 0 ? lastStakeBalance[user] : IERC20(address(staking)).balanceOf(user);
     }
 
     function _calculateAccRewards(uint256 _accRewardPerShare, uint256 _amount) private pure returns (uint256) {

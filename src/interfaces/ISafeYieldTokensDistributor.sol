@@ -3,24 +3,25 @@
 pragma solidity 0.8.26;
 
 import { ISafeYieldStakingCallback } from "./ISafeYieldStakingCallback.sol";
+import { Rewards } from "../types/SafeTypes.sol";
 
 interface ISafeYieldTokensDistributor is ISafeYieldStakingCallback {
     event HandleActionBefore(address indexed user, bytes4 selector);
     event HandleActionAfter(address indexed user, bytes4 selector);
 
-    // function approveRewardTokens(address[] calldata tokens) external;
+    function retrieve(address token, uint256 amount) external;
 
-    // function pause() external;
+    function getUserRewardDebt(address user, address rewardAsset) external view returns (int256);
 
-    // function unpause() external;
+    function getAllRewardTokens() external view returns (address[] memory);
 
-    // function updateStaking(address newStaking) external;
-
-    // function claimRewards() external;
-
-    // function pendingRewards(address user) external view returns (uint256[] memory pendingTokenRewards);
+    function allPendingRewards(address user) external view returns (Rewards[] memory);
 
     function depositReward(address[] calldata rewardAssets, uint128[] calldata amounts) external;
+
+    function claimAllRewards() external;
+
+    function claimRewards(address rewardAsset) external;
 
     function handleActionBefore(address _user, bytes4 _selector) external;
 
