@@ -62,3 +62,8 @@ struct RewardToken {
     uint256 accRewardPerShare;
     bool isRewardToken;
 }
+
+struct Rewards {
+    address yieldToken;
+    uint256 amount;
+}
