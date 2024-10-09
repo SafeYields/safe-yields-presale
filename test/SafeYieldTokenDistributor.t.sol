@@ -267,8 +267,6 @@ contract SafeYieldTokenDistributorTest is SafeYieldBaseTest {
          * Alice :666.66
          * bob : 333.33
          */
-        //todo add assertions
+        // add assertions
     }
-
-    //todo: multiple assets.
 }
