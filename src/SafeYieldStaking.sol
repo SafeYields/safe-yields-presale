@@ -150,6 +150,8 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
 
         emit Staked(user, amount);
     }
+    //TODO: unstake vested
+    //pull ssay vested from lockup and unstake
 
     //@note needed??
     function unStakeFor(address user, uint128 amount) external override onlySafeYieldLockUp {

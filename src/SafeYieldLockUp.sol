@@ -26,6 +26,7 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
+    //! change to sSayToken
     IERC20 public sayToken;
     ISafeYieldStaking public staking;
     ISafeYieldPreSale public safeYieldPresale;
@@ -67,6 +68,15 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
         _;
     }
 
+    /**
+     * TODO
+     * during presale, no vesting start date is known.
+     * For each user buying then, their vesting start date is 0
+     * Once IDO has started, admin should set the start date.
+     * All users who bought during presale will have their tokens start vesting at this date.
+     *
+     * After IDO is live, use block timestamp as start date for new users.
+     */
     constructor(address protocolAdmin, address _presale, address _sayToken, address _staking) Ownable(protocolAdmin) {
         if (protocolAdmin == address(0) || _sayToken == address(0) || _presale == address(0) || _staking == address(0))
         {
@@ -108,12 +118,13 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
         if (sayTokensAvailable == 0) revert SYLU__NO_SAY_TO_UNLOCK();
 
         schedules[msg.sender].amountClaimed += uint128(sayTokensAvailable);
-
+        //!remove, transfer to staker
         staking.unStakeFor(msg.sender, uint128(sayTokensAvailable));
 
         emit SayTokensClaimed(msg.sender, sayTokensAvailable);
     }
 
+    //! remove
     function updateSayToken(address newSayToken) external override onlyOwner {
         if (newSayToken == address(0)) revert SYLU__INVALID_ADDRESS();
 
@@ -130,6 +141,7 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
         emit StakingAddressUpdated(newStaking);
     }
 
+    //! remove
     function updatePreSale(address newPresale) external override onlyOwner {
         if (newPresale == address(0)) revert SYLU__INVALID_ADDRESS();
 
