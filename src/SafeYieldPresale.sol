@@ -8,6 +8,7 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Ownable2Step, Ownable } from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import { ISafeYieldConfigs } from "./interfaces/ISafeYieldConfigs.sol";
 import { ISafeYieldStaking } from "./interfaces/ISafeYieldStaking.sol";
 import { ISafeYieldPreSale } from "./interfaces/ISafeYieldPreSale.sol";
 
@@ -35,8 +36,8 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
     PreSaleState public currentPreSaleState;
-    ISafeYieldStaking public safeYieldStaking;
     ISafeToken public safeToken;
+    ISafeYieldConfigs public safeYieldConfig;
     address public protocolMultisig;
     uint128 public totalSold;
     uint128 public minAllocationPerWallet;
@@ -117,7 +118,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
     constructor(
         address _safeToken,
         address _usdcToken,
-        address _safeYieldStaking,
+        address _safeYieldConfigs,
         uint128 _minAllocationPerWallet,
         uint128 _maxAllocationPerWallet,
         uint128 _tokenPrice,
@@ -136,7 +137,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
         if (_tokenPrice == 0) revert SYPS__INVALID_TOKEN_PRICE();
 
         if (
-            _safeToken == address(0) || _usdcToken == address(0) || _safeYieldStaking == address(0)
+            _safeToken == address(0) || _usdcToken == address(0) || _safeYieldConfigs == address(0)
                 || _protocolMultisig == address(0)
         ) {
             revert SYPS__INVALID_ADDRESS();
@@ -147,7 +148,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
         safeToken = ISafeToken(_safeToken);
         usdcToken = IERC20(_usdcToken);
 
-        safeYieldStaking = ISafeYieldStaking(_safeYieldStaking);
+        safeYieldConfig = ISafeYieldConfigs(_safeYieldConfigs);
 
         minAllocationPerWallet = _minAllocationPerWallet;
         maxAllocationPerWallet = _maxAllocationPerWallet;
@@ -252,22 +253,6 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
         tokenPrice = _price;
 
         emit TokenPriceSet(_price);
-    }
-
-    function updateSafeToken(address _newSafeToken) external override onlyOwner {
-        if (_newSafeToken == address(0)) revert SYPS__INVALID_ADDRESS();
-
-        safeToken = ISafeToken(_newSafeToken);
-
-        emit SafeTokenUpdated(_newSafeToken);
-    }
-
-    function updateSafeStaking(address _newStaking) external override onlyOwner {
-        if (_newStaking == address(0)) revert SYPS__INVALID_ADDRESS();
-
-        safeYieldStaking = ISafeYieldStaking(_newStaking);
-
-        emit SafeStakingUpdated(_newStaking);
     }
 
     /**
@@ -514,6 +499,8 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
         //create refID.
         buyerReferrerId = getReferrerID();
         referrerInfo[buyerReferrerId].referrer = msg.sender;
+
+        ISafeYieldStaking safeYieldStaking = safeYieldConfig.safeYieldStaking();
 
         safeToken.approve(address(safeYieldStaking), totalSafeTokensToStake);
 

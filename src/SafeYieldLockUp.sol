@@ -5,10 +5,10 @@ pragma solidity 0.8.26;
 import { ISafeYieldStaking } from "./interfaces/ISafeYieldStaking.sol";
 import { ISafeYieldLockUp } from "./interfaces/ISafeYieldLockUp.sol";
 import { ISafeYieldPreSale } from "./interfaces/ISafeYieldPreSale.sol";
+import { ISafeYieldConfigs } from "./interfaces/ISafeYieldConfigs.sol";
 import { VestingSchedule, PreSaleState } from "./types/SafeTypes.sol";
 
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
-import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Ownable, Ownable2Step } from "@openzeppelin/contracts/access/Ownable2Step.sol";
@@ -26,11 +26,7 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
-    //! change to sSayToken
-    IERC20 public sayToken;
-    ISafeYieldStaking public staking;
-    ISafeYieldPreSale public safeYieldPresale;
-
+    ISafeYieldConfigs configs;
     uint48 public unlockPercentagePerMonth = 2_000; //20%
     mapping(address user => VestingSchedule schedule) public schedules;
     mapping(address user => bool approved) public approvedVestingAgents;
@@ -58,8 +54,8 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
     /*//////////////////////////////////////////////////////////////
                                MODIFIERS
     //////////////////////////////////////////////////////////////*/
-    modifier canClaim() {
-        if (safeYieldPresale.currentPreSaleState() != PreSaleState.Ended) revert SYLU__CANNOT_CLAIM();
+    modifier onlyStaking() {
+        if (msg.sender != address(configs.safeYieldStaking())) revert SYLU__ONLY_STAKING();
         _;
     }
 
@@ -77,15 +73,10 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
      *
      * After IDO is live, use block timestamp as start date for new users.
      */
-    constructor(address protocolAdmin, address _presale, address _sayToken, address _staking) Ownable(protocolAdmin) {
-        if (protocolAdmin == address(0) || _sayToken == address(0) || _presale == address(0) || _staking == address(0))
-        {
-            revert SYLU__INVALID_ADDRESS();
-        }
+    constructor(address protocolAdmin, address safeYieldConfig) Ownable(protocolAdmin) {
+        if (protocolAdmin == address(0) || safeYieldConfig == address(0)) revert SYLU__INVALID_ADDRESS();
 
-        sayToken = IERC20(_sayToken);
-        staking = ISafeYieldStaking(_staking);
-        safeYieldPresale = ISafeYieldPreSale(_presale);
+        configs = ISafeYieldConfigs(safeYieldConfig);
     }
 
     function vestFor(address user, uint256 amount) external override whenNotPaused isValidVestingAgent {
@@ -93,7 +84,7 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
         if (amount == 0) revert SYLU__INVALID_AMOUNT();
 
         if (block.timestamp >= schedules[user].start + schedules[user].duration) {
-            schedules[user].start = uint48(block.timestamp);
+            schedules[user].start = configs.vestStartTime();
             schedules[user].duration = VESTING_DURATION;
             schedules[user].amountClaimed = 0;
             schedules[user].totalAmount = uint128(amount);
@@ -112,42 +103,12 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
         emit VestingAgentApproved(agent, isApproved);
     }
 
-    function unlockSayTokens() external override whenNotPaused canClaim {
-        uint256 sayTokensAvailable = unlockedSayAmount(msg.sender);
+    function unlockStakedSayTokensFor(address user) external onlyStaking returns (uint256 stakedSayTokensAvailable) {
+        stakedSayTokensAvailable = unlockedStakedSayToken(user);
 
-        if (sayTokensAvailable == 0) revert SYLU__NO_SAY_TO_UNLOCK();
+        if (stakedSayTokensAvailable == 0) revert SYLU__NO_SAY_TO_UNLOCK();
 
-        schedules[msg.sender].amountClaimed += uint128(sayTokensAvailable);
-        //!remove, transfer to staker
-        staking.unStakeFor(msg.sender, uint128(sayTokensAvailable));
-
-        emit SayTokensClaimed(msg.sender, sayTokensAvailable);
-    }
-
-    //! remove
-    function updateSayToken(address newSayToken) external override onlyOwner {
-        if (newSayToken == address(0)) revert SYLU__INVALID_ADDRESS();
-
-        sayToken = IERC20(newSayToken);
-
-        emit SayTokenAddressUpdated(newSayToken);
-    }
-
-    function updateStaking(address newStaking) external override onlyOwner {
-        if (newStaking == address(0)) revert SYLU__INVALID_ADDRESS();
-
-        staking = ISafeYieldStaking(newStaking);
-
-        emit StakingAddressUpdated(newStaking);
-    }
-
-    //! remove
-    function updatePreSale(address newPresale) external override onlyOwner {
-        if (newPresale == address(0)) revert SYLU__INVALID_ADDRESS();
-
-        safeYieldPresale = ISafeYieldPreSale(newPresale);
-
-        emit PreSaleAddressUpdated(newPresale);
+        schedules[user].amountClaimed += uint128(stakedSayTokensAvailable);
     }
 
     function pause() external override onlyOwner {
@@ -162,7 +123,7 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
         return schedules[user];
     }
 
-    function unlockedSayAmount(address user) public view override returns (uint256 unlocked) {
+    function unlockedStakedSayToken(address user) public view override returns (uint256 unlocked) {
         VestingSchedule memory schedule = schedules[user];
 
         if (schedule.totalAmount == 0) {

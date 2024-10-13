@@ -9,15 +9,9 @@ interface ISafeYieldLockUp {
 
     function approveVestingAgent(address agent, bool isApproved) external;
 
-    function updateSayToken(address newSayToken) external;
+    function unlockStakedSayTokensFor(address user) external returns (uint256);
 
-    function updateStaking(address newStaking) external;
-
-    function updatePreSale(address newPresale) external;
-
-    function unlockSayTokens() external;
-
-    function unlockedSayAmount(address member) external view returns (uint256 unlocked);
+    function unlockedStakedSayToken(address user) external view returns (uint256 unlocked);
 
     function vestedAmount(address member) external view returns (uint256);
 

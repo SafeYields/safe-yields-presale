@@ -8,12 +8,6 @@ interface ISafeYieldStaking {
 
     function approveStakingAgent(address agent, bool isApproved) external;
 
-    function setLpAddress(address lp) external;
-
-    function setLockUp(address _lockUp) external;
-
-    function updateSafeToken(address newSafeToken) external;
-
     function updateRewards() external;
 
     function stakeFor(address user, uint128 amount, bool lockUp) external;
@@ -24,7 +18,7 @@ interface ISafeYieldStaking {
 
     function unStake(uint128 amount) external;
 
-    function unStakeFor(address user, uint128 amount) external;
+    // function unStakeFor(address user, uint128 amount) external;
 
     function claimRewards(address user) external;
 
@@ -37,13 +31,9 @@ interface ISafeYieldStaking {
             int128 accumulateSafeRewards
         );
 
-    function setPresale(address _presale) external;
-
     function pause() external;
 
     function unpause() external;
-
-    function setRewardDistributor(address _distributor) external;
 
     function getUserStake(address _user) external view returns (Stake memory stake);
 }
