@@ -3,6 +3,7 @@
 pragma solidity 0.8.26;
 
 import { ISafeYieldAirdrop } from "./interfaces/ISafeYieldAirdrop.sol";
+import { ISafeYieldConfigs } from "./interfaces/ISafeYieldConfigs.sol";
 import { ISafeYieldStaking } from "./interfaces/ISafeYieldStaking.sol";
 import { ISafeYieldLockUp } from "./interfaces/ISafeYieldLockUp.sol";
 import { ISafeToken } from "./interfaces/ISafeToken.sol";
@@ -24,7 +25,7 @@ contract SafeYieldAirdrop is ISafeYieldAirdrop, Ownable2Step, Pausable {
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
     ISafeToken public sayToken;
-    ISafeYieldStaking public staking;
+    ISafeYieldConfigs public safeYieldConfigs;
     mapping(address user => bool claimed) public hasClaimed;
 
     /*//////////////////////////////////////////////////////////////
@@ -45,16 +46,17 @@ contract SafeYieldAirdrop is ISafeYieldAirdrop, Ownable2Step, Pausable {
     error SYA__TOKENS_CLAIMED();
     error SYA__INVALID_PROOF_LENGTH();
 
-    constructor(address _sayToken, address _staking, bytes32 _merkleRoot, address protocolAdmin)
+    constructor(address _sayToken, address _safeYieldConfigs, bytes32 _merkleRoot, address protocolAdmin)
         Ownable(protocolAdmin)
     {
-        if (_sayToken == address(0) || protocolAdmin == address(0) || _staking == address(0)) {
+        if (_sayToken == address(0) || protocolAdmin == address(0) || _safeYieldConfigs == address(0)) {
             revert SYA_INVALID_ADDRESS();
         }
         if (_merkleRoot == bytes32(0)) revert SYA__INVALID_MERKLE_ROOT();
 
         sayToken = ISafeToken(_sayToken);
-        staking = ISafeYieldStaking(_staking);
+
+        safeYieldConfigs = ISafeYieldConfigs(_safeYieldConfigs);
 
         merkleRoot = _merkleRoot;
     }
@@ -73,27 +75,13 @@ contract SafeYieldAirdrop is ISafeYieldAirdrop, Ownable2Step, Pausable {
 
         hasClaimed[msg.sender] = true;
 
-        sayToken.approve(address(staking), amount);
+        ISafeYieldStaking safeYieldStaking = safeYieldConfigs.safeYieldStaking(); //cache
 
-        staking.stakeFor(msg.sender, uint128(amount), true);
+        sayToken.approve(address(safeYieldStaking), amount);
+
+        safeYieldStaking.stakeFor(msg.sender, uint128(amount), true);
 
         emit SayTokensStakedAndVested(msg.sender, amount);
-    }
-
-    function updateSayToken(address newSayToken) external onlyOwner {
-        if (newSayToken == address(0)) revert SYA_INVALID_ADDRESS();
-
-        sayToken = ISafeToken(newSayToken);
-
-        emit SayTokenAddressUpdated(newSayToken);
-    }
-
-    function updateStaking(address newStaking) external onlyOwner {
-        if (newStaking == address(0)) revert SYA_INVALID_ADDRESS();
-
-        staking = ISafeYieldStaking(newStaking);
-
-        emit StakingAddressUpdated(newStaking);
     }
 
     function clawBackSayTokens(uint256 amount) external override onlyOwner {
