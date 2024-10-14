@@ -14,6 +14,7 @@ import { SafeYieldStaking } from "src/SafeYieldStaking.sol";
 import { CoreContributorsLockUp } from "src/CoreContributorsLockUp.sol";
 import { SafeYieldTokenDistributor } from "src/SafeYieldTokenDistributor.sol";
 import { SafeYieldLockUp } from "src/SafeYieldLockUp.sol";
+import { SafeYieldConfigs } from "src/SafeYieldConfigs.sol";
 import { SafeYieldAirdrop } from "src/SafeYieldAirdrop.sol";
 import { SafeYieldTWAP } from "src/SafeYieldTWAP.sol";
 import { IUniswapV3Factory } from "src/uniswapV3/interfaces/IUniswapV3Factory.sol";
@@ -51,6 +52,7 @@ abstract contract SafeYieldBaseTest is Test {
     SafeYieldRewardDistributorMock public distributor;
     SafeYieldLockUp public safeYieldLockUp;
     CoreContributorsLockUp public contributorLockUp;
+    SafeYieldConfigs public configs;
     SafeYieldPresale public presale;
     SafeYieldStaking public staking;
     SafeYieldAirdrop public airdrop;
@@ -87,16 +89,18 @@ abstract contract SafeYieldBaseTest is Test {
 
         safeToken = new SafeToken();
 
-        staking = new SafeYieldStaking(address(safeToken), address(usdc));
+        configs = new SafeYieldConfigs(protocolAdmin);
 
-        tokensDistributor = new SafeYieldTokenDistributor(protocolAdmin, address(staking));
+        staking = new SafeYieldStaking(address(safeToken), address(usdc), address(configs));
+
+        tokensDistributor = new SafeYieldTokenDistributor(protocolAdmin, address(configs));
 
         twap = new SafeYieldTWAP();
 
         presale = new SafeYieldPresale(
             address(safeToken),
             address(usdc),
-            address(staking),
+            address(configs),
             1_000e18,
             uint128(PRE_SALE_MAX_SUPPLY),
             1e18,
@@ -105,13 +109,13 @@ abstract contract SafeYieldBaseTest is Test {
             protocolAdmin
         );
 
-        safeYieldLockUp = new SafeYieldLockUp(protocolAdmin, address(presale), address(safeToken), address(staking));
+        safeYieldLockUp = new SafeYieldLockUp(protocolAdmin, address(configs));
 
         distributor = new SafeYieldRewardDistributorMock(
             address(safeToken), address(usdc), teamOperations, usdcBuyback, address(staking), address(twap)
         );
 
-        airdrop = new SafeYieldAirdrop(address(safeToken), address(staking), merkleRoot, protocolAdmin);
+        airdrop = new SafeYieldAirdrop(address(safeToken), address(configs), merkleRoot, protocolAdmin);
 
         contributorLockUp = new CoreContributorsLockUp(protocolAdmin, address(safeToken));
 
@@ -119,15 +123,16 @@ abstract contract SafeYieldBaseTest is Test {
         safeToken.setAllocationLimit(address(presale), PRE_SALE_MAX_SUPPLY);
         safeToken.setAllocationLimit(address(contributorLockUp), CORE_CONTRIBUTORS_TOTAL_SAY_AMOUNT);
 
-        staking.setPresale(address(presale));
-        staking.setRewardDistributor(address(distributor));
         staking.addCallback(address(tokensDistributor));
 
         staking.approveStakingAgent(address(presale), true);
         staking.approveStakingAgent(protocolAdmin, true);
         staking.approveStakingAgent(address(airdrop), true);
 
-        staking.setLockUp(address(safeYieldLockUp));
+        configs.setPresale(address(presale));
+        configs.updateSafeStaking(address(staking));
+        configs.setRewardDistributor(address(distributor));
+        configs.setLockUp(address(safeYieldLockUp));
 
         contributorLockUp.mintSayAllocation();
         presale.mintPreSaleAllocation();
