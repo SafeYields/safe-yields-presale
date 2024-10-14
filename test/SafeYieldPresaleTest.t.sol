@@ -25,12 +25,6 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         assertLt(minAllocation, maxAllocation);
     }
 
-    function testSafeStakingIsSetCorrectly() public view {
-        address stakingAddress = address(presale.safeYieldStaking());
-
-        assertEq(stakingAddress, address(staking));
-    }
-
     function testTokenPriceIsSetCorrectly() public view {
         uint256 tokenPrice = presale.tokenPrice();
 
@@ -402,7 +396,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         uint256 aliceSecondMonthCalculated = (1_000 * aliceTotalStaked) / 10_000;
 
         vm.startPrank(ALICE);
-        safeYieldLockUp.unlockSayTokens();
+        staking.unstakeVestedTokens();
         vm.stopPrank();
 
         assertEq(safeToken.balanceOf(ALICE), aliceFirstMonthCalculated + aliceSecondMonthCalculated);
@@ -506,7 +500,8 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
          */
         skip(2 * 30 * 24 * 60 * 60 seconds); //2 months;
         vm.prank(BOB);
-        safeYieldLockUp.unlockSayTokens();
+
+        staking.unstakeVestedTokens();
 
         uint256 bobFirstMonthCalculated = (2_000 * safeTokensBought) / 10_000;
         uint256 bobSecondMonthCalculated = (2_000 * safeTokensBought) / 10_000;
@@ -519,7 +514,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
          */
         skip(30 * 24 * 60 * 60 seconds); //3  months;
         vm.prank(ALICE);
-        safeYieldLockUp.unlockSayTokens();
+        staking.unstakeVestedTokens();
 
         /**
          * 20% of SAFE tokens are unlocked each month.
