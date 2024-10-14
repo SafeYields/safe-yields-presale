@@ -83,7 +83,7 @@ contract SafeYieldAirdropTest is SafeYieldBaseTest {
         uint256 aliceSecondMonthCalculated = (1_000 * 1_000e18) / 10_000;
 
         vm.startPrank(ALICE);
-        safeYieldLockUp.unlockSayTokens();
+        staking.unstakeVestedTokens();
         vm.stopPrank();
         /**
          * First month:
