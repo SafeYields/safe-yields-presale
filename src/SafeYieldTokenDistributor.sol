@@ -5,7 +5,7 @@ import { Ownable2Step, Ownable } from "@openzeppelin/contracts/access/Ownable2St
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
-
+import { ISafeYieldConfigs } from "./interfaces/ISafeYieldConfigs.sol";
 import { RewardToken, Rewards } from "./types/SafeTypes.sol";
 import { ISafeYieldStaking } from "../src/interfaces/ISafeYieldStaking.sol";
 import { ISafeYieldStakingCallback } from "./interfaces/ISafeYieldStakingCallback.sol";
@@ -24,7 +24,7 @@ contract SafeYieldTokenDistributor is ISafeYieldTokensDistributor, Ownable2Step,
     //////////////////////////////////////////////////////////////*/
 
     address[] internal allRewardTokens;
-    ISafeYieldStaking public staking;
+    ISafeYieldConfigs configs;
     mapping(address user => mapping(address rewardToken => int256 rewardDebt)) public userTokenRewardDebt;
     mapping(address user => uint256 stakeBalance) public lastStakeBalance;
     mapping(address rewardToken => RewardToken) public rewardTokens;
@@ -46,14 +46,14 @@ contract SafeYieldTokenDistributor is ISafeYieldTokensDistributor, Ownable2Step,
                                MODIFIERS
     //////////////////////////////////////////////////////////////*/
     modifier onlyStaking() {
-        if (msg.sender != address(staking)) revert SYTD__UNAUTHORIZED();
+        if (msg.sender != address(configs.safeYieldStaking())) revert SYTD__UNAUTHORIZED();
         _;
     }
 
-    constructor(address protocolAdmin, address _staking) Ownable(protocolAdmin) {
-        if (_staking == address(0)) revert SYTD__INVALID_ADDRESS();
+    constructor(address protocolAdmin, address _safeYieldConfig) Ownable(protocolAdmin) {
+        if (_safeYieldConfig == address(0)) revert SYTD__INVALID_ADDRESS();
 
-        staking = ISafeYieldStaking(_staking);
+        configs = ISafeYieldConfigs(_safeYieldConfig);
     }
 
     function depositReward(address[] calldata rewardAssets, uint128[] calldata amounts) external onlyOwner {
@@ -75,7 +75,7 @@ contract SafeYieldTokenDistributor is ISafeYieldTokensDistributor, Ownable2Step,
 
             IERC20(rewardAsset).safeTransferFrom(msg.sender, address(this), amount);
 
-            rewardToken.accRewardPerShare += (amount * DIVISION_FACTOR) / staking.totalStaked();
+            rewardToken.accRewardPerShare += (amount * DIVISION_FACTOR) / configs.safeYieldStaking().totalStaked();
 
             emit RewardDeposited(msg.sender, rewardAsset, amount);
         }
@@ -84,7 +84,7 @@ contract SafeYieldTokenDistributor is ISafeYieldTokensDistributor, Ownable2Step,
     function handleActionBefore(address _user, bytes4 _selector) external override onlyStaking { }
 
     function handleActionAfter(address _user, bytes4 _selector) external override onlyStaking {
-        uint256 _userBalance = IERC20(address(staking)).balanceOf(_user);
+        uint256 _userBalance = IERC20(address(configs.safeYieldStaking())).balanceOf(_user);
         uint256 _userLastsSayBalance = lastStakeBalance[_user];
 
         emit HandleActionAfter(_user, _selector);
@@ -204,7 +204,9 @@ contract SafeYieldTokenDistributor is ISafeYieldTokensDistributor, Ownable2Step,
     }
 
     function existingLastStakeBalance(address user) public view returns (uint256) {
-        return lastStakeBalance[user] != 0 ? lastStakeBalance[user] : IERC20(address(staking)).balanceOf(user);
+        return lastStakeBalance[user] != 0
+            ? lastStakeBalance[user]
+            : IERC20(address(configs.safeYieldStaking())).balanceOf(user);
     }
 
     function _calculateAccRewards(uint256 _accRewardPerShare, uint256 _amount) private pure returns (uint256) {
