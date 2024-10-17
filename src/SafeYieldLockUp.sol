@@ -29,6 +29,7 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
     ISafeYieldConfigs configs;
     uint48 public unlockPercentagePerMonth = 2_000; //20%
     mapping(address user => VestingSchedule schedule) public schedules;
+    mapping(address user => bool hasVested) public userHasVested;
     mapping(address user => bool approved) public approvedVestingAgents;
 
     /*//////////////////////////////////////////////////////////////
@@ -83,12 +84,24 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
         if (user == address(0)) revert SYLU__INVALID_ADDRESS();
         if (amount == 0) revert SYLU__INVALID_AMOUNT();
 
-        if (block.timestamp >= schedules[user].start + schedules[user].duration) {
-            schedules[user].start = configs.vestStartTime();
+        uint48 vestStart = configs.vestStartTime();
+
+        //todo:!Jonathan please verify if statements
+        if (
+            (vestStart != 0 && block.timestamp >= vestStart + schedules[user].duration)
+                || (vestStart == 0 && !userHasVested[user])
+        ) {
+            //todo: claim for users before
+            // Set up a new vesting schedule
+            schedules[user].start = uint48(vestStart);
             schedules[user].duration = VESTING_DURATION;
             schedules[user].amountClaimed = 0;
             schedules[user].totalAmount = uint128(amount);
+
+            // Mark user as having an active vesting schedule
+            userHasVested[user] = true;
         } else {
+            // Add to the existing schedule if the vesting is still active
             schedules[user].totalAmount += uint128(amount);
         }
 
@@ -137,10 +150,15 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
     function vestedAmount(address user) public view override returns (uint256) {
         VestingSchedule memory schedule = schedules[user];
 
-        if (block.timestamp >= schedule.start + schedule.duration) {
+        //cache
+        uint48 vestStartTime = configs.vestStartTime();
+
+        if (vestStartTime == 0) return 0;
+
+        if (block.timestamp >= vestStartTime + schedule.duration) {
             return schedule.totalAmount;
         } else {
-            uint256 durationPassed = block.timestamp - schedule.start;
+            uint256 durationPassed = block.timestamp - vestStartTime;
 
             /**
              * Alice total Vested = 1000 tokens
@@ -151,7 +169,6 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
              * unlockedPercentagePerMonthsElapsed = 2.5 * 20% = 50%
              * total vested = (1000 * 50 ) / 100 = 500
              */
-            //todo! double check the math, careful with the division.
             uint256 monthsElapsed = durationPassed.mulDiv(BPS, ONE_MONTH);
 
             uint256 unlockedPercentagePerMonthsElapsed = monthsElapsed.mulDiv(unlockPercentagePerMonth, BPS);
