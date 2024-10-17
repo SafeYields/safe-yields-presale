@@ -3,6 +3,7 @@ pragma solidity 0.8.26;
 
 import { console } from "forge-std/Test.sol";
 import { SafeYieldPresale } from "src/SafeYieldPresale.sol";
+import { SafeYieldLockUp } from "src/SafeYieldLockUp.sol";
 import { PreSaleState } from "src/types/SafeTypes.sol";
 import { SafeYieldBaseTest } from "./setup/SafeYieldBaseTest.t.sol";
 
@@ -373,6 +374,18 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         presale.endPresale();
         vm.stopPrank();
 
+        skip(4 days);
+
+        vm.startPrank(ALICE);
+        vm.expectRevert(SafeYieldLockUp.SYLU__NO_SAY_TO_UNLOCK.selector);
+        staking.unstakeVestedTokens();
+        vm.stopPrank();
+
+        skip(5 minutes);
+
+        vm.prank(protocolAdmin);
+        configs.setVestingStartTime(uint48(block.timestamp));
+
         /**
          * alice claims after 1.5 month
          */
@@ -494,6 +507,23 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
 
         vm.prank(protocolAdmin);
         presale.endPresale();
+
+        skip(5 minutes);
+
+        vm.startPrank(ALICE);
+        vm.expectRevert(SafeYieldLockUp.SYLU__NO_SAY_TO_UNLOCK.selector);
+        staking.unstakeVestedTokens();
+        vm.stopPrank();
+
+        vm.startPrank(BOB);
+        vm.expectRevert(SafeYieldLockUp.SYLU__NO_SAY_TO_UNLOCK.selector);
+        staking.unstakeVestedTokens();
+        vm.stopPrank();
+
+        skip(5 minutes);
+
+        vm.prank(protocolAdmin);
+        configs.setVestingStartTime(uint48(block.timestamp));
 
         /**
          * Bob can start claiming after presale ends

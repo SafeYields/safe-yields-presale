@@ -252,6 +252,9 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         staking.stakeFor(ALICE, 2_000e18, true);
         vm.stopPrank();
 
+        vm.prank(protocolAdmin);
+        configs.setVestingStartTime(uint48(block.timestamp));
+
         skip(30 * 24 * 60 * 60 seconds); //1 month
 
         //alice claiming some safe tokens after presale has ended
@@ -548,6 +551,13 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         safeToken.approve(address(staking), amount);
         staking.stakeFor(user, uint128(amount), true);
         vm.stopPrank();
+
+        skip(5 minutes);
+
+        vm.prank(protocolAdmin);
+        configs.setVestingStartTime(uint48(block.timestamp));
+
+        skip(5 minutes);
 
         skip(30 * 24 * 60 * 60 seconds); //1 month
 

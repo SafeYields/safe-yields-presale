@@ -139,6 +139,7 @@ abstract contract SafeYieldBaseTest is Test {
         distributor.mintStakingEmissionAllocation();
 
         safeYieldLockUp.approveVestingAgent(address(staking), true);
+        safeYieldLockUp.approveVestingAgent(protocolAdmin, true);
 
         vm.stopPrank();
 

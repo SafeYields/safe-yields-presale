@@ -74,6 +74,9 @@ contract SafeYieldAirdropTest is SafeYieldBaseTest {
         vm.prank(ALICE);
         airdrop.stakeAndVestSayTokens(1_000e18, aliceMerkleProof);
 
+        vm.prank(protocolAdmin);
+        configs.setVestingStartTime(uint48(block.timestamp));
+
         /**
          * alice claims after 1.5 month
          */
