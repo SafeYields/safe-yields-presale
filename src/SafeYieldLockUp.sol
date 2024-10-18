@@ -86,22 +86,28 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
 
         uint48 vestStart = configs.vestStartTime();
 
-        //todo:!Jonathan please verify if statements
-        if (
-            (vestStart != 0 && block.timestamp >= vestStart + schedules[user].duration)
-                || (vestStart == 0 && !userHasVested[user])
-        ) {
-            //todo: claim for users before
-            // Set up a new vesting schedule
-            schedules[user].start = uint48(vestStart);
+        if (vestStart == 0) {
+            //before IDO
+            //start time is zero
+            if (!userHasVested[user]) {
+                schedules[user].start = uint48(vestStart);
+                schedules[user].duration = VESTING_DURATION;
+                schedules[user].amountClaimed = 0;
+                schedules[user].totalAmount = uint128(amount);
+
+                userHasVested[user] = true;
+            } else {
+                schedules[user].totalAmount += uint128(amount);
+            }
+        } else if (block.timestamp >= schedules[user].start + schedules[user].duration) {
+            //after IDo
+            //start time is block.timestamp
+            schedules[user].start = uint48(block.timestamp);
+
             schedules[user].duration = VESTING_DURATION;
             schedules[user].amountClaimed = 0;
             schedules[user].totalAmount = uint128(amount);
-
-            // Mark user as having an active vesting schedule
-            userHasVested[user] = true;
         } else {
-            // Add to the existing schedule if the vesting is still active
             schedules[user].totalAmount += uint128(amount);
         }
 
@@ -136,7 +142,7 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
         return schedules[user];
     }
 
-    function unlockedStakedSayToken(address user) public view override returns (uint256 unlocked) {
+    function unlockedStakedSayToken(address user) public override returns (uint256 unlocked) {
         VestingSchedule memory schedule = schedules[user];
 
         if (schedule.totalAmount == 0) {
@@ -147,7 +153,8 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
         unlocked = vested - schedule.amountClaimed;
     }
 
-    function vestedAmount(address user) public view override returns (uint256) {
+    //!note can't be a view function anymore, state changes
+    function vestedAmount(address user) public override returns (uint256) {
         VestingSchedule memory schedule = schedules[user];
 
         //cache
@@ -155,10 +162,15 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
 
         if (vestStartTime == 0) return 0;
 
-        if (block.timestamp >= vestStartTime + schedule.duration) {
+        if (schedule.start == 0 && schedule.totalAmount != 0) {
+            //before IDO users
+            schedules[user].start = vestStartTime;
+        }
+
+        if (block.timestamp >= schedule.start + schedule.duration) {
             return schedule.totalAmount;
         } else {
-            uint256 durationPassed = block.timestamp - vestStartTime;
+            uint256 durationPassed = block.timestamp - schedule.start;
 
             /**
              * Alice total Vested = 1000 tokens

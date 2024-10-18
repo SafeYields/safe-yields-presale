@@ -11,9 +11,9 @@ interface ISafeYieldLockUp {
 
     function unlockStakedSayTokensFor(address user) external returns (uint256);
 
-    function unlockedStakedSayToken(address user) external view returns (uint256 unlocked);
+    function unlockedStakedSayToken(address user) external returns (uint256 unlocked);
 
-    function vestedAmount(address member) external view returns (uint256);
+    function vestedAmount(address member) external returns (uint256);
 
     function getSchedules(address user) external view returns (VestingSchedule memory schedule);
 
