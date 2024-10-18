@@ -5,6 +5,7 @@ import { console } from "forge-std/Test.sol";
 import { SafeYieldPresale } from "src/SafeYieldPresale.sol";
 import { SafeYieldBaseTest } from "./setup/SafeYieldBaseTest.t.sol";
 import { SafeYieldStaking, Stake } from "src/SafeYieldStaking.sol";
+import { VestingSchedule } from "src/types/SafeTypes.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
 contract SafeYieldStakingTest is SafeYieldBaseTest {
@@ -286,6 +287,64 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         staking.unStake(1_000e18);
 
         assertEq(safeToken.balanceOf(ALICE), 1_000e18);
+    }
+
+    function testStakeAndVestForBeforeIDOStarts() public startEndPresale {
+        _transferSafeTokens(protocolAdmin, 10_000e18);
+
+        skip(5 days);
+
+        vm.startPrank(protocolAdmin);
+        safeToken.approve(address(staking), 5_000e18);
+        staking.stakeFor(ALICE, 2_000e18, true);
+        vm.stopPrank();
+
+        skip(1 weeks);
+
+        VestingSchedule memory aliceVestingSchedule1 = safeYieldLockUp.getSchedules(ALICE);
+        assertEq(aliceVestingSchedule1.start, 0);
+        assertEq(aliceVestingSchedule1.totalAmount, 2_000e18);
+
+        //after admin sets start time when IDO has ended.
+        vm.prank(protocolAdmin);
+        configs.setVestingStartTime(uint48(block.timestamp));
+
+        /**
+         * when user is claiming safe the user start time should be equal to vestStart time
+         */
+        skip(30 * 24 * 60 * 60 seconds); //42 days
+
+        /**
+         * 1.4 months = 28%
+         * First month Alice 20% of 2_000e18 = 400 say tokens
+         * Second month Alice 8% of 2_000e18 = 160
+         */
+
+        //alice claiming some safe tokens after presale has ended
+        vm.startPrank(ALICE);
+        staking.unstakeVestedTokens();
+        vm.stopPrank();
+
+        VestingSchedule memory aliceVestingSchedule2 = safeYieldLockUp.getSchedules(ALICE);
+        assertEq(aliceVestingSchedule2.start, configs.vestStartTime());
+        assertEq(aliceVestingSchedule2.amountClaimed, 560e18);
+        assertEq(safeToken.balanceOf(ALICE), 560e18);
+    }
+
+    function testStakeAndVestForWhenIDOEnds() public startEndPresale {
+        _transferSafeTokens(protocolAdmin, 10_000e18);
+
+        vm.prank(protocolAdmin);
+        configs.setVestingStartTime(uint48(block.timestamp));
+
+        vm.startPrank(protocolAdmin);
+        safeToken.approve(address(staking), 5_000e18);
+        staking.stakeFor(ALICE, 2_000e18, true);
+        vm.stopPrank();
+
+        VestingSchedule memory aliceVestingSchedule1 = safeYieldLockUp.getSchedules(ALICE);
+        assertEq(aliceVestingSchedule1.start, block.timestamp);
+        assertEq(aliceVestingSchedule1.totalAmount, 2_000e18);
     }
 
     function testUnStakeSafeTokensAndClaimUsdcRewards() public startEndPresale {

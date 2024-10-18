@@ -4,7 +4,7 @@ pragma solidity 0.8.26;
 import { console } from "forge-std/Test.sol";
 import { SafeYieldPresale } from "src/SafeYieldPresale.sol";
 import { SafeYieldLockUp } from "src/SafeYieldLockUp.sol";
-import { PreSaleState } from "src/types/SafeTypes.sol";
+import { PreSaleState, VestingSchedule } from "src/types/SafeTypes.sol";
 import { SafeYieldBaseTest } from "./setup/SafeYieldBaseTest.t.sol";
 
 contract SafeYieldPresaleTest is SafeYieldBaseTest {
@@ -454,6 +454,8 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
 
         assertEq(presale.getTotalSafeTokensOwed(CHARLIE), 3_000e18);
     }
+
+    function testBuySafeAfterIDOStarts() public startPresale { }
 
     /*//////////////////////////////////////////////////////////////
                                FUZZ TESTS
