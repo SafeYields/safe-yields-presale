@@ -32,48 +32,4 @@ contract SafeYieldLockUpTest is SafeYieldBaseTest {
         assertEq(aliceSchedule.cliff, 0);
         assertEq(aliceSchedule.duration, safeYieldLockUp.VESTING_DURATION());
     }
-
-    function testVestOverrideOldVest() public {
-        vm.warp(1729166198000);
-        vm.startPrank(protocolAdmin);
-
-        console.log("Before IDO");
-
-        safeYieldLockUp.vestFor(ALICE, 1_000e18);
-
-        VestingSchedule memory aliceSchedule = safeYieldLockUp.getSchedules(ALICE);
-        assertEq(aliceSchedule.totalAmount, 1_000e18);
-
-        skip(5 days);
-
-        safeYieldLockUp.vestFor(ALICE, 2_000e18);
-
-        VestingSchedule memory aliceSchedule2 = safeYieldLockUp.getSchedules(ALICE);
-        assertEq(aliceSchedule2.totalAmount, 3_000e18);
-
-        skip(10 minutes);
-
-        configs.setVestingStartTime(uint48(block.timestamp));
-
-        console.log("After IDO");
-
-        skip(10 minutes);
-        safeYieldLockUp.vestFor(ALICE, 2_000e18);
-
-        VestingSchedule memory aliceSchedule3 = safeYieldLockUp.getSchedules(ALICE);
-        assertEq(aliceSchedule3.totalAmount, 2_000e18);
-
-        skip(10 minutes);
-        safeYieldLockUp.vestFor(ALICE, 2_000e18);
-
-        VestingSchedule memory aliceSchedule4 = safeYieldLockUp.getSchedules(ALICE);
-        assertEq(aliceSchedule4.totalAmount, 4_000e18);
-
-        skip(10 * 30 * 24 * 60 * 60 seconds);
-
-        safeYieldLockUp.vestFor(ALICE, 2_000e18);
-
-        VestingSchedule memory aliceSchedule5 = safeYieldLockUp.getSchedules(ALICE);
-        assertEq(aliceSchedule5.totalAmount, 2_000e18);
-    }
 }

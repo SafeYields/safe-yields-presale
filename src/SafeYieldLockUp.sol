@@ -29,7 +29,7 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
     ISafeYieldConfigs configs;
     uint48 public unlockPercentagePerMonth = 2_000; //20%
     mapping(address user => VestingSchedule schedule) public schedules;
-    mapping(address user => bool hasVested) public userHasVested;
+    mapping(address user => bool hasVested) public userHasVestedBeforeIDO;
     mapping(address user => bool approved) public approvedVestingAgents;
 
     /*//////////////////////////////////////////////////////////////
@@ -86,27 +86,50 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
 
         uint48 vestStart = configs.vestStartTime();
 
-        if (vestStart == 0) {
-            //before IDO
-            //start time is zero
-            if (!userHasVested[user]) {
-                schedules[user].start = uint48(vestStart);
-                schedules[user].duration = VESTING_DURATION;
-                schedules[user].amountClaimed = 0;
-                schedules[user].totalAmount = uint128(amount);
+        // if (vestStart == 0) {
+        //     //before IDO
+        //     //start time is zero
+        //     if (!userHasVestedBeforeIDO[user]) {
+        //         schedules[user].start = uint48(vestStart);
+        //         schedules[user].duration = VESTING_DURATION;
+        //         schedules[user].amountClaimed = 0;
+        //         schedules[user].totalAmount = uint128(amount);
 
-                userHasVested[user] = true;
-            } else {
-                schedules[user].totalAmount += uint128(amount);
+        //         userHasVestedBeforeIDO[user] = true;
+        //     } else {
+        //         schedules[user].totalAmount += uint128(amount);
+        //     }
+        // } else if (block.timestamp >= schedules[user].start + schedules[user].duration) {
+        //     //after IDO
+        //     //start time is block.timestamp
+        //     schedules[user].start = uint48(block.timestamp);
+
+        //     schedules[user].duration = VESTING_DURATION;
+        //     schedules[user].amountClaimed = 0;
+        //     schedules[user].totalAmount = uint128(amount);
+        // } else {
+        //     schedules[user].totalAmount += uint128(amount);
+        // }
+        //!!@Jonathan please verify.
+        //optimized version
+        uint48 startTime = (vestStart == 0) ? vestStart : uint48(block.timestamp);
+        bool isBeforeIDO = (vestStart == 0 && !userHasVestedBeforeIDO[user]);
+        bool isAfterIDOVestingReset =
+            (vestStart != 0 && block.timestamp >= schedules[user].start + schedules[user].duration);
+
+        if (isBeforeIDO || isAfterIDOVestingReset) {
+            ISafeYieldStaking safeStaking = configs.safeYieldStaking(); //cache
+
+            if (unlockedStakedSayToken(user) != 0) {
+                safeStaking.unstakeVestedTokensFor(user);
             }
-        } else if (block.timestamp >= schedules[user].start + schedules[user].duration) {
-            //after IDo
-            //start time is block.timestamp
-            schedules[user].start = uint48(block.timestamp);
 
+            schedules[user].start = startTime;
             schedules[user].duration = VESTING_DURATION;
             schedules[user].amountClaimed = 0;
             schedules[user].totalAmount = uint128(amount);
+
+            if (isBeforeIDO) userHasVestedBeforeIDO[user] = true;
         } else {
             schedules[user].totalAmount += uint128(amount);
         }
@@ -153,13 +176,13 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
         unlocked = vested - schedule.amountClaimed;
     }
 
-    //!note can't be a view function anymore, state changes
     function vestedAmount(address user) public override returns (uint256) {
         VestingSchedule memory schedule = schedules[user];
 
         //cache
         uint48 vestStartTime = configs.vestStartTime();
 
+        //!Jonathan
         if (vestStartTime == 0) return 0;
 
         if (schedule.start == 0 && schedule.totalAmount != 0) {
