@@ -18,7 +18,9 @@ interface ISafeYieldStaking {
 
     function unStake(uint128 amount) external;
 
-    // function unStakeFor(address user, uint128 amount) external;
+    function unstakeVestedTokens() external;
+
+    function unstakeVestedTokensFor(address user) external;
 
     function claimRewards(address user) external;
 

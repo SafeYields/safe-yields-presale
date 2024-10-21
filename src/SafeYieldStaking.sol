@@ -166,7 +166,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
         emit Staked(user, amount);
     }
 
-    function unstakeVestedTokens() external canUnstakeVested {
+    function unstakeVestedTokens() external override canUnstakeVested {
         uint256 len = callbacks.length();
 
         for (uint256 i; i < len;) {
@@ -200,42 +200,39 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
         safeToken.safeTransfer(msg.sender, amountStakedVested);
     }
 
-    // function unStakeFor(address user, uint128 amount) external override onlySafeYieldLockUp {
-    //     if (user == address(0)) revert SYST__INVALID_ADDRESS();
-    //     if (amount == 0) revert SYST__INVALID_STAKE_AMOUNT();
+    function unstakeVestedTokensFor(address user) external override canUnstakeVested onlySafeYieldLockUp {
+        uint256 len = callbacks.length();
 
-    //     if (userStake[user].stakeAmount < amount) revert SYST__INSUFFICIENT_STAKE();
+        for (uint256 i; i < len;) {
+            ISafeYieldStakingCallback(callbacks.at(i)).handleActionBefore(
+                user, SafeYieldStaking.unstakeVestedTokensFor.selector
+            );
+            unchecked {
+                ++i;
+            }
+        }
 
-    //     uint256 len = callbacks.length();
+        claimRewards(msg.sender);
 
-    //     for (uint256 i; i < len;) {
-    //         ISafeYieldStakingCallback(callbacks.at(i)).handleActionBefore(
-    //             msg.sender, SafeYieldStaking.unStakeFor.selector
-    //         );
-    //         unchecked {
-    //             ++i;
-    //         }
-    //     }
+        ISafeYieldLockUp safeYieldLockUp = configs.safeYieldLockUp(); //cache
 
-    //     claimRewards(user);
+        uint256 amountStakedVested = safeYieldLockUp.unlockStakedSayTokensFor(user);
 
-    //     _unStake(user, amount);
+        _unStake(user, uint128(amountStakedVested));
 
-    //     _burn(address(safeYieldLockUp), amount);
+        _burn(address(safeYieldLockUp), amountStakedVested);
 
-    //     for (uint256 i; i < len;) {
-    //         ISafeYieldStakingCallback(callbacks.at(i)).handleActionAfter(
-    //             msg.sender, SafeYieldStaking.unStakeFor.selector
-    //         );
-    //         unchecked {
-    //             ++i;
-    //         }
-    //     }
+        for (uint256 i; i < len;) {
+            ISafeYieldStakingCallback(callbacks.at(i)).handleActionAfter(
+                msg.sender, SafeYieldStaking.unstakeVestedTokensFor.selector
+            );
+            unchecked {
+                ++i;
+            }
+        }
 
-    //     safeToken.safeTransfer(user, amount);
-
-    //     emit UnStaked(user, amount);
-    // }
+        safeToken.safeTransfer(user, amountStakedVested);
+    }
 
     function stake(uint128 amount) external whenNotPaused lockStaking {
         if (amount == 0) revert SYST__INVALID_STAKE_AMOUNT();
