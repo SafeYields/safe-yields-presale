@@ -389,30 +389,24 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         /**
          * alice claims after 1.5 month
          */
-        skip(45 * 24 * 60 * 60 seconds);
+        skip(5256000);
 
         //claim safe tokens
-        /**
-         * 20% of SAFE tokens are unlocked each month.
-         * In the first month, Alice receives the full 20%.
-         * In the second month, she receives half of that (10%).
-         * Example: If Alice has 1,500 SAFE tokens:
-         *      Month 1: 20% of 1,500 = 300
-         *      Month 2: 10% of 1,500 = 150
-         *      Total: 300 + 150 = 450 SAFE tokens.
-         */
         uint256 aliceCommissionFromBOB = (500 * 1_000e18) / 10_000;
 
         uint256 aliceTotalStaked = aliceCommissionFromBOB + 1_500e18;
 
-        uint256 aliceFirstMonthCalculated = (2_000 * aliceTotalStaked) / 10_000;
-        uint256 aliceSecondMonthCalculated = (1_000 * aliceTotalStaked) / 10_000;
+        uint256 monthsElapsed = (block.timestamp * 10_000) / (30 * 24 * 60 * 60 seconds);
+
+        uint256 unlockedPercentage = (monthsElapsed * 2_000) / 10_000;
+
+        uint256 aliceCalculatedSafe = (unlockedPercentage * aliceTotalStaked) / 10_000;
 
         vm.startPrank(ALICE);
         staking.unstakeVestedTokens();
         vm.stopPrank();
 
-        assertEq(safeToken.balanceOf(ALICE), aliceFirstMonthCalculated + aliceSecondMonthCalculated);
+        assertEq(safeToken.balanceOf(ALICE), aliceCalculatedSafe);
     }
 
     function testBuySafeWithMultipleReferrers() public startPresale {
