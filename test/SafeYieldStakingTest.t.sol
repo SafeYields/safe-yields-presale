@@ -331,6 +331,45 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         assertEq(safeToken.balanceOf(ALICE), 560e18);
     }
 
+    function testStakeForOverrides() public startEndPresale {
+        vm.warp(1729166198000);
+        _transferSafeTokens(protocolAdmin, 10_000e18);
+
+        skip(5 days);
+
+        vm.startPrank(protocolAdmin);
+        safeToken.approve(address(staking), 10_000e18);
+        staking.stakeFor(ALICE, 2_000e18, true);
+        vm.stopPrank();
+
+        VestingSchedule memory aliceVestingSchedule1 = safeYieldLockUp.getSchedules(ALICE);
+        assertEq(aliceVestingSchedule1.start, 0);
+        assertEq(aliceVestingSchedule1.totalAmount, 2_000e18);
+
+        skip(5 days);
+
+        vm.startPrank(protocolAdmin);
+        staking.stakeFor(ALICE, 2_000e18, true);
+        vm.stopPrank();
+
+        VestingSchedule memory aliceVestingSchedule2 = safeYieldLockUp.getSchedules(ALICE);
+        assertEq(aliceVestingSchedule2.start, 0);
+        assertEq(aliceVestingSchedule2.totalAmount, 4_000e18);
+
+        skip(10 minutes);
+        vm.prank(protocolAdmin);
+        configs.setVestingStartTime(uint48(block.timestamp));
+
+        skip(30 * 24 * 60 * 60 seconds);
+        vm.startPrank(protocolAdmin);
+        staking.stakeFor(ALICE, 2_000e18, true);
+        vm.stopPrank();
+
+        VestingSchedule memory aliceVestingSchedule3 = safeYieldLockUp.getSchedules(ALICE);
+        assertEq(aliceVestingSchedule3.start, block.timestamp);
+        assertEq(aliceVestingSchedule3.totalAmount, 2_000e18);
+    }
+
     function testStakeAndVestForWhenIDOEnds() public startEndPresale {
         _transferSafeTokens(protocolAdmin, 10_000e18);
 
