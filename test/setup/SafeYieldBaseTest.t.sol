@@ -109,7 +109,7 @@ abstract contract SafeYieldBaseTest is Test {
             protocolAdmin
         );
 
-        safeYieldLockUp = new SafeYieldLockUp(protocolAdmin, address(configs));
+        safeYieldLockUp = new SafeYieldLockUp(protocolAdmin, address(staking), address(configs));
 
         distributor = new SafeYieldRewardDistributorMock(
             address(safeToken), address(usdc), teamOperations, usdcBuyback, address(staking), address(twap)

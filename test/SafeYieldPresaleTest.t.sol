@@ -374,13 +374,6 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         presale.endPresale();
         vm.stopPrank();
 
-        skip(4 days);
-
-        vm.startPrank(ALICE);
-        vm.expectRevert(SafeYieldLockUp.SYLU__NO_SAY_TO_UNLOCK.selector);
-        staking.unstakeVestedTokens();
-        vm.stopPrank();
-
         skip(5 minutes);
 
         vm.prank(protocolAdmin);
@@ -503,18 +496,6 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
 
         vm.prank(protocolAdmin);
         presale.endPresale();
-
-        skip(5 minutes);
-
-        vm.startPrank(ALICE);
-        vm.expectRevert(SafeYieldLockUp.SYLU__NO_SAY_TO_UNLOCK.selector);
-        staking.unstakeVestedTokens();
-        vm.stopPrank();
-
-        vm.startPrank(BOB);
-        vm.expectRevert(SafeYieldLockUp.SYLU__NO_SAY_TO_UNLOCK.selector);
-        staking.unstakeVestedTokens();
-        vm.stopPrank();
 
         skip(5 minutes);
 

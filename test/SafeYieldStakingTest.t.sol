@@ -638,16 +638,14 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
                                FUZZ TESTS
     //////////////////////////////////////////////////////////////*/
 
-    function testFuzz_StakeFor(address user, uint256 amount) public startEndPresale {
+    function testFuzz_StakeFor(uint256 amount) public startEndPresale {
         amount = bound(amount, 2e18, 10_000e18);
-
-        user = makeAddr("userA");
 
         _transferSafeTokens(protocolAdmin, 10_000e18);
 
         vm.startPrank(protocolAdmin);
         safeToken.approve(address(staking), amount);
-        staking.stakeFor(user, uint128(amount), true);
+        staking.stakeFor(ALICE, uint128(amount), true);
         vm.stopPrank();
 
         skip(5 minutes);
@@ -660,7 +658,7 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         skip(30 * 24 * 60 * 60 seconds); //1 month
 
         //alice claiming some safe tokens after presale has ended
-        vm.startPrank(user);
+        vm.startPrank(ALICE);
         staking.unstakeVestedTokens();
         vm.stopPrank();
 
@@ -669,7 +667,7 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
          * as 20% of 2_000 each month is 400
          */
         uint256 calculatedSafeBalance = (2_000 * amount) / 10_000;
-        assertEq(safeToken.balanceOf(user), calculatedSafeBalance);
+        assertEq(safeToken.balanceOf(ALICE), calculatedSafeBalance);
     }
 
     function testFuzz_StakeTokens(address userA, address userB, uint256 amount) public startEndPresale {
