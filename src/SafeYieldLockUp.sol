@@ -6,8 +6,8 @@ import { ISafeYieldStaking } from "./interfaces/ISafeYieldStaking.sol";
 import { ISafeYieldLockUp } from "./interfaces/ISafeYieldLockUp.sol";
 import { ISafeYieldPreSale } from "./interfaces/ISafeYieldPreSale.sol";
 import { ISafeYieldConfigs } from "./interfaces/ISafeYieldConfigs.sol";
-import { VestingSchedule, PreSaleState } from "./types/SafeTypes.sol";
-
+import { VestingSchedule } from "./types/SafeTypes.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -15,6 +15,7 @@ import { Ownable, Ownable2Step } from "@openzeppelin/contracts/access/Ownable2St
 
 contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
     using Math for uint256;
+    using SafeERC20 for IERC20;
     /*//////////////////////////////////////////////////////////////
                                CONSTANTS
     //////////////////////////////////////////////////////////////*/
@@ -27,6 +28,7 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
     ISafeYieldConfigs configs;
+    IERC20 public sSayToken;
     uint48 public unlockPercentagePerMonth = 2_000; //20%
     mapping(address user => VestingSchedule schedule) public schedules;
     mapping(address user => bool hasVested) public userHasVestedBeforeIDO;
@@ -36,10 +38,7 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
     event TokensVestedFor(address indexed user, uint256 indexed amount);
-    event SayTokensClaimed(address indexed user, uint256 indexed tokensClaimed);
-    event SayTokenAddressUpdated(address indexed newSayToken);
-    event PreSaleAddressUpdated(address indexed newPresale);
-    event StakingAddressUpdated(address indexed newStaking);
+    event sSayTokensClaimed(address indexed user, uint256 indexed tokensClaimed);
     event VestingAgentApproved(address indexed agent, bool indexed isApproved);
 
     /*//////////////////////////////////////////////////////////////
@@ -47,9 +46,7 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
     //////////////////////////////////////////////////////////////*/
     error SYLU__INVALID_ADDRESS();
     error SYLU__INVALID_AMOUNT();
-    error SYLU__NO_SAY_TO_UNLOCK();
     error SYLU__ONLY_STAKING();
-    error SYLU__CANNOT_CLAIM();
     error SYLU__AGENT_NOT_APPROVED();
 
     /*//////////////////////////////////////////////////////////////
@@ -74,10 +71,13 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
      *
      * After IDO is live, use block timestamp as start date for new users.
      */
-    constructor(address protocolAdmin, address safeYieldConfig) Ownable(protocolAdmin) {
-        if (protocolAdmin == address(0) || safeYieldConfig == address(0)) revert SYLU__INVALID_ADDRESS();
+    constructor(address protocolAdmin, address _sSayToken, address safeYieldConfig) Ownable(protocolAdmin) {
+        if (protocolAdmin == address(0) || safeYieldConfig == address(0) || _sSayToken == address(0)) {
+            revert SYLU__INVALID_ADDRESS();
+        }
 
         configs = ISafeYieldConfigs(safeYieldConfig);
+        sSayToken = IERC20(_sSayToken);
     }
 
     function vestFor(address user, uint256 amount) external override whenNotPaused isValidVestingAgent {
@@ -86,43 +86,14 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
 
         uint48 vestStart = configs.vestStartTime();
 
-        // if (vestStart == 0) {
-        //     //before IDO
-        //     //start time is zero
-        //     if (!userHasVestedBeforeIDO[user]) {
-        //         schedules[user].start = uint48(vestStart);
-        //         schedules[user].duration = VESTING_DURATION;
-        //         schedules[user].amountClaimed = 0;
-        //         schedules[user].totalAmount = uint128(amount);
-
-        //         userHasVestedBeforeIDO[user] = true;
-        //     } else {
-        //         schedules[user].totalAmount += uint128(amount);
-        //     }
-        // } else if (block.timestamp >= schedules[user].start + schedules[user].duration) {
-        //     //after IDO
-        //     //start time is block.timestamp
-        //     schedules[user].start = uint48(block.timestamp);
-
-        //     schedules[user].duration = VESTING_DURATION;
-        //     schedules[user].amountClaimed = 0;
-        //     schedules[user].totalAmount = uint128(amount);
-        // } else {
-        //     schedules[user].totalAmount += uint128(amount);
-        // }
-        //!!@Jonathan please verify.
-        //optimized version
+        //!@jonathan review
         uint48 startTime = (vestStart == 0) ? vestStart : uint48(block.timestamp);
         bool isBeforeIDO = (vestStart == 0 && !userHasVestedBeforeIDO[user]);
         bool isAfterIDOVestingReset =
             (vestStart != 0 && block.timestamp >= schedules[user].start + schedules[user].duration);
 
         if (isBeforeIDO || isAfterIDOVestingReset) {
-            ISafeYieldStaking safeStaking = configs.safeYieldStaking(); //cache
-
-            if (unlockedStakedSayToken(user) != 0) {
-                safeStaking.unstakeVestedTokensFor(user);
-            }
+            unlock_sSayTokens();
 
             schedules[user].start = startTime;
             schedules[user].duration = VESTING_DURATION;
@@ -145,12 +116,31 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
         emit VestingAgentApproved(agent, isApproved);
     }
 
-    function unlockStakedSayTokensFor(address user) external onlyStaking returns (uint256 stakedSayTokensAvailable) {
+    function unlock_sSayTokens() public override whenNotPaused returns (uint256 stakedSayTokensAvailable) {
+        stakedSayTokensAvailable = unlockedStakedSayToken(msg.sender);
+
+        if (stakedSayTokensAvailable == 0) return 0;
+
+        schedules[msg.sender].amountClaimed += uint128(stakedSayTokensAvailable);
+
+        sSayToken.safeTransfer(msg.sender, stakedSayTokensAvailable);
+
+        emit sSayTokensClaimed(msg.sender, stakedSayTokensAvailable);
+    }
+
+    function unlock_sSayTokensFor(address user)
+        external
+        override
+        onlyStaking
+        returns (uint256 stakedSayTokensAvailable)
+    {
         stakedSayTokensAvailable = unlockedStakedSayToken(user);
 
-        if (stakedSayTokensAvailable == 0) revert SYLU__NO_SAY_TO_UNLOCK();
+        if (stakedSayTokensAvailable == 0) return 0;
 
         schedules[user].amountClaimed += uint128(stakedSayTokensAvailable);
+
+        sSayToken.safeTransfer(user, stakedSayTokensAvailable);
     }
 
     function pause() external override onlyOwner {
@@ -182,7 +172,7 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
         //cache
         uint48 vestStartTime = configs.vestStartTime();
 
-        //!Jonathan
+        //!Jonathan review
         if (vestStartTime == 0) return 0;
 
         if (schedule.start == 0 && schedule.totalAmount != 0) {
