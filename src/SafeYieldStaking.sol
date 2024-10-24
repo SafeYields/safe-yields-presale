@@ -61,11 +61,6 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
     event Staked(address indexed user, uint128 indexed amount);
     event UnStaked(address indexed user, uint128 indexed amount);
     event RewardsClaimed(address indexed user, uint128 indexed safeRewards, uint128 indexed usdcRewards);
-    event RewardDistributorSet(address indexed distributor);
-    event PresaleSet(address indexed presale);
-    event SafeYieldLpSet(address indexed lp);
-    event LockUpSet(address indexed lockUp);
-    event SafeTokenUpdated(address indexed newSafeToken);
     event StakingAgentApproved(address indexed agent, bool indexed isApproved);
     event CallBackAdded(address indexed callback);
     event CallBackRemoved(address indexed callback);
@@ -76,11 +71,8 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
     error SYST__STAKING_LOCKED();
     error SYST__INVALID_STAKE_AMOUNT();
     error SYST__INSUFFICIENT_STAKE();
-    error SYST__NO_STAKED_SAY_VESTED();
     error SYST__INVALID_ADDRESS();
     error SYST__AGENT_NOT_APPROVED();
-    error SYST__ONLY_LOCKUP();
-    error SYST__ONLY_PRESALE();
     error SYST__STAKED_SAFE_TRANSFER_NOT_ALLOWED();
     error SYST__CALLBACK_ALREADY_REGISTERED();
     error SYST__NO_CALLBACK_INDEX();
@@ -103,11 +95,6 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
         ) {
             revert SYST__STAKING_LOCKED();
         }
-        _;
-    }
-
-    modifier onlySafeYieldLockUp() {
-        if (msg.sender != address(configs.safeYieldLockUp())) revert SYST__ONLY_LOCKUP();
         _;
     }
 
@@ -166,7 +153,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
         emit Staked(user, amount);
     }
 
-    function unstakeVestedTokens() external override canUnstakeVested {
+    function unstakeVestedTokens() external override canUnstakeVested whenNotPaused {
         uint256 len = callbacks.length();
 
         for (uint256 i; i < len;) {
@@ -182,11 +169,11 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
 
         ISafeYieldLockUp safeYieldLockUp = configs.safeYieldLockUp(); //cache
 
-        uint256 amountStakedVested = safeYieldLockUp.unlockStakedSayTokensFor(msg.sender);
+        uint256 amountStakedVested = safeYieldLockUp.unlock_sSayTokensFor(msg.sender);
 
         _unStake(msg.sender, uint128(amountStakedVested));
 
-        _burn(address(safeYieldLockUp), amountStakedVested);
+        _burn(msg.sender, amountStakedVested);
 
         for (uint256 i; i < len;) {
             ISafeYieldStakingCallback(callbacks.at(i)).handleActionAfter(
@@ -198,40 +185,6 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
         }
 
         safeToken.safeTransfer(msg.sender, amountStakedVested);
-    }
-
-    function unstakeVestedTokensFor(address user) external override canUnstakeVested onlySafeYieldLockUp {
-        uint256 len = callbacks.length();
-
-        for (uint256 i; i < len;) {
-            ISafeYieldStakingCallback(callbacks.at(i)).handleActionBefore(
-                user, SafeYieldStaking.unstakeVestedTokensFor.selector
-            );
-            unchecked {
-                ++i;
-            }
-        }
-
-        claimRewards(msg.sender);
-
-        ISafeYieldLockUp safeYieldLockUp = configs.safeYieldLockUp(); //cache
-
-        uint256 amountStakedVested = safeYieldLockUp.unlockStakedSayTokensFor(user);
-
-        _unStake(user, uint128(amountStakedVested));
-
-        _burn(address(safeYieldLockUp), amountStakedVested);
-
-        for (uint256 i; i < len;) {
-            ISafeYieldStakingCallback(callbacks.at(i)).handleActionAfter(
-                msg.sender, SafeYieldStaking.unstakeVestedTokensFor.selector
-            );
-            unchecked {
-                ++i;
-            }
-        }
-
-        safeToken.safeTransfer(user, amountStakedVested);
     }
 
     function stake(uint128 amount) external whenNotPaused lockStaking {
@@ -478,13 +431,14 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
         }
     }
 
-    function _update(address from, address to, uint256 value) internal override {
-        if (from != address(0) && to != address(0)) {
-            revert SYST__STAKED_SAFE_TRANSFER_NOT_ALLOWED();
-        }
+    //!jonathan do we still need it transferrable
+    // function _update(address from, address to, uint256 value) internal override {
+    //     if (from != address(0) && to != address(0)) {
+    //         revert SYST__STAKED_SAFE_TRANSFER_NOT_ALLOWED();
+    //     }
 
-        super._update(from, to, value);
-    }
+    //     super._update(from, to, value);
+    // }
 
     function _stake(address _user, uint128 amount) internal {
         updateRewards();

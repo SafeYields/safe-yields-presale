@@ -20,8 +20,6 @@ interface ISafeYieldStaking {
 
     function unstakeVestedTokens() external;
 
-    function unstakeVestedTokensFor(address user) external;
-
     function claimRewards(address user) external;
 
     function calculatePendingRewards(address user)
