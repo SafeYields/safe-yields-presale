@@ -36,7 +36,7 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         staking.stake(1_000e18);
     }
 
-    function testStakeForShouldFailIfPresaleEndedButIdoIsNotLive() public startEndPresale {
+    function testStakeForShouldFailIfPresaleEndedBut_IDO_IsNotLive() public startEndPresale {
         vm.expectRevert(SafeYieldStaking.SYST__STAKING_LOCKED.selector);
         vm.prank(ALICE);
         staking.stake(1_000e18);
