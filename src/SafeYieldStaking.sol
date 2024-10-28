@@ -431,14 +431,13 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
         }
     }
 
-    //!jonathan do we still need it transferrable
-    // function _update(address from, address to, uint256 value) internal override {
-    //     if (from != address(0) && to != address(0)) {
-    //         revert SYST__STAKED_SAFE_TRANSFER_NOT_ALLOWED();
-    //     }
+    function _update(address from, address to, uint256 value) internal override {
+        if (from != address(0) && to != address(0) && !approvedStakingAgent[msg.sender]) {
+            revert SYST__STAKED_SAFE_TRANSFER_NOT_ALLOWED();
+        }
 
-    //     super._update(from, to, value);
-    // }
+        super._update(from, to, value);
+    }
 
     function _stake(address _user, uint128 amount) internal {
         updateRewards();

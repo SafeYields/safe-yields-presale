@@ -128,6 +128,7 @@ abstract contract SafeYieldBaseTest is Test {
         staking.approveStakingAgent(address(presale), true);
         staking.approveStakingAgent(protocolAdmin, true);
         staking.approveStakingAgent(address(airdrop), true);
+        staking.approveStakingAgent(address(safeYieldLockUp), true);
 
         configs.setPresale(address(presale));
         configs.updateSafeStaking(address(staking));
