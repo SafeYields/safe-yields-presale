@@ -155,7 +155,7 @@ contract StrategyFundManager is IStrategyFundManager, Ownable2Step {
         onlyController
         returns (uint256 _totalAmountsDeposited)
     {
-        usdc.safeTransfer(address(strategyHandler), 1_000e6);
+        usdc.safeTransfer(address(strategyHandler), amountRequested);
 
         _totalAmountsDeposited = totalAmountsDeposited;
 
