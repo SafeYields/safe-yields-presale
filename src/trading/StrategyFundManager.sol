@@ -10,6 +10,7 @@ import { UserDepositDetails, Strategy } from "./types/StrategyControllerTypes.so
 import { IStrategyFundManager } from "./interfaces/IStrategyFundManager.sol";
 import { IStrategyController } from "./interfaces/IStrategyController.sol";
 import { IBaseStrategyHandler } from "./handlers/Base/interfaces/IBaseStrategyHandler.sol";
+import { console } from "forge-std/Test.sol";
 
 /**
  * @notice StrategyFundManager contract manages user deposits, allocates funds to strategies,
@@ -52,8 +53,9 @@ contract StrategyFundManager is IStrategyFundManager, Ownable2Step {
     /*//////////////////////////////////////////////////////////////
                                MODIFIERS
     //////////////////////////////////////////////////////////////*/
-    modifier onlyController(address _caller) {
-        if (_caller != address(controller)) revert SY__SFM__ONLY_CONTROLLER();
+    modifier onlyController() {
+        console.log(msg.sender);
+        if (msg.sender != address(controller)) revert SY__SFM__ONLY_CONTROLLER();
         _;
     }
 
@@ -150,10 +152,10 @@ contract StrategyFundManager is IStrategyFundManager, Ownable2Step {
     function fundStrategy(address strategyHandler, uint256 amountRequested)
         external
         override
-        onlyController(msg.sender)
+        onlyController
         returns (uint256 _totalAmountsDeposited)
     {
-        usdc.safeIncreaseAllowance(strategyHandler, amountRequested);
+        usdc.safeTransfer(address(strategyHandler), 1_000e6);
 
         _totalAmountsDeposited = totalAmountsDeposited;
 
@@ -165,7 +167,7 @@ contract StrategyFundManager is IStrategyFundManager, Ownable2Step {
     function returnStrategyFunds(uint256 strategyId, uint256 fundsReturned, int256 pnl)
         external
         override
-        onlyController(msg.sender)
+        onlyController
     {
         Strategy memory currentStrategy = controller.getStrategy(strategyId);
         if (pnl < 0) {
