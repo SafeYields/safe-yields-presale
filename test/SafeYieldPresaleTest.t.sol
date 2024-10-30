@@ -382,16 +382,22 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         /**
          * alice claims after 1.5 month
          */
-        skip(5256000);
+        skip(45 * 24 * 60 * 60 seconds); //45 days
 
         //claim safe tokens
         uint256 aliceCommissionFromBOB = (500 * 1_000e18) / 10_000;
 
         uint256 aliceTotalStaked = aliceCommissionFromBOB + 1_500e18;
 
-        uint256 monthsElapsed = (block.timestamp * 10_000) / (30 * 24 * 60 * 60 seconds);
+        uint256 monthsElapsed = (block.timestamp * 10_000) / safeYieldLockUp.ONE_MONTH();
+
+          console.log("Month elapsed - t",monthsElapsed);
+
+
 
         uint256 unlockedPercentage = (monthsElapsed * 2_000) / 10_000;
+
+             console.log("unlockedPercentage - t",unlockedPercentage);
 
         uint256 aliceCalculatedSafe = (unlockedPercentage * aliceTotalStaked) / 10_000;
 

@@ -268,6 +268,7 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
          * as 20% of 2_000 each month is 400
          */
         assertEq(safeToken.balanceOf(ALICE), 400e18);
+        //2000 00 00 00 00 00 00 00 00 00
     }
 
     function testStakeSafeTokensForNoVest() public startEndPresale {
@@ -312,12 +313,11 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         /**
          * when user is claiming safe the user start time should be equal to vestStart time
          */
-        skip(30 * 24 * 60 * 60 seconds); //42 days
+        skip(30 * 24 * 60 * 60 seconds); //30 days
 
         /**
-         * 1.4 months = 28%
+         * 1 months = 20%
          * First month Alice 20% of 2_000e18 = 400 say tokens
-         * Second month Alice 8% of 2_000e18 = 160
          */
 
         //alice claiming some safe tokens after presale has ended
@@ -327,8 +327,8 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
 
         VestingSchedule memory aliceVestingSchedule2 = safeYieldLockUp.getSchedules(ALICE);
         assertEq(aliceVestingSchedule2.start, configs.vestStartTime());
-        assertEq(aliceVestingSchedule2.amountClaimed, 560e18);
-        assertEq(safeToken.balanceOf(ALICE), 560e18);
+        assertEq(aliceVestingSchedule2.amountClaimed, 400e18);
+        assertEq(safeToken.balanceOf(ALICE), 400e18);
     }
 
     function testStakeForOverrides() public startEndPresale {
