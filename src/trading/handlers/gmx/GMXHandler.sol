@@ -2,9 +2,9 @@
 
 pragma solidity 0.8.26;
 
-import { IERC20 } from "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
-import { SafeERC20 } from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
-import { OrderType } from "./types/GMXTypes.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { GMXOrderType } from "./types/GMXTypes.sol";
 import { BaseStrategyHandler } from "../Base/BaseStrategyHandler.sol";
 import { IExchangeRouter } from "./interfaces/IExchangeRouter.sol";
 import { IReader } from "./interfaces/IReader.sol";
@@ -85,11 +85,11 @@ contract GMXHandler is BaseStrategyHandler {
         external
         payable
         override
-        onlyController(msg.sender)
+        onlyController
         returns (bytes32 orderId)
     {
-        (uint256 orderAmount, uint128 controllerStrategyId,,, uint256 executionFee) =
-            abi.decode(handlerData, (uint256, uint128, address, bool, uint256));
+        (uint256 orderAmount,uint256  executionFee ,uint128 controllerStrategyId,,) =
+            abi.decode(handlerData, (uint256,uint256 ,uint128, address, bool));
 
         if (strategyPositionId[controllerStrategyId] != 0) revert SY_HDL__POSITION_EXIST();
 
@@ -97,18 +97,20 @@ contract GMXHandler is BaseStrategyHandler {
 
         //call exchangeRouter sendWNT tokens to pay fee.
         bytes memory sendExecutionFeeData =
-            abi.encodeWithSelector(exchangeRouter.sendWnt.selector, orderVault, executionFee);
+            abi.encodeWithSelector(exchangeRouter.sendWnt.selector, orderVault, 66774344000000);
 
         //send collateral
         bytes memory sendCollateralData =
             abi.encodeWithSelector(exchangeRouter.sendTokens.selector, usdcToken, orderVault, orderAmount);
 
-        //call multicall
         multicallData[0] = sendExecutionFeeData;
         multicallData[1] = sendCollateralData;
         multicallData[2] = openStrategyData;
 
-        bytes[] memory resultData = exchangeRouter.multicall(multicallData);
+        //! remove address
+        IERC20(usdcToken).approve(0x7452c558d45f8afC8c83dAe62C3f8A5BE19c71f6, orderAmount);
+
+        bytes[] memory resultData = exchangeRouter.multicall{ value: 66774344000000 }(multicallData);
 
         orderId = abi.decode(resultData[2], (bytes32));
     }
@@ -119,11 +121,7 @@ contract GMXHandler is BaseStrategyHandler {
     /// @dev This function prepares a multicall data array to first send the execution fee
     ///      and then perform the exit strategy operations. It then calls the `multicall` function
     ///      on the `exchangeRouter`.
-    function exitStrategy(uint256 executionFee, bytes memory exitStrategyData)
-        external
-        payable
-        onlyController(msg.sender)
-    {
+    function exitStrategy(uint256 executionFee, bytes memory exitStrategyData) external payable onlyController {
         bytes[] memory multicallData = new bytes[](2);
 
         //call exchangeRouter sendWNT tokens to pay fee.
@@ -136,7 +134,7 @@ contract GMXHandler is BaseStrategyHandler {
         exchangeRouter.multicall(multicallData);
     }
 
-    function confirmExitStrategy(bytes32 positionKey) external view onlyController(msg.sender) {
+    function confirmExitStrategy(bytes32 positionKey) external view onlyController {
         PositionProps memory position = gmxReader.getPosition(dataStore, positionKey);
 
         if (position.addresses.account != address(0)) revert SY_HDL__ORDER_NOT_SETTLED();
@@ -147,10 +145,7 @@ contract GMXHandler is BaseStrategyHandler {
     /// @param positionKey The key of the position to be confirmed.
     /// @dev This function retrieves the position details using the `positionKey`, checks if the position
     ///      is settled.
-    function confirmOrderFulfillment(uint128 controllerStrategyId, bytes32 positionKey)
-        external
-        onlyController(msg.sender)
-    {
+    function confirmOrderFulfillment(uint128 controllerStrategyId, bytes32 positionKey) external /*onlyController*/ {
         PositionProps memory position = gmxReader.getPosition(dataStore, positionKey);
 
         if (position.addresses.account == address(0)) revert SY_HDL__ORDER_NOT_SETTLED();
@@ -164,7 +159,7 @@ contract GMXHandler is BaseStrategyHandler {
     /// @param cancelOrderData Encoded data containing the order ID to be canceled.
     /// @dev This function decodes the `cancelOrderData` to extract the `orderId`, checks if the order exists,
     ///      and then calls the `cancelOrder` function on the `exchangeRouter'.
-    function cancelOrder(bytes memory cancelOrderData) external override onlyController(msg.sender) {
+    function cancelOrder(bytes memory cancelOrderData) external override  {
         (bool success,) = address(exchangeRouter).call(cancelOrderData);
 
         if (!success) revert SY_HDL__CALL_FAILED();
@@ -177,7 +172,7 @@ contract GMXHandler is BaseStrategyHandler {
     /// - triggerPrice: The price at which the order will be triggered.
     /// @dev This function decodes the `exchangeData`, checks if the order exists and is a limit order,
     ///      and then calls the `updateOrder` function on the `exchangeRouter`.
-    function modifyStrategy(bytes memory exchangeData) external payable override onlyController(msg.sender) {
+    function modifyStrategy(bytes memory exchangeData) external payable override onlyController {
         (bytes32 orderId, uint256 acceptablePrice, uint256 triggerPrice) =
             abi.decode(exchangeData, (bytes32, uint256, uint256));
 
@@ -186,8 +181,8 @@ contract GMXHandler is BaseStrategyHandler {
         OrderProps memory order = gmxReader.getOrder(dataStore, orderId);
 
         if (
-            uint256(order.numbers.orderType) == uint256(OrderType.MarketIncrease)
-                || uint256(order.numbers.orderType) == uint256(OrderType.MarketDecrease)
+            uint256(order.numbers.orderType) == uint256(GMXOrderType.MarketIncrease)
+                || uint256(order.numbers.orderType) == uint256(GMXOrderType.MarketDecrease)
         ) {
             revert SY_HDL__NOT_LIMIT_ORDER();
         }
@@ -225,4 +220,6 @@ contract GMXHandler is BaseStrategyHandler {
 
         return order.addresses.account != address(0);
     }
+
+    fallback() external payable { }
 }
