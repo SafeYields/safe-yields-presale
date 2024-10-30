@@ -20,8 +20,8 @@ abstract contract BaseStrategyHandler is IBaseStrategyHandler {
     error SY_HDL__POSITION_EXIST();
     error SY_HDL__CALL_FAILED();
 
-    modifier onlyController(address _caller) {
-        if (_caller != strategyController) revert SYSH_NOT_CONTROLLER();
+    modifier onlyController() {
+        if (msg.sender != strategyController) revert SYSH_NOT_CONTROLLER();
         _;
     }
 
@@ -33,25 +33,19 @@ abstract contract BaseStrategyHandler is IBaseStrategyHandler {
         usdcToken = IERC20(_usdcToken);
     }
 
-    function openStrategy(bytes memory, bytes memory)
-        external
-        payable
-        virtual
-        onlyController(msg.sender)
-        returns (bytes32)
-    {
+    function openStrategy(bytes memory, bytes memory) external payable virtual onlyController returns (bytes32) {
         revert SY_B_SH_UNIMPLEMENTED();
     }
 
-    function cancelOrder(bytes memory) external virtual onlyController(msg.sender) {
+    function cancelOrder(bytes memory) external virtual onlyController {
         revert SY_B_SH_UNIMPLEMENTED();
     }
 
-    function modifyStrategy(bytes memory) external payable virtual onlyController(msg.sender) {
+    function modifyStrategy(bytes memory) external payable virtual onlyController {
         revert SY_B_SH_UNIMPLEMENTED();
     }
 
-    function exitStrategy(uint128, bytes memory) external payable virtual onlyController(msg.sender) {
+    function exitStrategy(uint128, bytes memory) external payable virtual onlyController {
         revert SY_B_SH_UNIMPLEMENTED();
     }
 
