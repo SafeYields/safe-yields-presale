@@ -5,6 +5,8 @@ pragma solidity 0.8.26;
 import { OrderType } from "../types/VelaTypes.sol";
 
 interface IVault {
+    function deposit(address _account, address _token, uint256 _amount) external;
+
     function newPositionOrder(
         address _indexToken,
         bool _isLong,

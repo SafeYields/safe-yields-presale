@@ -22,6 +22,8 @@ interface IExchangeRouter {
      */
     function createOrder(CreateOrderParams calldata params) external payable returns (bytes32);
 
+    function createDeposit(CreateDepositParams calldata params) external payable returns (bytes32);
+
     function updateOrder(
         bytes32 key,
         uint256 sizeDeltaUsd,
