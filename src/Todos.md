@@ -1,6 +1,6 @@
 1- Vest presale buyers to 5 months, unlocking 20% each month while being auto-staked
 2- allow to airdrop users into the current presale pool with the same rules as 1
-3- after IDO, allow users to stake SAY and unstake any time
+3- after IDO, allow users to stake SAY and unstake any time.
 
 SAY Staking
 Allow protocol approved addresses to stake for anyone.
