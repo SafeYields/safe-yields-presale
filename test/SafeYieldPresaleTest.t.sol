@@ -377,7 +377,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         skip(5 minutes);
 
         vm.prank(protocolAdmin);
-        configs.setVestingStartTime(uint48(block.timestamp));
+        configs.setIDO(makeAddr("SafeYieldLP"));
 
         /**
          * alice claims after 1.5 month
@@ -500,7 +500,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         skip(5 minutes);
 
         vm.prank(protocolAdmin);
-        configs.setVestingStartTime(uint48(block.timestamp));
+        configs.setIDO(makeAddr("SafeYieldLP"));
 
         /**
          * Bob can start claiming after presale ends

@@ -44,7 +44,7 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
 
     function testStakeForShouldFailIfStakeAmountIsLessThanMin() public startEndPresale {
         vm.prank(protocolAdmin);
-        configs.setLpAddress(makeAddr("safeYieldLP"));
+        configs.setIDO(makeAddr("SafeYieldLP"));
         vm.stopPrank();
 
         vm.expectRevert(SafeYieldStaking.SYST__INVALID_STAKE_AMOUNT.selector);
@@ -55,7 +55,7 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
 
     function testUnStakeForShouldFailIfUnStakeAmountIsLessThanMin() public startEndPresale {
         vm.prank(protocolAdmin);
-        configs.setLpAddress(makeAddr("safeYieldLP"));
+        configs.setIDO(makeAddr("SafeYieldLP"));
         vm.stopPrank();
 
         vm.expectRevert(SafeYieldStaking.SYST__INVALID_STAKE_AMOUNT.selector);
@@ -66,7 +66,7 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
 
     function testUnStakeShouldFailIfUserHasNoStake() public startEndPresale {
         vm.prank(protocolAdmin);
-        configs.setLpAddress(makeAddr("safeYieldLP"));
+        configs.setIDO(makeAddr("SafeYieldLP"));
         vm.stopPrank();
 
         vm.expectRevert(SafeYieldStaking.SYST__INSUFFICIENT_STAKE.selector);
@@ -77,7 +77,7 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
 
     function testClaimUsdcRewards() public startEndPresale {
         vm.prank(protocolAdmin);
-        configs.setLpAddress(makeAddr("safeYieldLP"));
+        configs.setIDO(makeAddr("SafeYieldLP"));
         vm.stopPrank();
         /**
          * @dev since its normal rewards distribution, Usdc rewards will be distributed
@@ -132,7 +132,7 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
 
     function testClaimSafeRewards() public startEndPresale {
         vm.prank(protocolAdmin);
-        configs.setLpAddress(makeAddr("safeYieldLP"));
+        configs.setIDO(makeAddr("SafeYieldLP"));
         vm.stopPrank();
 
         vm.startPrank(protocolAdmin);
@@ -254,7 +254,7 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         vm.stopPrank();
 
         vm.prank(protocolAdmin);
-        configs.setVestingStartTime(uint48(block.timestamp));
+        configs.setIDO(makeAddr("SafeYieldLP"));
 
         skip(30 * 24 * 60 * 60 seconds); //1 month
 
@@ -272,7 +272,7 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
 
     function testStakeSafeTokensForNoVest() public startEndPresale {
         vm.prank(protocolAdmin);
-        configs.setLpAddress(makeAddr("safeYieldLP"));
+        configs.setIDO(makeAddr("SafeYieldLP"));
         vm.stopPrank();
 
         _transferSafeTokens(protocolAdmin, 10_000e18);
@@ -307,7 +307,7 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
 
         //after admin sets start time when IDO has ended.
         vm.prank(protocolAdmin);
-        configs.setVestingStartTime(uint48(block.timestamp));
+        configs.setIDO(makeAddr("SafeYieldLP"));
 
         /**
          * when user is claiming safe the user start time should be equal to vestStart time
@@ -358,7 +358,7 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
 
         skip(10 minutes);
         vm.prank(protocolAdmin);
-        configs.setVestingStartTime(uint48(block.timestamp));
+        configs.setIDO(makeAddr("SafeYieldLP"));
 
         skip(30 * 24 * 60 * 60 seconds);
         vm.startPrank(protocolAdmin);
@@ -374,7 +374,7 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         _transferSafeTokens(protocolAdmin, 10_000e18);
 
         vm.prank(protocolAdmin);
-        configs.setVestingStartTime(uint48(block.timestamp));
+        configs.setIDO(makeAddr("SafeYieldLP"));
 
         vm.startPrank(protocolAdmin);
         safeToken.approve(address(staking), 5_000e18);
@@ -388,7 +388,7 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
 
     function testUnStakeSafeTokensAndClaimUsdcRewards() public startEndPresale {
         vm.prank(protocolAdmin);
-        configs.setLpAddress(makeAddr("safeYieldLP"));
+        configs.setIDO(makeAddr("SafeYieldLP"));
         vm.stopPrank();
 
         _transferSafeTokens(ALICE, 10_000e18);
@@ -443,7 +443,7 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
 
     function testStakeSafeTokensGetUsdcRewards() public startEndPresale {
         vm.prank(protocolAdmin);
-        configs.setLpAddress(makeAddr("safeYieldLP"));
+        configs.setIDO(makeAddr("SafeYieldLP"));
         vm.stopPrank();
 
         _transferSafeTokens(ALICE, 10_000e18);
@@ -512,7 +512,7 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
 
     function testStakeSafeTokensGetSafeRewards() public startEndPresale {
         vm.prank(protocolAdmin);
-        configs.setLpAddress(makeAddr("safeYieldLP"));
+        configs.setIDO(makeAddr("SafeYieldLP"));
         vm.stopPrank();
 
         vm.startPrank(protocolAdmin);
@@ -589,7 +589,7 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
 
     function testStakePOC_RewardsDebtCalculations() public startEndPresale {
         vm.prank(protocolAdmin);
-        configs.setLpAddress(makeAddr("safeYieldLP"));
+        configs.setIDO(makeAddr("SafeYieldLP"));
         vm.stopPrank();
 
         _transferSafeTokens(ALICE, 10_000e18);
@@ -651,7 +651,7 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         skip(5 minutes);
 
         vm.prank(protocolAdmin);
-        configs.setVestingStartTime(uint48(block.timestamp));
+        configs.setIDO(makeAddr("SafeYieldLP"));
 
         skip(5 minutes);
 
@@ -672,7 +672,7 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
 
     function testFuzz_StakeTokens(address userA, address userB, uint256 amount) public startEndPresale {
         vm.prank(protocolAdmin);
-        configs.setLpAddress(makeAddr("safeYieldLP"));
+        configs.setIDO(makeAddr("SafeYieldLP"));
         vm.stopPrank();
 
         amount = bound(amount, 2e18, 100_000e18);
@@ -707,7 +707,7 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         startEndPresale
     {
         vm.prank(protocolAdmin);
-        configs.setLpAddress(makeAddr("safeYieldLP"));
+        configs.setIDO(makeAddr("SafeYieldLP"));
         vm.stopPrank();
 
         amount = bound(amount, 2e18, 100_000e18);
@@ -758,7 +758,7 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         startEndPresale
     {
         vm.prank(protocolAdmin);
-        configs.setLpAddress(makeAddr("safeYieldLP"));
+        configs.setIDO(makeAddr("SafeYieldLP"));
         vm.stopPrank();
 
         amount = bound(amount, 2e18, 1_000_000e18);
@@ -829,7 +829,7 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         startEndPresale
     {
         vm.prank(protocolAdmin);
-        configs.setLpAddress(makeAddr("safeYieldLP"));
+        configs.setIDO(makeAddr("SafeYieldLP"));
         vm.stopPrank();
 
         vm.startPrank(protocolAdmin);

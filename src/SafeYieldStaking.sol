@@ -232,14 +232,14 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
 
         _burn(msg.sender, amount);
 
+        safeToken.safeTransfer(msg.sender, amount);
+
         for (uint256 i; i < len;) {
             ISafeYieldStakingCallback(callbacks.at(i)).handleActionAfter(msg.sender, SafeYieldStaking.unStake.selector);
             unchecked {
                 ++i;
             }
         }
-
-        safeToken.safeTransfer(msg.sender, amount);
 
         emit UnStaked(msg.sender, amount);
     }

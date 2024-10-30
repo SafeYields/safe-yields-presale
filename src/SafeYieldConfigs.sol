@@ -28,10 +28,12 @@ contract SafeYieldConfigs is ISafeYieldConfigs, Ownable2Step {
 
     constructor(address protocolAdmin) Ownable(protocolAdmin) { }
 
-    function setLpAddress(address lp) external override onlyOwner {
+    function setIDO(address lp) external override onlyOwner {
         if (lp == address(0)) revert SYC__INVALID_ADDRESS();
 
         safeYieldLP = lp;
+
+        vestStartTime = uint48(block.timestamp);
 
         emit SafeYieldLpSet(lp);
     }
@@ -52,9 +54,6 @@ contract SafeYieldConfigs is ISafeYieldConfigs, Ownable2Step {
         emit LockUpSet(_lockUp);
     }
 
-    function setVestingStartTime(uint48 _vestStartTime) external override onlyOwner {
-        vestStartTime = _vestStartTime;
-    }
 
     function updateSafeStaking(address _newStaking) external override onlyOwner {
         if (_newStaking == address(0)) revert SYC__INVALID_ADDRESS();

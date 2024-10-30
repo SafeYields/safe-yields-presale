@@ -15,7 +15,7 @@ contract SafeYieldTokenDistributorTest is SafeYieldBaseTest {
     //////////////////////////////////////////////////////////////*/
     function testDepositRewardAsset() public startEndPresale {
         vm.prank(protocolAdmin);
-        configs.setLpAddress(makeAddr("safeYieldLP"));
+        configs.setIDO(makeAddr("SafeYieldLP"));
         vm.stopPrank();
 
         address[] memory rewardAssets = new address[](1);
@@ -143,7 +143,7 @@ contract SafeYieldTokenDistributorTest is SafeYieldBaseTest {
 
     function testRewardsAccrued__MultipleOps() public startEndPresale {
         vm.prank(protocolAdmin);
-        configs.setLpAddress(makeAddr("safeYieldLP"));
+        configs.setIDO(makeAddr("SafeYieldLP"));
         vm.stopPrank();
 
         skip(5 minutes);

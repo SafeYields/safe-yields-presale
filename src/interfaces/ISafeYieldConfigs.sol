@@ -21,9 +21,7 @@ interface ISafeYieldConfigs {
 
     function safeYieldStaking() external view returns (ISafeYieldStaking);
 
-    function setVestingStartTime(uint48 _vestStartTime) external;
-
-    function setLpAddress(address lp) external;
+    function setIDO(address lp) external ;
 
     function setPresale(address _presale) external;
 
