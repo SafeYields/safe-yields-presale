@@ -84,10 +84,6 @@ abstract contract SafeYieldBaseTest is Test {
     function setUp() public virtual {
         vm.startPrank(protocolAdmin);
 
-        arbitrumFork = vm.createFork("arbitrum_rpc");
-
-        vm.selectFork(arbitrumFork);
-
         usdc = new USDCMockToken("USDC", "USDC", 6);
 
         rewardToken = new RewardMockToken("RewardToken", "RT", 6);

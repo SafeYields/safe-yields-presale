@@ -88,8 +88,8 @@ contract GMXHandler is BaseStrategyHandler {
         onlyController
         returns (bytes32 orderId)
     {
-        (uint256 orderAmount,uint256  executionFee ,uint128 controllerStrategyId,,) =
-            abi.decode(handlerData, (uint256,uint256 ,uint128, address, bool));
+        (uint256 orderAmount ,uint128 controllerStrategyId,,) =
+            abi.decode(handlerData, (uint256,uint128, address, bool));
 
         if (strategyPositionId[controllerStrategyId] != 0) revert SY_HDL__POSITION_EXIST();
 
