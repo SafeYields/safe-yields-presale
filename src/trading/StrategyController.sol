@@ -123,7 +123,10 @@ contract StrategyController is /*IStrategyController,*/ AccessControl {
         IBaseStrategyHandler(strategyHandler).exitStrategy(strategyId, exchangeData);
     }
 
-    //!review
+    function cancelStrategy(address strategyHandler,  bytes memory exchangeData) external payable onlyRole(SAY_TRADER_ROLE){
+         IBaseStrategyHandler(strategyHandler).cancelOrder(exchangeData);
+    }
+
     function confirmExitStrategy(address strategyHandler, uint128 strategyId, bytes32 positionKey)
         external
         onlyRole(SAY_TRADER_ROLE)
