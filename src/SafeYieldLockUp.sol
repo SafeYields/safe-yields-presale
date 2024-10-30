@@ -88,7 +88,9 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
 
         //!@jonathan review
         uint48 startTime = (vestStart == 0) ? vestStart : uint48(block.timestamp);
+
         bool isBeforeIDO = (vestStart == 0 && !userHasVestedBeforeIDO[user]);
+        
         bool isAfterIDOVestingReset =
             (vestStart != 0 && block.timestamp >= schedules[user].start + schedules[user].duration);
 
