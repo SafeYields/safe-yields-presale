@@ -18,7 +18,7 @@ contract SafeYieldConfigs is ISafeYieldConfigs, Ownable2Step {
     ISafeYieldLockUp public override safeYieldLockUp;
     ISafeYieldStaking public override safeYieldStaking;
 
-    event SafeYieldLpSet(address indexed LPset);
+    event SafeYieldLpSet(address indexed LPset, uint256 indexed vestStart);
     event PresaleSet(address indexed presale);
     event LockUpSet(address indexed lockUp);
     event SafeStakingUpdated(address indexed newStaking);
@@ -35,7 +35,7 @@ contract SafeYieldConfigs is ISafeYieldConfigs, Ownable2Step {
 
         vestStartTime = uint48(block.timestamp);
 
-        emit SafeYieldLpSet(lp);
+        emit SafeYieldLpSet(lp,block.timestamp);
     }
 
     function setPresale(address _presale) external override onlyOwner {
