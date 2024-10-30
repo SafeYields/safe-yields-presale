@@ -4,6 +4,7 @@ out = "out"
 libs = ["lib"]
 solc = "0.8.26"
 
+
 [fmt]
 line_length = 120
 tab_width = 4
@@ -13,8 +14,8 @@ bracket_spacing = true
 runs = 1024
 
 [rpc_endpoints]
-arbitrum = "${ARBITRUM_RPC_URL}"
-sepoliaARB = "${SEPOLIA_ARB_RPC_URL}"
+arbitrum_rpc = "${ARBITRUM_RPC_URL}"
+sepoliaARB = "${ARBITRUM_SEPOLIA_RPC_URL}"
 mainnet = "${MAINNET_RPC_URL}"
 
 
