@@ -22,7 +22,6 @@ import { IUniswapV3Pool } from "src/uniswapV3/interfaces/IUniswapV3Pool.sol";
 import { ISwapRouter } from "src/uniswapV3/interfaces/ISwapRouter.sol";
 import { INonFungiblePositionManager } from "src/uniswapV3/interfaces/INonFungiblePositionManager.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
-import { GMXHandler } from "src/trading/handlers/gmx/GMXHandler.sol";
 
 abstract contract SafeYieldBaseTest is Test {
     uint256 public constant PRE_SALE_MAX_SUPPLY = 2_000_000e18;
@@ -60,7 +59,8 @@ abstract contract SafeYieldBaseTest is Test {
     SafeToken public safeToken;
     USDCMockToken public usdc;
     RewardMockToken rewardToken;
-    GMXHandler gmxHandler;
+
+    uint256 public arbitrumFork;
 
     error AccessControlUnauthorizedAccount(address account, bytes32 neededRole);
     error OwnableUnauthorizedAccount(address account);
@@ -83,6 +83,11 @@ abstract contract SafeYieldBaseTest is Test {
 
     function setUp() public virtual {
         vm.startPrank(protocolAdmin);
+
+        arbitrumFork = vm.createFork("arbitrum_rpc");
+
+        vm.selectFork(arbitrumFork);
+
         usdc = new USDCMockToken("USDC", "USDC", 6);
 
         rewardToken = new RewardMockToken("RewardToken", "RT", 6);
