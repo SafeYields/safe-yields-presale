@@ -70,7 +70,7 @@ struct CreateWithdrawalParams {
 struct CreateOrderParams {
     CreateOrderParamsAddresses addresses;
     CreateOrderParamsNumbers numbers;
-    OrderType orderType;
+    GMXOrderType orderType;
     DecreasePositionSwapType decreasePositionSwapType;
     bool isLong;
     bool shouldUnwrapNativeToken;
@@ -84,7 +84,7 @@ enum DecreasePositionSwapType {
     SwapCollateralTokenToPnlToken
 }
 
-enum OrderType {
+enum GMXOrderType {
     // @dev MarketSwap: swap token A to token B at the current market price
     // the order will be cancelled if the minOutputAmount cannot be fulfilled
     MarketSwap,
