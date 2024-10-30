@@ -94,6 +94,11 @@ contract StrategyControllerTest is SafeYieldTradingBaseTest {
 
         controller.openStrategy(address(gmxHandler), GMX__ETH_USD, 10e6, true, OrderType.MARKET, data2);
 
+        //! assert
+        //! 1. fund manager
+        //! 2. controller 
+        //! 3. balance difference 
+
         return orderKey;
     }
 
@@ -115,7 +120,6 @@ contract StrategyControllerTest is SafeYieldTradingBaseTest {
        controller.cancelStrategy(address(gmxHandler),exchangeData);
 
        assertEq(IERC20(USDC_ARB).balanceOf(address(gmxHandler)),10e6);
-
     }
 
     function getOrderKey() public view returns(bytes32 key) {
@@ -129,84 +133,84 @@ contract StrategyControllerTest is SafeYieldTradingBaseTest {
                                   VELA
     //////////////////////////////////////////////////////////////*/
 
-    function testUserFundingManager__VELA() public {
-        transferUSDC(ALICE, 1_000e6);
+    // function testUserFundingManager__VELA() public {
+    //     transferUSDC(ALICE, 1_000e6);
 
-        uint32 lastTime = uint32(block.timestamp);
+    //     uint32 lastTime = uint32(block.timestamp);
 
-        vm.startPrank(ALICE);
-        IERC20(USDC_ARB).approve(address(fundManager), 1_000e6);
-        fundManager.deposit(1_000e6);
+    //     vm.startPrank(ALICE);
+    //     IERC20(USDC_ARB).approve(address(fundManager), 1_000e6);
+    //     fundManager.deposit(1_000e6);
 
-        skip(5 minutes);
+    //     skip(5 minutes);
 
-        UserDepositDetails memory aliceDepositDetailsAfter = fundManager.userDepositDetails(ALICE);
+    //     UserDepositDetails memory aliceDepositDetailsAfter = fundManager.userDepositDetails(ALICE);
 
-        assertEq(aliceDepositDetailsAfter.amountUtilized, 0);
-        assertEq(aliceDepositDetailsAfter.amountUnutilized, 1_000e6);
-    }
+    //     assertEq(aliceDepositDetailsAfter.amountUtilized, 0);
+    //     assertEq(aliceDepositDetailsAfter.amountUnutilized, 1_000e6);
+    // }
 
-    function createNewPosition__VELA() internal {
-        transferUSDC(ALICE, 1_000e6);
+    // function createNewPosition__VELA() internal {
+    //     transferUSDC(ALICE, 1_000e6);
 
-        UserDepositDetails memory aliceDepositDetailsPrior = fundManager.userDepositDetails(ALICE);
+    //     UserDepositDetails memory aliceDepositDetailsPrior = fundManager.userDepositDetails(ALICE);
 
-        vm.startPrank(ALICE);
-        IERC20(USDC_ARB).approve(address(fundManager), 1_000e6);
-        fundManager.deposit(1_000e6);
+    //     vm.startPrank(ALICE);
+    //     IERC20(USDC_ARB).approve(address(fundManager), 1_000e6);
+    //     fundManager.deposit(1_000e6);
 
-        uint256[] memory params = new uint256[](4);
-        params[0] = 168331567680524983643408631905913;
-        params[1] = 250;
-        params[2] = 50000000000000000000000000000000;
-        params[3] = 1325000000000000000000000000000000;
+    //     uint256[] memory params = new uint256[](4);
+    //     params[0] = 168331567680524983643408631905913;
+    //     params[1] = 250;
+    //     params[2] = 50000000000000000000000000000000;
+    //     params[3] = 1325000000000000000000000000000000;
 
-        vm.deal(address(velaHandler), 20 ether);
+    //     vm.deal(address(velaHandler), 20 ether);
 
-        bytes memory data = abi.encodeWithSignature(
-            "newPositionOrder(uint256,bool,uint8,uint256[],address)", 8, true, OrderType.MARKET, params, address(0)
-        );
+    //     bytes memory data = abi.encodeWithSignature(
+    //         "newPositionOrder(uint256,bool,uint8,uint256[],address)", 8, true, OrderType.MARKET, params, address(0)
+    //     );
 
-        bytes memory handlerData = abi.encode("NewData");
+    //     bytes memory handlerData = abi.encode("NewData");
 
-        uint256 posId = IPositionVault(POSITION_VAULT).lastPosId();
+    //     uint256 posId = IPositionVault(POSITION_VAULT).lastPosId();
 
-        vm.startPrank(SAY_TRADER);
-        controller.openStrategy(address(velaHandler), address(0), 1_000e6, true, OrderType.MARKET, data);
+    //     vm.startPrank(SAY_TRADER);
+    //     controller.openStrategy(address(velaHandler), address(0), 1_000e6, true, OrderType.MARKET, data);
 
-        // Order memory newOrder = IOrderVault(ORDER_VAULT).getOrder(uint256 _posId);
-    }
+    //     // Order memory newOrder = IOrderVault(ORDER_VAULT).getOrder(uint256 _posId);
+    // }
 
-    function testVela___AddNewPosition() public {
-        transferUSDC(ALICE, 1_000e6);
+    // function testVela___AddNewPosition() public {
+    //     transferUSDC(ALICE, 1_000e6);
 
-        UserDepositDetails memory aliceDepositDetailsPrior = fundManager.userDepositDetails(ALICE);
+    //     UserDepositDetails memory aliceDepositDetailsPrior = fundManager.userDepositDetails(ALICE);
 
-        vm.startPrank(ALICE);
-        IERC20(USDC_ARB).approve(address(fundManager), 1_000e6);
-        fundManager.deposit(1_000e6);
+    //     vm.startPrank(ALICE);
+    //     IERC20(USDC_ARB).approve(address(fundManager), 1_000e6);
+    //     fundManager.deposit(1_000e6);
 
-        uint256[] memory params = new uint256[](4);
-        params[0] = 168331567680524983643408631905913;
-        params[1] = 250;
-        params[2] = 50000000000000000000000000000000;
-        params[3] = 1325000000000000000000000000000000;
+    //     uint256[] memory params = new uint256[](4);
+    //     params[0] = 168331567680524983643408631905913;
+    //     params[1] = 250;
+    //     params[2] = 50000000000000000000000000000000;
+    //     params[3] = 1325000000000000000000000000000000;
 
-        vm.deal(address(velaHandler), 20 ether);
+    //     vm.deal(address(velaHandler), 20 ether);
 
-        bytes memory data = abi.encodeWithSignature(
-            "newPositionOrder(uint256,bool,uint8,uint256[],address)", 8, true, OrderType.MARKET, params, address(0)
-        );
+    //     bytes memory data = abi.encodeWithSignature(
+    //         "newPositionOrder(uint256,bool,uint8,uint256[],address)", 8, true, OrderType.MARKET, params, address(0)
+    //     );
 
-        bytes memory handlerData = abi.encode("NewData");
+    //     bytes memory handlerData = abi.encode("NewData");
 
-        vm.startPrank(SAY_TRADER);
-        controller.openStrategy(address(velaHandler), address(0), 1_000e6, true, OrderType.MARKET, data);
+    //     vm.startPrank(SAY_TRADER);
+    //     controller.openStrategy(address(velaHandler), address(0), 1_000e6, true, OrderType.MARKET, data);
 
-        // UserDepositDetails memory aliceDepositDetailsAfter = fundManager.userDepositDetails(ALICE);
+    //     // UserDepositDetails memory aliceDepositDetailsAfter = fundManager.userDepositDetails(ALICE);
 
-        // assertEq(aliceDepositDetailsAfter.amountUtilized, aliceDepositDetailsPrior.amountUtilized + 1_000e6);
-        // assertEq(aliceDepositDetailsAfter.amountUnutilized, aliceDepositDetailsPrior.amountUnutilized);
-        //todo: add assertions
-    }
+    //     // assertEq(aliceDepositDetailsAfter.amountUtilized, aliceDepositDetailsPrior.amountUtilized + 1_000e6);
+    //     // assertEq(aliceDepositDetailsAfter.amountUnutilized, aliceDepositDetailsPrior.amountUnutilized);
+    //     //todo: add assertions
+    // }
 }

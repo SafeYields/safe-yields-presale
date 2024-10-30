@@ -7,12 +7,15 @@ import { StrategyFundManager } from "src/trading/StrategyFundManager.sol";
 import { SafeYieldBaseTest } from "../setup/SafeYieldBaseTest.t.sol";
 import { GMXHandler } from "src/trading/handlers/gmx/GMXHandler.sol";
 import { VelaHandler } from "src/trading/handlers/vela/VelaHandler.sol";
-import { console } from "forge-std/Test.sol";
 import { ArbSysMock } from "../mocks/ArbSysMock.sol";
 
-contract SafeYieldTradingBaseTest is SafeYieldBaseTest {
-    ArbSysMock public arbSysMock;
+import { Test, console } from "forge-std/Test.sol";
 
+contract SafeYieldTradingBaseTest is Test {
+    ArbSysMock public arbSysMock;
+     uint256 public arbitrumFork;
+    address public ALICE = makeAddr("alice");
+    address public protocolAdmin = makeAddr("protocolAdmin");
     address public SAY_TRADER = makeAddr("sayTrader");
     address public VELA_VAULT = 0xC4ABADE3a15064F9E3596943c699032748b13352;
     address public USDC_ARB = 0xaf88d065e77c8cC2239327C5EDb3A432268e5831;
@@ -27,8 +30,11 @@ contract SafeYieldTradingBaseTest is SafeYieldBaseTest {
     StrategyFundManager fundManager;
     StrategyController controller;
 
-    function setUp() public override {
-        super.setUp();
+    function setUp() public  {
+        
+         arbitrumFork = vm.createFork("arbitrum_rpc");
+
+        vm.selectFork(arbitrumFork);
 
         vm.startPrank(protocolAdmin);
 
