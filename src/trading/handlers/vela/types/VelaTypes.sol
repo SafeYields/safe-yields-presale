@@ -6,28 +6,7 @@ enum OrderType {
     MARKET,
     LIMIT,
     STOP,
-    STOP_LIMIT,
-    TRAILING_STOP
-}
-
-struct Position {
-    address owner;
-    address refer;
-    int256 realisedPnl;
-    uint256 averagePrice;
-    uint256 collateral;
-    uint256 entryFundingRate;
-    uint256 lastIncreasedTime;
-    uint256 lastPrice;
-    uint256 reserveAmount;
-    uint256 size;
-}
-
-struct ConfirmInfo {
-    bool confirmDelayStatus;
-    uint256 pendingDelayCollateral;
-    uint256 pendingDelaySize;
-    uint256 delayStartTime;
+    STOP_LIMIT
 }
 
 enum OrderStatus {
@@ -37,13 +16,95 @@ enum OrderStatus {
     CANCELED
 }
 
-struct OrderInfo {
+enum TriggerStatus {
+    NONE,
+    PENDING,
+    OPEN,
+    TRIGGERED,
+    CANCELLED
+}
+
+struct Order {
     OrderStatus status;
     uint256 lmtPrice;
-    uint256 pendingSize;
-    uint256 pendingCollateral;
+    uint256 size;
+    uint256 collateral;
     uint256 positionType;
     uint256 stepAmount;
     uint256 stepType;
     uint256 stpPrice;
+    uint256 timestamp;
+}
+
+struct AddPositionOrder {
+    address owner;
+    uint256 collateral;
+    uint256 size;
+    uint256 allowedPrice;
+    uint256 timestamp;
+    uint256 fee;
+}
+
+struct AddPositionTrigger {
+    bool isTriggerAbove;
+    uint256 posId;
+    uint256 triggerPrice;
+    uint256 collateral;
+    uint256 size;
+    uint256 fee;
+}
+
+struct DecreasePositionOrder {
+    uint256 size;
+    uint256 allowedPrice;
+    uint256 timestamp;
+}
+
+struct Position {
+    address owner;
+    address refer;
+    bool isLong;
+    uint256 tokenId;
+    uint256 averagePrice;
+    uint256 collateral;
+    int256 fundingIndex;
+    uint256 lastIncreasedTime;
+    uint256 size;
+    uint256 accruedBorrowFee;
+}
+
+struct PaidFees {
+    uint256 paidPositionFee;
+    uint256 paidBorrowFee;
+    int256 paidFundingFee;
+}
+
+struct Temp {
+    uint256 a;
+    uint256 b;
+    uint256 c;
+    uint256 d;
+    uint256 e;
+}
+
+struct TriggerInfo {
+    bool isTP;
+    uint256 amountPercent;
+    uint256 createdAt;
+    uint256 price;
+    uint256 triggeredAmount;
+    uint256 triggeredAt;
+    TriggerStatus status;
+}
+
+struct PositionTrigger {
+    TriggerInfo[] triggers;
+}
+
+struct WithdrawalRequest {
+    bool isOpen;
+    address account;
+    address token;
+    uint256 vusdAmount;
+    uint256 timestamp;
 }
