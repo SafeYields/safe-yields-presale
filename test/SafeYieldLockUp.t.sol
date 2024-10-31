@@ -33,5 +33,4 @@ contract SafeYieldLockUpTest is SafeYieldBaseTest {
         assertEq(aliceSchedule.duration, safeYieldLockUp.VESTING_DURATION());
     }
 
-    //! tests flow -  unlocksSay and unstake from staking 
 }

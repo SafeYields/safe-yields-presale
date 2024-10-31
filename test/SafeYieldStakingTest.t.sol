@@ -7,6 +7,7 @@ import { SafeYieldBaseTest } from "./setup/SafeYieldBaseTest.t.sol";
 import { SafeYieldStaking, Stake } from "src/SafeYieldStaking.sol";
 import { VestingSchedule } from "src/types/SafeTypes.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract SafeYieldStakingTest is SafeYieldBaseTest {
     using Math for uint256;
@@ -300,6 +301,9 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         staking.stakeFor(ALICE, 2_000e18, true);
         vm.stopPrank();
 
+        Stake memory aliceStake = staking.getUserStake(ALICE);
+        assertEq(aliceStake.stakeAmount, 2_000e18);
+
         skip(1 weeks);
 
         VestingSchedule memory aliceVestingSchedule1 = safeYieldLockUp.getSchedules(ALICE);
@@ -329,6 +333,51 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         assertEq(aliceVestingSchedule2.start, configs.vestStartTime());
         assertEq(aliceVestingSchedule2.amountClaimed, 400e18);
         assertEq(safeToken.balanceOf(ALICE), 400e18);
+    }
+
+    //! tests flow -  unlocksSay and unstake from staking
+
+    function testUnlocksSayAndUnstake() public startEndPresale {
+        _transferSafeTokens(protocolAdmin, 10_000e18);
+
+        skip(5 days);
+
+        vm.startPrank(protocolAdmin);
+        safeToken.approve(address(staking), 5_000e18);
+        staking.stakeFor(ALICE, 2_000e18, true);
+        vm.stopPrank();
+
+        Stake memory aliceStake = staking.getUserStake(ALICE);
+        assertEq(aliceStake.stakeAmount, 2_000e18);
+
+        skip(1 weeks);
+
+        VestingSchedule memory aliceVestingSchedule1 = safeYieldLockUp.getSchedules(ALICE);
+        assertEq(aliceVestingSchedule1.start, 0);
+        assertEq(aliceVestingSchedule1.totalAmount, 2_000e18);
+
+        //after admin sets start time when IDO has ended.
+        vm.prank(protocolAdmin);
+        configs.setIDO(makeAddr("SafeYieldLP"));
+
+        skip(30 * 24 * 60 * 60 seconds); //30 days
+
+        vm.prank(ALICE);
+        safeYieldLockUp.unlock_sSayTokens();
+
+        VestingSchedule memory aliceVestingSchedule2 = safeYieldLockUp.getSchedules(ALICE);
+
+        assertEq(aliceVestingSchedule2.amountClaimed, 400e18);
+        assertEq(IERC20(address(staking)).balanceOf(ALICE), 400e18);
+        assertEq(safeToken.balanceOf(ALICE), 0);
+
+        vm.prank(ALICE);
+        staking.unStake(200e18);
+
+        assertEq(safeToken.balanceOf(ALICE), 200e18);
+
+        Stake memory aliceNewStake = staking.getUserStake(ALICE);
+        assertEq(aliceNewStake.stakeAmount, 1_800e18);
     }
 
     function testStakeForOverrides() public startEndPresale {
