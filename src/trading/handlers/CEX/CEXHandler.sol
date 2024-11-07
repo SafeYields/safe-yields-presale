@@ -5,13 +5,28 @@ import { BaseStrategyHandler } from "../Base/BaseStrategyHandler.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+/**
+ * Cex Vault (4626 vault)
+ * Accept usdc deposits from users.
+ * Pull out the funds from the vault and deposit them into the CEX.
+ * Use a state variable to track all usdc deposits (do not depend on 4626 balanceOf tracking).
+ * Record amounts used to fund each strategyId but do not update number of assets. (Maintain share pricing of vault).
+ * When strategy is closed, pull funds back to the vault and based on pnl, update the state variable tracking all usdc deposits.
+ * If strategy pnl is +ve, add to the state variable, if -ve, subtract from the state variable.
+ * This is the only point we will manually change the price of the vault share.
+ *
+ * limit user withdrawals ***
+ * When a user wants to withdraw, they should request to withdraw x amount of their share tokens.
+ * Off-chain keeps will honor user's withdrawal request by sending them x amount of usdc.
+ * We have to take that amount of usdc from a strategy, burn the share tokens and update the state variable tracking all usdc deposits.
+ */
 contract CEXHandler is BaseStrategyHandler {
     using SafeERC20 for IERC20;
 
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
-    
+
     enum CEXType {
         BYBIT,
         BINANCE,
@@ -19,11 +34,11 @@ contract CEXHandler is BaseStrategyHandler {
     }
 
     struct CEXPosition {
-        uint256 depositAmount;    // Initial deposit amount
-        uint256 currentBalance;   // Current balance tracked
-        address trader;           // Address of the CEX trader
-        CEXType cexType;         // Which CEX this position is on
-        bool isActive;           // Whether position is currently active
+        uint256 depositAmount; // Initial deposit amount
+        uint256 currentBalance; // Current balance tracked
+        address trader; // Address of the CEX trader
+        CEXType cexType; // Which CEX this position is on
+        bool isActive; // Whether position is currently active
     }
 
     // Track positions per strategy
@@ -39,22 +54,11 @@ contract CEXHandler is BaseStrategyHandler {
     //////////////////////////////////////////////////////////////*/
 
     event StrategyOpened(
-        uint128 indexed strategyId,
-        CEXType indexed cexType,
-        address indexed trader,
-        uint256 amount,
-        bytes32 orderId
+        uint128 indexed strategyId, CEXType indexed cexType, address indexed trader, uint256 amount, bytes32 orderId
     );
-    event StrategyExited(
-        uint128 indexed strategyId,
-        uint256 finalBalance,
-        int256 realizedPnl
-    );
+    event StrategyExited(uint128 indexed strategyId, uint256 finalBalance, int256 realizedPnl);
 
-    event CEXBalanceUpdated(
-        CEXType indexed cexType,
-        uint256 newBalance
-    );
+    event CEXBalanceUpdated(CEXType indexed cexType, uint256 newBalance);
 
     /*//////////////////////////////////////////////////////////////
                                ERRORS
@@ -67,14 +71,9 @@ contract CEXHandler is BaseStrategyHandler {
     error CH__STRATEGY_ALREADY_EXISTS();
     error CH__INSUFFICIENT_BALANCE();
 
-    constructor(
-        address _controller,
-        address _usdc,
-        address _fundManager,
-        string memory _exchangeName
-    ) 
+    constructor(address _controller, address _usdc, address _fundManager, string memory _exchangeName)
         BaseStrategyHandler(_controller, _usdc, _fundManager, _exchangeName)
-    {}
+    { }
 
     /**
      * @notice Opens a new strategy and transfers funds to the trader
@@ -82,23 +81,23 @@ contract CEXHandler is BaseStrategyHandler {
      * @param openStrategyData Contains CEX type and trader address
      * @return orderId Generated order ID for the strategy
      */
-    function openStrategy(
-        bytes memory handlerData,
-        bytes memory openStrategyData
-    ) external payable override onlyController returns (bytes32) {
-        (uint256 amount, uint128 strategyId,,) = abi.decode(
-            handlerData,
-            (uint256, uint128, address, bool)
-        );
+    function openStrategy(bytes memory handlerData, bytes memory openStrategyData)
+        external
+        payable
+        override
+        onlyController
+        returns (bytes32)
+    {
+        (uint256 amount, uint128 strategyId,,) = abi.decode(handlerData, (uint256, uint128, address, bool));
 
         (CEXType cexType, address trader) = abi.decode(openStrategyData, (CEXType, address));
-        
+
         if (positions[strategyId].isActive) revert CH__STRATEGY_ALREADY_EXISTS();
         if (amount == 0) revert CH__INVALID_AMOUNT();
         if (trader == address(0)) revert CH__INVALID_TRADER();
 
         bytes32 orderId = keccak256(abi.encodePacked(strategyId, block.timestamp, trader));
-        
+
         // Store position details
         positions[strategyId] = CEXPosition({
             depositAmount: amount,
@@ -111,12 +110,12 @@ contract CEXHandler is BaseStrategyHandler {
         // Update balances
         cexBalances[cexType] += amount;
         strategyOrderIds[strategyId] = orderId;
-        
+
         // Transfer USDC to trader
         IERC20(usdcToken).safeTransfer(trader, amount);
-        
+
         emit StrategyOpened(strategyId, cexType, trader, amount, orderId);
-        
+
         return orderId;
     }
 
@@ -125,29 +124,25 @@ contract CEXHandler is BaseStrategyHandler {
      * @param strategyId Strategy ID to exit
      * @param exitData Contains the final balance amount
      */
-    function exitStrategy(
-        uint128 strategyId,
-        bytes memory exitData
-    ) external payable override onlyController {
+    function exitStrategy(uint128 strategyId, bytes memory exitData) external payable override onlyController {
         CEXPosition storage position = positions[strategyId];
         if (!position.isActive) revert CH__STRATEGY_NOT_ACTIVE();
 
         uint256 finalBalance = abi.decode(exitData, (uint256));
-        
+
         // Update balances
         cexBalances[position.cexType] = finalBalance;
 
         // Calculate PnL
         int256 realizedPnl = int256(finalBalance) - int256(position.depositAmount);
-        
+
         // Transfer returned funds from trader
         IERC20(usdcToken).safeTransferFrom(position.trader, address(this), finalBalance);
-        
+
         position.isActive = false;
         position.currentBalance = finalBalance;
-        
+
         emit StrategyExited(strategyId, finalBalance, realizedPnl);
-     
     }
 
     /**
@@ -156,9 +151,12 @@ contract CEXHandler is BaseStrategyHandler {
      * @return id256 Strategy ID as uint256
      * @return idBytes32 Strategy ID as bytes32
      */
-    function getStrategyPositionId(
-        uint128 strategyId
-    ) external view override returns (uint256 id256, bytes32 idBytes32) {
+    function getStrategyPositionId(uint128 strategyId)
+        external
+        view
+        override
+        returns (uint256 id256, bytes32 idBytes32)
+    {
         idBytes32 = strategyOrderIds[strategyId];
         id256 = uint256(strategyId);
     }
@@ -176,8 +174,7 @@ contract CEXHandler is BaseStrategyHandler {
         return 0;
     }
 
-   
-    function modifyStrategy(bytes memory) external payable override {}
-    function cancelOrder(bytes memory) external override {}
-    function confirmExitStrategy(bytes32) external override {}
+    function modifyStrategy(bytes memory) external payable override { }
+    function cancelOrder(bytes memory) external override { }
+    function confirmExitStrategy(bytes32) external override { }
 }
