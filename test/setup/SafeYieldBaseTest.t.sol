@@ -116,7 +116,7 @@ abstract contract SafeYieldBaseTest is Test {
             address(safeToken), address(usdc), teamOperations, usdcBuyback, address(staking), address(twap)
         );
 
-        airdrop = new SafeYieldAirdrop(address(safeToken), address(configs), merkleRoot, protocolAdmin);
+        airdrop = new SafeYieldAirdrop(address(safeToken), address(configs), protocolAdmin);
 
         contributorLockUp = new SafeYieldCoreContributorsLockUp(protocolAdmin, address(safeToken));
 
@@ -136,12 +136,14 @@ abstract contract SafeYieldBaseTest is Test {
         configs.setRewardDistributor(address(distributor));
         configs.setLockUp(address(safeYieldLockUp));
 
-        contributorLockUp.mintSayAllocation();
-        presale.mintPreSaleAllocation();
-        distributor.mintStakingEmissionAllocation();
+        contributorLockUp.mintSayAllocation(CORE_CONTRIBUTORS_TOTAL_SAY_AMOUNT);
+        presale.mintPreSaleAllocation(PRE_SALE_MAX_SUPPLY);
+        distributor.mintStakingEmissionAllocation(STAKING_MAX_SUPPLY);
 
         safeYieldLockUp.approveVestingAgent(address(staking), true);
         safeYieldLockUp.approveVestingAgent(protocolAdmin, true);
+
+        airdrop.setMerkleRoot(merkleRoot);
 
         vm.stopPrank();
 

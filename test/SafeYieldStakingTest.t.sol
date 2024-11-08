@@ -335,8 +335,6 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         assertEq(safeToken.balanceOf(ALICE), 400e18);
     }
 
-    //! tests flow -  unlocksSay and unstake from staking
-
     function testUnlocksSayAndUnstake() public startEndPresale {
         _transferSafeTokens(protocolAdmin, 10_000e18);
 
