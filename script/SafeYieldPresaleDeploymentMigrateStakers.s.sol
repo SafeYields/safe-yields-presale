@@ -31,17 +31,17 @@ contract SafeYieldPresaleDeploymentMigrate is Script {
     address public constant SY_ADMIN = 0x3e88e60894D081B27D180fcADd524365A3DE7Dd4;
     address public constant PROTOCOL_MULTISIG = 0xb7eCbD7262a9250A44EaA040A2B2a184536F3861;
     bytes32 public constant MERKLE_ROOT = 0x09d4267a42b2b82ffc3599f877a3305637af8394f4d19ffb1fafdc9ab482c47b; //!change merkle root
+    bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");
     uint128 public constant PRE_SALE_MAX_SUPPLY = 2_000_000e18;
     uint128 public constant STAKING_MAX_SUPPLY = 11_000_000e18;
     uint128 public constant CORE_CONTRIBUTORS_TOTAL_SAY_AMOUNT = 1_000_000e18;
+    uint128 public constant minAllocationPerWallet = 1e18;
+    uint128 public constant maxAllocationPerWallet = PRE_SALE_MAX_SUPPLY;
+    uint128 public constant tokenPrice = 8e17; //e.g 0.8 usdc
+    uint128 public constant referrerCommissionUsdcBps = 500; //5% => 500 bps
+    uint128 public constant referrerCommissionSafeTokenBps = 500; // 5% => 500 bps
 
-    uint128 minAllocationPerWallet = 1e18;
-    uint128 maxAllocationPerWallet = PRE_SALE_MAX_SUPPLY;
-    uint128 tokenPrice = 8e17; //e.g 0.8 usdc
-    uint128 referrerCommissionUsdcBps = 500; //5% => 500 bps
-    uint128 referrerCommissionSafeTokenBps = 500; // 5% => 500 bps
-
-    ISafeToken public sayToken = ISafeToken(SAY_TOKEN);
+    SafeToken public sayToken = SafeToken(SAY_TOKEN);
     ISafeYieldStaking public oldStaking = ISafeYieldStaking(OLD_STAKING);
     ISafeYieldPreSale public oldPresale = ISafeYieldPreSale(OLD_PRESALE);
     ISafeYieldRewardDistributor public oldDistributor = ISafeYieldRewardDistributor(OLD_REWARD_DISTRIBUTOR);
@@ -55,8 +55,9 @@ contract SafeYieldPresaleDeploymentMigrate is Script {
     SafeYieldCoreContributorsLockUp public syCoreContributorsLockUp;
 
     function run() public {
-        uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PK");
-        vm.startBroadcast(deployerPrivateKey);
+        uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PK_DL");
+        //vm.startBroadcast(deployerPrivateKey);//!use when deploying to mainnet
+        vm.startPrank(SY_ADMIN);
 
         uint256 oldStakingSAYBalance = sayToken.balanceOf(OLD_STAKING);
         uint256 oldPreSaleSAYBalance = sayToken.balanceOf(OLD_PRESALE);
@@ -64,6 +65,8 @@ contract SafeYieldPresaleDeploymentMigrate is Script {
         //pause the old contracts
         oldPresale.pause();
         oldStaking.pause();
+
+        sayToken.grantRole(BURNER_ROLE, SY_ADMIN);
 
         //burn the say tokens
         sayToken.burn(OLD_STAKING, oldStakingSAYBalance);
@@ -93,7 +96,7 @@ contract SafeYieldPresaleDeploymentMigrate is Script {
 
         syAirdrop = new SafeYieldAirdrop(SAY_TOKEN, address(syConfig), MERKLE_ROOT, SY_ADMIN);
 
-        syTokenDistributor = new SafeYieldTokenDistributor(SY_ADMIN, SAY_TOKEN);
+        syTokenDistributor = new SafeYieldTokenDistributor(SY_ADMIN, address(syConfig));
 
         //set configs
         syConfig.setPresale(address(syPresale));
@@ -101,10 +104,16 @@ contract SafeYieldPresaleDeploymentMigrate is Script {
         syConfig.setRewardDistributor(address(OLD_REWARD_DISTRIBUTOR));
         syConfig.setLockUp(address(syLockUp));
 
-        //set say token allocations
-        sayToken.setAllocationLimit(address(syPresale), PRE_SALE_MAX_SUPPLY);
-        sayToken.setAllocationLimit(address(syCoreContributorsLockUp), CORE_CONTRIBUTORS_TOTAL_SAY_AMOUNT);
+        /**
+         * To account for tokens minted during the previous presale, we subtract them from the main allocation.
+         * The admin can then mint the `oldStakingSAYBalance` to stake on behalf of users.
+         */
+        uint256 sayAmountRemainingForPresale = PRE_SALE_MAX_SUPPLY - oldStakingSAYBalance;
 
+        //set say token allocations
+        sayToken.setAllocationLimit(address(syPresale), sayAmountRemainingForPresale);
+
+        sayToken.setAllocationLimit(address(syCoreContributorsLockUp), CORE_CONTRIBUTORS_TOTAL_SAY_AMOUNT);
         //set staking configs
         syStaking.addCallback(address(syTokenDistributor));
 
@@ -114,24 +123,30 @@ contract SafeYieldPresaleDeploymentMigrate is Script {
         syStaking.approveStakingAgent(address(syLockUp), true);
 
         //mint allocations
-        syCoreContributorsLockUp.mintSayAllocation();
-        syPresale.mintPreSaleAllocation();
+        syCoreContributorsLockUp.mintSayAllocation(CORE_CONTRIBUTORS_TOTAL_SAY_AMOUNT);
+        syPresale.mintPreSaleAllocation(sayAmountRemainingForPresale);
 
         //approve lock up vesting agents
         syLockUp.approveVestingAgent(address(syStaking), true);
         syLockUp.approveVestingAgent(SY_ADMIN, true);
 
         //validate contracts
-        _validateConfigs();
+        _validateConfigs(sayAmountRemainingForPresale);
 
         //log address
         _logAddresses();
+
+        //admin to mint say to stake for users
+        sayToken.mint(oldStakingSAYBalance);
 
         //stake for OldStaking users
         _stakeForMultipleUsers(oldStakingSAYBalance);
 
         //assertions
         _assertMultipleUserStakeForNewStaking();
+
+        //vm.stopBroadcast();
+        vm.stopPrank();
     }
 
     function _stakeForMultipleUsers(uint256 totalStakedSay) internal {
@@ -143,12 +158,8 @@ contract SafeYieldPresaleDeploymentMigrate is Script {
         uint256 numOfUsers = userAddresses.length;
 
         for (uint256 i = 0; i < numOfUsers; i++) {
-            //retrieve user information
-            //!pass stake amount into the stakeFor function to save some gas?
-            Stake memory userStake = oldStaking.getUserStake(userAddresses[i]);
-
             //stake for them
-            syStaking.stakeFor(userAddresses[i], userStake.stakeAmount, true);
+            syStaking.stakeFor(userAddresses[i], oldStaking.getUserStake(userAddresses[i]).stakeAmount, true);
         }
     }
 
@@ -158,12 +169,8 @@ contract SafeYieldPresaleDeploymentMigrate is Script {
         uint256 numOfUsers = userAddresses.length;
 
         for (uint256 i = 0; i < numOfUsers; i++) {
-            //retrieve user information
-            //!pass stake amount into the assertion to save some gas?
-            Stake memory userStake = syStaking.getUserStake(userAddresses[i]);
-
             //assert new stake amounts
-            require(userStake.stakeAmount > 0, "Invalid user stake amount");
+            require(syStaking.getUserStake(userAddresses[i]).stakeAmount > 0, "Invalid user stake amount");
         }
     }
 
@@ -213,11 +220,12 @@ contract SafeYieldPresaleDeploymentMigrate is Script {
         console.log("CoreContributorsLockUp", address(syCoreContributorsLockUp));
         console.log("TokenYieldDistributor", address(syTokenDistributor));
         console.log("Airdrop", address(syAirdrop));
+        console.log("");
     }
 
-    function _validateConfigs() internal view {
+    function _validateConfigs(uint256 presaleSayAmount) internal view {
         //validate presale configuration
-        require(sayToken.balanceOf(address(syPresale)) == PRE_SALE_MAX_SUPPLY, "Invalid presale allocation");
+        require(sayToken.balanceOf(address(syPresale)) == presaleSayAmount, "Invalid presale allocation");
         require(address(syPresale.safeToken()) == address(sayToken), "Invalid sayToken token address");
         require(address(syPresale.usdcToken()) == USDC_ARB, "Invalid usdc address");
         require(address(syPresale.safeYieldConfig()) == address(syConfig), "Invalid config address");
