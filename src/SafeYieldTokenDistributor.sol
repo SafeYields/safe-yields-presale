@@ -24,7 +24,7 @@ contract SafeYieldTokenDistributor is ISafeYieldTokensDistributor, Ownable2Step,
     //////////////////////////////////////////////////////////////*/
 
     address[] internal allRewardTokens;
-    ISafeYieldConfigs configs;
+    ISafeYieldConfigs public configs;
     mapping(address user => mapping(address rewardToken => int256 rewardDebt)) public userTokenRewardDebt;
     mapping(address user => uint256 stakeBalance) public lastStakeBalance;
     mapping(address rewardToken => RewardToken) public rewardTokens;

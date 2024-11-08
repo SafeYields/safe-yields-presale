@@ -27,7 +27,7 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
-    ISafeYieldConfigs configs;
+    ISafeYieldConfigs public configs;
     IERC20 public sSayToken;
     uint48 public unlockPercentagePerMonth = 2_000; //20%
     mapping(address user => VestingSchedule schedule) public schedules;
@@ -89,7 +89,7 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
         uint48 startTime = (vestStart == 0) ? vestStart : uint48(block.timestamp);
 
         bool isBeforeIDO = (vestStart == 0 && !userHasVestedBeforeIDO[user]);
-        
+
         bool isAfterIDOVestingReset =
             (vestStart != 0 && block.timestamp >= schedules[user].start + schedules[user].duration);
 
@@ -176,7 +176,6 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
         if (vestStartTime == 0) return 0;
 
         if (schedule.start == 0 && schedule.totalAmount != 0) {
-            
             //before IDO users
             schedules[user].start = vestStartTime;
             schedule.start = vestStartTime;
