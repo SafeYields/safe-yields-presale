@@ -46,6 +46,7 @@ contract SafeYieldAirdrop is ISafeYieldAirdrop, Ownable2Step, Pausable {
     error SYA__TOKENS_CLAIMED();
     error SYA__INVALID_PROOF_LENGTH();
 
+    //! should we make merkleRoot be set after deployment, instead of constructor?
     constructor(address _sayToken, address _safeYieldConfigs, bytes32 _merkleRoot, address protocolAdmin)
         Ownable(protocolAdmin)
     {
