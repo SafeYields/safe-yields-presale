@@ -15,22 +15,19 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 
 contract SafeYieldAirdrop is ISafeYieldAirdrop, Ownable2Step, Pausable {
     using SafeERC20 for ISafeToken;
-    /*//////////////////////////////////////////////////////////////
-                        CONSTANTS AND IMMUTABLES
-    //////////////////////////////////////////////////////////////*/
-
-    bytes32 public immutable merkleRoot;
 
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
     ISafeToken public sayToken;
+    bytes32 public merkleRoot;
     ISafeYieldConfigs public safeYieldConfigs;
     mapping(address user => bool claimed) public hasClaimed;
 
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
+    event MerkleRootUpdated(bytes32 indexed _merkleRoot);
     event SayTokenAddressUpdated(address indexed newSayToken);
     event StakingAddressUpdated(address indexed newStaking);
     event SayTokensClawedBack(address indexed admin, uint256 indexed amount);
@@ -46,20 +43,22 @@ contract SafeYieldAirdrop is ISafeYieldAirdrop, Ownable2Step, Pausable {
     error SYA__TOKENS_CLAIMED();
     error SYA__INVALID_PROOF_LENGTH();
 
-    //! should we make merkleRoot be set after deployment, instead of constructor?
-    constructor(address _sayToken, address _safeYieldConfigs, bytes32 _merkleRoot, address protocolAdmin)
-        Ownable(protocolAdmin)
-    {
+    constructor(address _sayToken, address _safeYieldConfigs, address protocolAdmin) Ownable(protocolAdmin) {
         if (_sayToken == address(0) || protocolAdmin == address(0) || _safeYieldConfigs == address(0)) {
             revert SYA_INVALID_ADDRESS();
         }
-        if (_merkleRoot == bytes32(0)) revert SYA__INVALID_MERKLE_ROOT();
 
         sayToken = ISafeToken(_sayToken);
 
         safeYieldConfigs = ISafeYieldConfigs(_safeYieldConfigs);
+    }
+
+    function setMerkleRoot(bytes32 _merkleRoot) external override onlyOwner {
+        if (_merkleRoot == bytes32(0)) revert SYA__INVALID_MERKLE_ROOT();
 
         merkleRoot = _merkleRoot;
+
+        emit MerkleRootUpdated(_merkleRoot);
     }
 
     function stakeAndVestSayTokens(uint256 amount, bytes32[] calldata merkleProof) external override whenNotPaused {
