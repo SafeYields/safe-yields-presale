@@ -135,7 +135,7 @@ contract SafeYieldPresaleDeploymentMigrate is Script {
     }
 
     function _stakeForMultipleUsers(uint256 totalStakedSay) internal {
-        address[] memory userAddresses = getOldStakingAddresses();
+        address[] memory userAddresses = getOldStakingUserAddresses();
 
         //approve total amounts to stake
         sayToken.approve(address(syStaking), totalStakedSay);
@@ -144,7 +144,7 @@ contract SafeYieldPresaleDeploymentMigrate is Script {
 
         for (uint256 i = 0; i < numOfUsers; i++) {
             //retrieve user information
-            //!pass it stake amount into the stakeFor function to save some gas?
+            //!pass stake amount into the stakeFor function to save some gas?
             Stake memory userStake = oldStaking.getUserStake(userAddresses[i]);
 
             //stake for them
@@ -153,13 +153,13 @@ contract SafeYieldPresaleDeploymentMigrate is Script {
     }
 
     function _assertMultipleUserStakeForNewStaking() internal view {
-        address[] memory userAddresses = getOldStakingAddresses();
+        address[] memory userAddresses = getOldStakingUserAddresses();
 
         uint256 numOfUsers = userAddresses.length;
 
         for (uint256 i = 0; i < numOfUsers; i++) {
             //retrieve user information
-            //!pass it stake amount into the assertion to save some gas?
+            //!pass stake amount into the assertion to save some gas?
             Stake memory userStake = syStaking.getUserStake(userAddresses[i]);
 
             //assert new stake amounts
@@ -167,7 +167,7 @@ contract SafeYieldPresaleDeploymentMigrate is Script {
         }
     }
 
-    function getOldStakingAddresses() internal pure returns (address[] memory userAddresses) {
+    function getOldStakingUserAddresses() internal pure returns (address[] memory userAddresses) {
         userAddresses = new address[](33);
 
         userAddresses[0] = 0x3BD358b35b6Ff3cADf01Ac118b3d21Ee62E56C0C;
