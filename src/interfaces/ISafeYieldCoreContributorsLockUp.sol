@@ -9,7 +9,7 @@ interface ISafeYieldCoreContributorsLockUp {
 
     function unlockedAmount(address member) external view returns (uint256 unlocked);
 
-    function mintSayAllocation() external;
+    function mintSayAllocation(uint256 totalSayAllocated) external;
 
     function vestedAmount(address member) external view returns (uint256 vestedAmount);
 

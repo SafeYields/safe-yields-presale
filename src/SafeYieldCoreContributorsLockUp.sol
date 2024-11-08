@@ -81,10 +81,10 @@ contract SafeYieldCoreContributorsLockUp is ISafeYieldCoreContributorsLockUp, Ow
         emit SayTokensUnlocked(msg.sender, releasableSAY);
     }
 
-    function mintSayAllocation() external override onlyOwner {
-        sayToken.mint(CORE_CONTRIBUTORS_TOTAL_SAY_AMOUNT);
+    function mintSayAllocation(uint256 totalSayAllocated) external override onlyOwner {
+        sayToken.mint(totalSayAllocated);
 
-        emit SayAllocationsMinted(CORE_CONTRIBUTORS_TOTAL_SAY_AMOUNT);
+        emit SayAllocationsMinted(totalSayAllocated);
     }
 
     function pause() external override onlyOwner {

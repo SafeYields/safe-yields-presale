@@ -517,10 +517,10 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
         }
     }
 
-    function mintPreSaleAllocation() external override onlyOwner {
-        safeToken.mint(PRE_SALE_CAP);
+    function mintPreSaleAllocation(uint256 totalSayAmount) external override onlyOwner {
+        safeToken.mint(totalSayAmount);
 
-        emit PreSaleAllocationsMinted(PRE_SALE_CAP);
+        emit PreSaleAllocationsMinted(totalSayAmount);
     }
 
     function transferRemainingSayToken(address recipient) external override onlyOwner {

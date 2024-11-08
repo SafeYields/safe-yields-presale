@@ -288,10 +288,10 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
         emit TokensRecovered(token, amount);
     }
 
-    function mintStakingEmissionAllocation() external override onlyOwner {
-        safeToken.mint(MAX_STAKING_EMISSIONS);
+    function mintStakingEmissionAllocation(uint256 totalSayAllocated) external override onlyOwner {
+        safeToken.mint(totalSayAllocated);
 
-        emit AllAllocationsMinted(MAX_STAKING_EMISSIONS);
+        emit AllAllocationsMinted(totalSayAllocated);
     }
 
     function updateTwapInterval(uint32 newInterval) external override onlyOwner {

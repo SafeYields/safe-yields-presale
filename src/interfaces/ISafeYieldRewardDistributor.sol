@@ -38,7 +38,7 @@ interface ISafeYieldRewardDistributor {
 
     function updateContractShares(ContractShare[] memory updatedAllocations) external;
 
-    function mintStakingEmissionAllocation() external;
+    function mintStakingEmissionAllocation(uint256 totalSayAllocated) external;
 
     function updateTwapInterval(uint32 newInterval) external;
 
