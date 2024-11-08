@@ -1,13 +1,5 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.26;
-//todo:
-/**
- *  1. retrieve SAY tokens from old Staking contract
- *  2. burn the say
- *  2. get array of address, get their staked SAY.
- *  3. stake for users in the new staking.
- */
 pragma solidity ^0.8.13;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
