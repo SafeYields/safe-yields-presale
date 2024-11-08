@@ -4,7 +4,7 @@ pragma solidity 0.8.26;
 
 import { console } from "forge-std/Test.sol";
 import { SafeYieldBaseTest } from "./setup/SafeYieldBaseTest.t.sol";
-import { CoreContributorsLockUp } from "src/CoreContributorsLockUp.sol";
+import { SafeYieldCoreContributorsLockUp } from "src/SafeYieldCoreContributorsLockUp.sol";
 import { VestingSchedule } from "src/types/SafeTypes.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
@@ -37,7 +37,7 @@ contract CoreContributorLockUpTest is SafeYieldBaseTest {
         totalAmounts[0] = 30_000e18;
 
         vm.startPrank(protocolAdmin);
-        vm.expectRevert(CoreContributorsLockUp.SY_CCLU__LENGTH_MISMATCH.selector);
+        vm.expectRevert(SafeYieldCoreContributorsLockUp.SY_CCLU__LENGTH_MISMATCH.selector);
         contributorLockUp.addMultipleMembers(members, totalAmounts);
     }
 

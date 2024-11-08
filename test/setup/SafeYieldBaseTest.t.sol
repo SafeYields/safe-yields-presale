@@ -11,7 +11,7 @@ import { RewardMockToken } from "../mocks/RewardMockToken.sol";
 import { SafeYieldRewardDistributorMock } from "../mocks/SafeYieldRewardDistributorMock.sol";
 import { SafeYieldPresale } from "src/SafeYieldPresale.sol";
 import { SafeYieldStaking } from "src/SafeYieldStaking.sol";
-import { CoreContributorsLockUp } from "src/CoreContributorsLockUp.sol";
+import { SafeYieldCoreContributorsLockUp } from "src/SafeYieldCoreContributorsLockUp.sol";
 import { SafeYieldTokenDistributor } from "src/SafeYieldTokenDistributor.sol";
 import { SafeYieldLockUp } from "src/SafeYieldLockUp.sol";
 import { SafeYieldConfigs } from "src/SafeYieldConfigs.sol";
@@ -50,7 +50,7 @@ abstract contract SafeYieldBaseTest is Test {
 
     SafeYieldRewardDistributorMock public distributor;
     SafeYieldLockUp public safeYieldLockUp;
-    CoreContributorsLockUp public contributorLockUp;
+    SafeYieldCoreContributorsLockUp public contributorLockUp;
     SafeYieldConfigs public configs;
     SafeYieldPresale public presale;
     SafeYieldStaking public staking;
@@ -118,7 +118,7 @@ abstract contract SafeYieldBaseTest is Test {
 
         airdrop = new SafeYieldAirdrop(address(safeToken), address(configs), merkleRoot, protocolAdmin);
 
-        contributorLockUp = new CoreContributorsLockUp(protocolAdmin, address(safeToken));
+        contributorLockUp = new SafeYieldCoreContributorsLockUp(protocolAdmin, address(safeToken));
 
         safeToken.setAllocationLimit(address(distributor), STAKING_MAX_SUPPLY);
         safeToken.setAllocationLimit(address(presale), PRE_SALE_MAX_SUPPLY);
