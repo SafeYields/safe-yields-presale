@@ -239,6 +239,7 @@ contract SafeYieldPresaleDeploymentMigrate is Script {
         require(address(syStaking.safeToken()) == address(sayToken), "Invalid safeToken token address");
         require(address(syStaking.usdc()) == USDC_ARB, "Invalid usdc address");
         require(address(syStaking.configs()) == address(syConfig), "Invalid config address");
+        require(syStaking.getAllCallbacks().length == 1, "Invalid number of callbacks");
         require(address(syStaking.getCallback(0)) == address(syTokenDistributor), "Invalid callback");
 
         //validate lockup configurations
