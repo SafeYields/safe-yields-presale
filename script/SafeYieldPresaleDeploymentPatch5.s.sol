@@ -48,8 +48,8 @@ contract SafeYieldPresaleDeploymentMigrate is Script {
 
     function run() public {
         uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PK_DL");
-        //vm.startBroadcast(deployerPrivateKey);//!use when deploying to mainnet
-        vm.startPrank(SY_ADMIN);
+        vm.startBroadcast(deployerPrivateKey);
+        //vm.startPrank(SY_ADMIN);
 
         uint256 oldStakingSAYBalance = sayToken.balanceOf(OLD_STAKING);
         uint256 oldPreSaleSAYBalance = sayToken.balanceOf(OLD_PRESALE);
@@ -86,7 +86,7 @@ contract SafeYieldPresaleDeploymentMigrate is Script {
 
         syLockUp = new SafeYieldLockUp(SY_ADMIN, address(syStaking), address(syConfig));
 
-        syAirdrop = new SafeYieldAirdrop(SAY_TOKEN, address(syConfig), MERKLE_ROOT, SY_ADMIN);
+        syAirdrop = new SafeYieldAirdrop(SAY_TOKEN, address(syConfig), SY_ADMIN);
 
         syTokenDistributor = new SafeYieldTokenDistributor(SY_ADMIN, address(syConfig));
 
@@ -137,8 +137,8 @@ contract SafeYieldPresaleDeploymentMigrate is Script {
         //assertions
         _assertMultipleUserStakeForNewStaking();
 
-        //vm.stopBroadcast();
-        vm.stopPrank();
+        vm.stopBroadcast();
+        //vm.stopPrank();
     }
 
     function _stakeForMultipleUsers(uint256 totalStakedSay) internal {
@@ -172,6 +172,7 @@ contract SafeYieldPresaleDeploymentMigrate is Script {
     function getOldStakingUserAddresses() internal pure returns (address[] memory userAddresses) {
         userAddresses = new address[](33);
 
+        //!check addresses are up-to-date before deployment.
         userAddresses[0] = 0x3BD358b35b6Ff3cADf01Ac118b3d21Ee62E56C0C;
         userAddresses[1] = 0xEeE9Ef09B9D9dE0B8aA47A781bA7aCF87818C05f;
         userAddresses[2] = 0x6405f47Be0D616E7f59749cdAF8e8b180CaA18cB;
@@ -251,7 +252,6 @@ contract SafeYieldPresaleDeploymentMigrate is Script {
         //validate airdrop
         require(address(syAirdrop.sayToken()) == address(sayToken), "Invalid safeToken token address");
         require(address(syAirdrop.safeYieldConfigs()) == address(syConfig), "Invalid config address");
-        require(syAirdrop.merkleRoot() == MERKLE_ROOT, "Invalid merkle root");
 
         //validate core contributors
         require(address(syCoreContributorsLockUp.sayToken()) == address(sayToken), "Invalid safeToken token address");
