@@ -164,6 +164,9 @@ contract SafeYieldPresaleDeploymentMigrate is Script {
             //assert new stake amounts
             require(syStaking.getUserStake(userAddresses[i]).stakeAmount > 0, "Invalid user stake amount");
         }
+
+        //say token config
+        require(sayToken.totalSupply() == 20_000_000e18, "Total supply not reached");
     }
 
     function getOldStakingUserAddresses() internal pure returns (address[] memory userAddresses) {
