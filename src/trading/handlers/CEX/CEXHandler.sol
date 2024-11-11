@@ -53,7 +53,7 @@ contract CEXHandler is BaseStrategyHandlerCEX {
     );
     event StrategyExited(uint128 indexed strategyId, uint256 finalBalance, int256 realizedPnl);
 
-    event CEXBalanceUpdated(uint256 indexed cexType, uint256 newBalance);
+    
 
     /*//////////////////////////////////////////////////////////////
                                ERRORS
@@ -113,6 +113,7 @@ contract CEXHandler is BaseStrategyHandlerCEX {
         return orderId;
     }
 
+
     /**
     * @notice Exits an existing strategy position
     * @dev Processes returned funds and updates balances
@@ -129,14 +130,13 @@ contract CEXHandler is BaseStrategyHandlerCEX {
         // Calculate PnL
         int256 realizedPnl = int256(finalBalance) - int256(position.depositAmount);
 
-        // Transfer returned funds from trader
-        IERC20(usdcToken).safeTransferFrom(position.trader, address(this), finalBalance);
-
         position.isActive = false;
         position.currentBalance = finalBalance;
 
         emit StrategyExited(strategyId, finalBalance, realizedPnl);
     }
+
+  
 
     /**
      * @notice Gets the strategy position details
