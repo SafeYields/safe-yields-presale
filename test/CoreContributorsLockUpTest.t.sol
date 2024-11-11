@@ -107,6 +107,7 @@ contract CoreContributorLockUpTest is SafeYieldBaseTest {
         assertEq(bobSayBalancePrior, 0, "Bob Balance should be 0");
 
         skip(1 days);
+
         vm.startPrank(ALICE);
         contributorLockUp.claimSayTokens();
 

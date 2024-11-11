@@ -11,6 +11,8 @@ interface ISafeYieldTokensDistributor is ISafeYieldStakingCallback {
 
     function retrieve(address token, uint256 amount) external;
 
+    function setConfig(address configs) external;
+
     function getUserRewardDebt(address user, address rewardAsset) external view returns (int256);
 
     function getAllRewardTokens() external view returns (address[] memory);

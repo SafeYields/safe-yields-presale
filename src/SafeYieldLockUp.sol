@@ -27,7 +27,7 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
-    ISafeYieldConfigs public configs;
+    ISafeYieldConfigs public safeYieldConfigs;
     IERC20 public sSayToken;
     uint48 public unlockPercentagePerMonth = 2_000; //20%
     mapping(address user => VestingSchedule schedule) public schedules;
@@ -40,10 +40,11 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
     event TokensVestedFor(address indexed user, uint256 indexed amount);
     event sSayTokensClaimed(address indexed user, uint256 indexed tokensClaimed);
     event VestingAgentApproved(address indexed agent, bool indexed isApproved);
-
+    event SafeYieldConfigUpdated(address indexed configs);
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
+
     error SYLU__INVALID_ADDRESS();
     error SYLU__INVALID_AMOUNT();
     error SYLU__ONLY_STAKING();
@@ -53,7 +54,7 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
                                MODIFIERS
     //////////////////////////////////////////////////////////////*/
     modifier onlyStaking() {
-        if (msg.sender != address(configs.safeYieldStaking())) revert SYLU__ONLY_STAKING();
+        if (msg.sender != address(safeYieldConfigs.safeYieldStaking())) revert SYLU__ONLY_STAKING();
         _;
     }
 
@@ -76,7 +77,7 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
             revert SYLU__INVALID_ADDRESS();
         }
 
-        configs = ISafeYieldConfigs(safeYieldConfig);
+        safeYieldConfigs = ISafeYieldConfigs(safeYieldConfig);
         sSayToken = IERC20(_sSayToken);
     }
 
@@ -84,7 +85,7 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
         if (user == address(0)) revert SYLU__INVALID_ADDRESS();
         if (amount == 0) revert SYLU__INVALID_AMOUNT();
 
-        uint48 vestStart = configs.vestStartTime();
+        uint48 vestStart = safeYieldConfigs.vestStartTime();
 
         uint48 startTime = (vestStart == 0) ? vestStart : uint48(block.timestamp);
 
@@ -171,7 +172,7 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
         VestingSchedule memory schedule = schedules[user];
 
         //cache
-        uint48 vestStartTime = configs.vestStartTime();
+        uint48 vestStartTime = safeYieldConfigs.vestStartTime();
 
         if (vestStartTime == 0) return 0;
 
@@ -203,5 +204,13 @@ contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
 
             return totalVested;
         }
+    }
+
+    function setConfig(address configs) external override onlyOwner {
+        if (configs == address(0)) revert SYLU__INVALID_ADDRESS();
+
+        safeYieldConfigs = ISafeYieldConfigs(configs);
+
+        emit SafeYieldConfigUpdated(configs);
     }
 }

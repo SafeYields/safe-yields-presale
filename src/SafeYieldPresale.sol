@@ -37,7 +37,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
     //////////////////////////////////////////////////////////////*/
     PreSaleState public currentPreSaleState;
     ISafeToken public safeToken;
-    ISafeYieldConfigs public safeYieldConfig;
+    ISafeYieldConfigs public safeYieldConfigs;
     address public protocolMultisig;
     uint128 public totalSold;
     uint128 public minAllocationPerWallet;
@@ -69,6 +69,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
     event ReferrerCommissionBpsSet(
         uint128 indexed referrerCommissionUsdcBps, uint128 indexed referrerCommissionSafeTokenBps
     );
+    event SafeYieldConfigUpdated(address indexed configs);
     event UsdcCommissionRedeemed(address indexed referrer, uint128 indexed usdcAmount);
     event TokenPriceSet(uint128 indexed tokenPrice);
     event PreSaleStarted(PreSaleState indexed currentState);
@@ -77,8 +78,6 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
     event ProtocolMultisigSet(address indexed protocolMultisig);
     event PreSaleAllocationsMinted(uint256 indexed amount);
     event AllocationsPerWalletSet(uint128 indexed minAllocationPerWallet, uint128 indexed maxAllocationPerWallet);
-    event SafeTokenUpdated(address indexed newSafeToken);
-    event SafeStakingUpdated(address indexed newStaking);
     event RemainingSayTokensTransferred(address indexed recipient, uint256 indexed remainingBalance);
     /*//////////////////////////////////////////////////////////////
                                  ERRORS
@@ -148,7 +147,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
         safeToken = ISafeToken(_safeToken);
         usdcToken = IERC20(_usdcToken);
 
-        safeYieldConfig = ISafeYieldConfigs(_safeYieldConfigs);
+        safeYieldConfigs = ISafeYieldConfigs(_safeYieldConfigs);
 
         minAllocationPerWallet = _minAllocationPerWallet;
         maxAllocationPerWallet = _maxAllocationPerWallet;
@@ -284,7 +283,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
     function recoverSafeTokens(uint256 amount) external onlyOwner preSaleEnded {
         if (amount == 0) revert SYPS__INVALID_AMOUNT();
 
-        safeToken.transfer(owner(), amount);
+        safeToken.safeTransfer(owner(), amount);
 
         emit SafeTokensRecovered(amount);
     }
@@ -488,7 +487,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
         /**
          * @dev transfer the USDC raised to the protocol multisig
          */
-        usdcToken.transfer(protocolMultisig, amountRaised);
+        usdcToken.safeTransfer(protocolMultisig, amountRaised);
 
         investorAllocations[investor] += safeTokensBought;
 
@@ -500,7 +499,7 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
         buyerReferrerId = getReferrerID();
         referrerInfo[buyerReferrerId].referrer = msg.sender;
 
-        ISafeYieldStaking safeYieldStaking = safeYieldConfig.safeYieldStaking();
+        ISafeYieldStaking safeYieldStaking = safeYieldConfigs.safeYieldStaking();
 
         safeToken.approve(address(safeYieldStaking), totalSafeTokensToStake);
 
@@ -531,9 +530,17 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
         uint256 remainingBalance = safeToken.balanceOf(address(this));
 
         if (remainingBalance != 0) {
-            safeToken.transfer(recipient, remainingBalance);
+            safeToken.safeTransfer(recipient, remainingBalance);
         }
 
         emit RemainingSayTokensTransferred(recipient, remainingBalance);
+    }
+
+    function setConfig(address configs) external override onlyOwner {
+        if (configs == address(0)) revert SYPS__INVALID_ADDRESS();
+
+        safeYieldConfigs = ISafeYieldConfigs(configs);
+
+        emit SafeYieldConfigUpdated(configs);
     }
 }

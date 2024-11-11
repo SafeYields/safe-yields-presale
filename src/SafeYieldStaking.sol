@@ -44,7 +44,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
     //////////////////////////////////////////////////////////////*/
     EnumerableSet.AddressSet private callbacks;
     IERC20 public safeToken;
-    ISafeYieldConfigs public configs;
+    ISafeYieldConfigs public safeYieldConfigs;
 
     uint128 public usdcAccumulatedRewardsPerStake; //@dev accumulated usdc per safe staked.
     uint128 public safeAccumulatedRewardsPerStake; //@dev accumulated safe per safe staked.
@@ -60,6 +60,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
     //////////////////////////////////////////////////////////////*/
     event Staked(address indexed user, uint128 indexed amount);
     event UnStaked(address indexed user, uint128 indexed amount);
+    event SafeYieldConfigUpdated(address indexed configs);
     event RewardsClaimed(address indexed user, uint128 indexed safeRewards, uint128 indexed usdcRewards);
     event StakingAgentApproved(address indexed agent, bool indexed isApproved);
     event CallBackAdded(address indexed callback);
@@ -84,14 +85,16 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
     //////////////////////////////////////////////////////////////*/
 
     modifier canUnstakeVested() {
-        if ((configs.safeYieldPresale()).currentPreSaleState() != PreSaleState.Ended) revert SYLU__CANNOT_CLAIM();
+        if ((safeYieldConfigs.safeYieldPresale()).currentPreSaleState() != PreSaleState.Ended) {
+            revert SYLU__CANNOT_CLAIM();
+        }
         _;
     }
 
     modifier lockStaking() {
         if (
-            ((configs.safeYieldPresale()).currentPreSaleState() != PreSaleState.Ended)
-                || configs.safeYieldLP() == address(0)
+            ((safeYieldConfigs.safeYieldPresale()).currentPreSaleState() != PreSaleState.Ended)
+                || safeYieldConfigs.safeYieldLP() == address(0)
         ) {
             revert SYST__STAKING_LOCKED();
         }
@@ -113,7 +116,8 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
 
         safeToken = IERC20(_safeToken);
         usdc = IERC20(_usdc);
-        configs = ISafeYieldConfigs(safeYieldConfig);
+
+        safeYieldConfigs = ISafeYieldConfigs(safeYieldConfig);
     }
 
     function stakeFor(address user, uint128 amount, bool lockUp) external override whenNotPaused isValidStakingAgent {
@@ -134,7 +138,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
         _stake(user, amount);
 
         if (lockUp) {
-            ISafeYieldLockUp safeYieldLockUp = configs.safeYieldLockUp(); //cache
+            ISafeYieldLockUp safeYieldLockUp = safeYieldConfigs.safeYieldLockUp(); //cache
 
             _mint(address(safeYieldLockUp), amount);
 
@@ -167,7 +171,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
 
         claimRewards(msg.sender);
 
-        ISafeYieldLockUp safeYieldLockUp = configs.safeYieldLockUp(); //cache
+        ISafeYieldLockUp safeYieldLockUp = safeYieldConfigs.safeYieldLockUp(); //cache
 
         uint256 amountStakedVested = safeYieldLockUp.unlock_sSayTokensFor(msg.sender);
 
@@ -321,7 +325,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
         }
 
         (uint256 pendingUsdcRewardsToContract, uint256 pendingSafeRewardsToContract) =
-            configs.safeYieldDistributor().pendingRewards(address(this));
+            safeYieldConfigs.safeYieldDistributor().pendingRewards(address(this));
 
         uint128 stakingAccSafeRewardsPerStake = safeAccumulatedRewardsPerStake;
         uint128 stakingAccUsdcRewardsPerStake = usdcAccumulatedRewardsPerStake;
@@ -408,7 +412,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
              * (35% of the value of safe tokens are minted)
              * Any other state, rewards are distributed in USDC.(60% USDC)
              */
-            uint256 shareableRewards = configs.safeYieldDistributor().distributeToContract(address(this));
+            uint256 shareableRewards = safeYieldConfigs.safeYieldDistributor().distributeToContract(address(this));
 
             uint256 contractUsdcBalance = usdc.balanceOf(address(this));
 
@@ -420,7 +424,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
                 lastUsdcBalance = contractUsdcBalance;
             }
 
-            if (configs.safeYieldDistributor().isSafeRewardsDistributed()) {
+            if (safeYieldConfigs.safeYieldDistributor().isSafeRewardsDistributed()) {
                 if (shareableRewards != 0) {
                     safeAccumulatedRewardsPerStake +=
                         SafeCast.toUint128(shareableRewards.mulDiv(PRECISION, totalStaked));
@@ -479,5 +483,13 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
         }
 
         totalStaked -= _amount;
+    }
+
+    function setConfig(address configs) external override onlyOwner {
+        if (configs == address(0)) revert SYST__INVALID_ADDRESS();
+
+        safeYieldConfigs = ISafeYieldConfigs(configs);
+
+        emit SafeYieldConfigUpdated(configs);
     }
 }

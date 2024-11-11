@@ -9,6 +9,8 @@ interface ISafeYieldAirdrop {
 
     function clawBackSayTokens(uint256 amount) external;
 
+    function setConfig(address configs) external;
+
     function pause() external;
 
     function unpause() external;

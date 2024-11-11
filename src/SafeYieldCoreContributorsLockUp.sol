@@ -122,6 +122,8 @@ contract SafeYieldCoreContributorsLockUp is ISafeYieldCoreContributorsLockUp, Ow
          */
         if (totalAmount == 0) return;
 
+        //! review check if new member is added after duration passed
+        //! add a test
         if (schedules[_member].start == 0) {
             schedules[_member].start = uint48(block.timestamp);
             schedules[_member].duration = CORE_CONTRIBUTORS_VESTING_DURATION;

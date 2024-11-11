@@ -283,7 +283,7 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
      */
     function recoverTokens(address token, uint256 amount) external override onlyOwner {
         if (token == address(usdcToken) || token == address(safeToken)) revert SYRD__TOKEN_NOT_ALLOWED();
-        IERC20(token).transfer(owner(), amount);
+        IERC20(token).safeTransfer(owner(), amount);
 
         emit TokensRecovered(token, amount);
     }
@@ -355,7 +355,7 @@ contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step
                         emit StakingEmissionsEnded();
                     }
 
-                    safeToken.transfer(contract_, tokensToTransfer);
+                    safeToken.safeTransfer(contract_, tokensToTransfer);
 
                     safeTransferred += tokensToTransfer;
 

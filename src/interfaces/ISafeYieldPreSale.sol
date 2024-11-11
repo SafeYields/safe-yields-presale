@@ -8,6 +8,8 @@ interface ISafeYieldPreSale {
 
     function deposit(uint128 usdcAmount, bytes32 referrerId) external;
 
+    function setConfig(address configs) external;
+
     function safeTokensAvailable() external view returns (uint128);
 
     function redeemUsdcCommission() external;

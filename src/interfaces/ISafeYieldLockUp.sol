@@ -7,6 +7,8 @@ import { VestingSchedule, PreSaleState } from "../types/SafeTypes.sol";
 interface ISafeYieldLockUp {
     function vestFor(address user, uint256 amount) external;
 
+    function setConfig(address configs) external;
+
     function approveVestingAgent(address agent, bool isApproved) external;
 
     function unlock_sSayTokens() external returns (uint256 stakedSayTokensAvailable);

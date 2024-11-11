@@ -28,15 +28,14 @@ contract SafeYieldAirdrop is ISafeYieldAirdrop, Ownable2Step, Pausable {
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
     event MerkleRootUpdated(bytes32 indexed _merkleRoot);
-    event SayTokenAddressUpdated(address indexed newSayToken);
-    event StakingAddressUpdated(address indexed newStaking);
     event SayTokensClawedBack(address indexed admin, uint256 indexed amount);
     event SayTokensStakedAndVested(address indexed receiver, uint256 indexed amount);
+    event SafeYieldConfigUpdated(address indexed safeYieldConfigs);
     /*//////////////////////////////////////////////////////////////
                                  ERRORS
     //////////////////////////////////////////////////////////////*/
 
-    error SYA_INVALID_ADDRESS();
+    error SYA__INVALID_ADDRESS();
     error SYA__INVALID_PROOF();
     error SYA__INVALID_AMOUNT();
     error SYA__INVALID_MERKLE_ROOT();
@@ -45,7 +44,7 @@ contract SafeYieldAirdrop is ISafeYieldAirdrop, Ownable2Step, Pausable {
 
     constructor(address _sayToken, address _safeYieldConfigs, address protocolAdmin) Ownable(protocolAdmin) {
         if (_sayToken == address(0) || protocolAdmin == address(0) || _safeYieldConfigs == address(0)) {
-            revert SYA_INVALID_ADDRESS();
+            revert SYA__INVALID_ADDRESS();
         }
 
         sayToken = ISafeToken(_sayToken);
@@ -87,7 +86,7 @@ contract SafeYieldAirdrop is ISafeYieldAirdrop, Ownable2Step, Pausable {
     function clawBackSayTokens(uint256 amount) external override onlyOwner {
         if (amount == 0) revert SYA__INVALID_AMOUNT();
 
-        sayToken.transfer(owner(), amount);
+        sayToken.safeTransfer(owner(), amount);
 
         emit SayTokensClawedBack(msg.sender, amount);
     }
@@ -98,5 +97,12 @@ contract SafeYieldAirdrop is ISafeYieldAirdrop, Ownable2Step, Pausable {
 
     function unpause() external override onlyOwner {
         _unpause();
+    }
+
+    function setConfig(address configs) external override onlyOwner {
+        if (configs == address(0)) revert SYA__INVALID_ADDRESS();
+        safeYieldConfigs = ISafeYieldConfigs(configs);
+
+        emit SafeYieldConfigUpdated(configs);
     }
 }

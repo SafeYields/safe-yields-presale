@@ -24,7 +24,7 @@ contract SafeYieldTokenDistributor is ISafeYieldTokensDistributor, Ownable2Step,
     //////////////////////////////////////////////////////////////*/
 
     address[] internal allRewardTokens;
-    ISafeYieldConfigs public configs;
+    ISafeYieldConfigs public safeYieldConfigs;
     mapping(address user => mapping(address rewardToken => int256 rewardDebt)) public userTokenRewardDebt;
     mapping(address user => uint256 stakeBalance) public lastStakeBalance;
     mapping(address rewardToken => RewardToken) public rewardTokens;
@@ -34,10 +34,11 @@ contract SafeYieldTokenDistributor is ISafeYieldTokensDistributor, Ownable2Step,
     //////////////////////////////////////////////////////////////*/
     event RewardDeposited(address indexed owner, address indexed rewardAsset, uint256 indexed amount);
     event RewardsClaimed(address indexed user, address indexed rewardAsset, uint256 indexed _pendingReward);
-
+    event SafeYieldConfigUpdated(address indexed configs);
     /*//////////////////////////////////////////////////////////////
                                  ERROR
     //////////////////////////////////////////////////////////////*/
+
     error SYTD__LENGTH_MISMATCH();
     error SYTD__INVALID_ADDRESS();
     error SYTD__UNAUTHORIZED();
@@ -46,14 +47,14 @@ contract SafeYieldTokenDistributor is ISafeYieldTokensDistributor, Ownable2Step,
                                MODIFIERS
     //////////////////////////////////////////////////////////////*/
     modifier onlyStaking() {
-        if (msg.sender != address(configs.safeYieldStaking())) revert SYTD__UNAUTHORIZED();
+        if (msg.sender != address(safeYieldConfigs.safeYieldStaking())) revert SYTD__UNAUTHORIZED();
         _;
     }
 
     constructor(address protocolAdmin, address _safeYieldConfig) Ownable(protocolAdmin) {
-        if (_safeYieldConfig == address(0)) revert SYTD__INVALID_ADDRESS();
+        if (_safeYieldConfig == address(0) || protocolAdmin == address(0)) revert SYTD__INVALID_ADDRESS();
 
-        configs = ISafeYieldConfigs(_safeYieldConfig);
+        safeYieldConfigs = ISafeYieldConfigs(_safeYieldConfig);
     }
 
     function depositReward(address[] calldata rewardAssets, uint128[] calldata amounts) external onlyOwner {
@@ -75,7 +76,8 @@ contract SafeYieldTokenDistributor is ISafeYieldTokensDistributor, Ownable2Step,
 
             IERC20(rewardAsset).safeTransferFrom(msg.sender, address(this), amount);
 
-            rewardToken.accRewardPerShare += (amount * DIVISION_FACTOR) / configs.safeYieldStaking().totalStaked();
+            rewardToken.accRewardPerShare +=
+                (amount * DIVISION_FACTOR) / safeYieldConfigs.safeYieldStaking().totalStaked();
 
             emit RewardDeposited(msg.sender, rewardAsset, amount);
         }
@@ -84,7 +86,7 @@ contract SafeYieldTokenDistributor is ISafeYieldTokensDistributor, Ownable2Step,
     function handleActionBefore(address _user, bytes4 _selector) external override onlyStaking { }
 
     function handleActionAfter(address _user, bytes4 _selector) external override onlyStaking {
-        uint256 _userBalance = IERC20(address(configs.safeYieldStaking())).balanceOf(_user);
+        uint256 _userBalance = IERC20(address(safeYieldConfigs.safeYieldStaking())).balanceOf(_user);
         uint256 _userLastsSayBalance = lastStakeBalance[_user];
 
         emit HandleActionAfter(_user, _selector);
@@ -188,7 +190,7 @@ contract SafeYieldTokenDistributor is ISafeYieldTokensDistributor, Ownable2Step,
             payable(owner()).transfer(address(this).balance);
         }
 
-        IERC20(token).transfer(owner(), amount);
+        IERC20(token).safeTransfer(owner(), amount);
     }
 
     function getRewardTokens(address yieldAsset) external view returns (RewardToken memory) {
@@ -206,10 +208,18 @@ contract SafeYieldTokenDistributor is ISafeYieldTokensDistributor, Ownable2Step,
     function existingLastStakeBalance(address user) public view returns (uint256) {
         return lastStakeBalance[user] != 0
             ? lastStakeBalance[user]
-            : IERC20(address(configs.safeYieldStaking())).balanceOf(user);
+            : IERC20(address(safeYieldConfigs.safeYieldStaking())).balanceOf(user);
     }
 
     function _calculateAccRewards(uint256 _accRewardPerShare, uint256 _amount) private pure returns (uint256) {
         return (_amount * _accRewardPerShare) / DIVISION_FACTOR;
+    }
+
+    function setConfig(address configs) external override onlyOwner {
+        if (configs == address(0)) revert SYTD__INVALID_ADDRESS();
+
+        safeYieldConfigs = ISafeYieldConfigs(configs);
+
+        emit SafeYieldConfigUpdated(configs);
     }
 }
