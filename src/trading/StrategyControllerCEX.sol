@@ -4,12 +4,12 @@ pragma solidity 0.8.26;
 import { ERC4626, ERC20, IERC20, IERC20Metadata } from "lib/openzeppelin-contracts/contracts/token/ERC20/extensions/ERC4626.sol";
 import { SafeERC20 } from "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import { Math } from "lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
-import { Ownable2Step } from "lib/openzeppelin-contracts/contracts/access/Ownable2Step.sol";
+import { Ownable } from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 
 /**
  * @notice Gas optimized ERC4626 vault that handles multiple users efficiently
  */
-contract StrategyFundManagerCEX is ERC4626, Ownable2Step {
+contract StrategyFundManagerCEX is ERC4626, Ownable {
     using SafeERC20 for IERC20;
 
     /*//////////////////////////////////////////////////////////////
@@ -45,7 +45,7 @@ contract StrategyFundManagerCEX is ERC4626, Ownable2Step {
         string memory _symbol,
         address _controller,
         address _owner
-    ) ERC4626(_asset) ERC20(_name, _symbol) Ownable2Step(_owner) {
+    ) ERC4626(_asset) ERC20(_name, _symbol) Ownable(_owner) {
         if (_controller == address(0)) revert InvalidAddress();
         controller = _controller;
     }

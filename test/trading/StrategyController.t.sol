@@ -169,7 +169,7 @@ contract StrategyControllerTest is SafeYieldTradingBaseTest {
 
         bytes memory handlerData = abi.encode("NewData");
 
-        uint256 posId = IPositionVault(POSITION_VAULT).lastPosId();
+        //uint256 posId = IPositionVault(POSITION_VAULT).lastPosId();
 
         vm.startPrank(SAY_TRADER);
         controller.openStrategy(address(velaHandler), address(0), 1_000e6, true, OrderType.MARKET, data);
