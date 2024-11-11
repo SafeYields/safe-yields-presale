@@ -106,7 +106,13 @@ contract StrategyFundManagerCEX is ERC4626, Ownable {
         if (amount == 0) revert InvalidAmount();
         
         fundsInTrading -= amount;
-        IERC20(asset()).safeTransferFrom(msg.sender, address(this), amount);
+        uint256 fundsToTransfer;
+         if (pnl > 0) {
+        fundsToTransfer = amount + uint256(pnl);
+       } else {
+        fundsToTransfer = amount - uint256(-pnl);
+        }
+        IERC20(asset()).safeTransferFrom(msg.sender, address(this), fundsToTransfer);
 
         emit StrategyReturned(msg.sender, amount, pnl);
     }
