@@ -130,7 +130,7 @@ contract SafeYieldTokenDistributor is ISafeYieldTokensDistributor, Ownable2Step,
         }
     }
 
-    function claimRewards(address rewardAsset) external override {
+    function claimRewards(address rewardAsset) external override whenNotPaused {
         if (rewardAsset == address(0)) revert SYTD__INVALID_ADDRESS();
 
         uint256 _pendingReward = pendingRewards(msg.sender, rewardAsset);
@@ -149,7 +149,7 @@ contract SafeYieldTokenDistributor is ISafeYieldTokensDistributor, Ownable2Step,
         return userTokenRewardDebt[user][rewardAsset];
     }
 
-    function claimAllRewards() external override {
+    function claimAllRewards() external override whenNotPaused {
         address[] memory _rewardTokens = allRewardTokens;
 
         for (uint256 i; i < _rewardTokens.length; i++) {
@@ -176,6 +176,22 @@ contract SafeYieldTokenDistributor is ISafeYieldTokensDistributor, Ownable2Step,
             int256(_calculateAccRewards(_accRewardPerShare, lastStakeBalance[user]))
                 - userTokenRewardDebt[user][rewardAsset]
         );
+    }
+
+    /**
+     * @dev Pause the distributor
+     * @notice This function can only be called by the owner()
+     */
+    function pause() external override onlyOwner {
+        _pause();
+    }
+
+    /**
+     * @dev Unpause the distributor
+     * @notice This function can only be called by the owner()
+     */
+    function unpause() external override onlyOwner {
+        _unpause();
     }
 
     function allPendingRewards(address user) external view override returns (Rewards[] memory) {

@@ -23,6 +23,10 @@ interface ISafeYieldTokensDistributor is ISafeYieldStakingCallback {
 
     function claimAllRewards() external;
 
+    function pause() external;
+
+    function unpause() external;
+
     function claimRewards(address rewardAsset) external;
 
     function handleActionBefore(address _user, bytes4 _selector) external;
