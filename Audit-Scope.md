@@ -1,4 +1,8 @@
-### All Contracts in `src` are in scope except files in the `trading` folders.
+### All Contracts in `src` and `script` are in scope except files in the `trading` folders.
+
+├── script/
+│   ├── SafeYieldPresaleDeploymentPatch5.Migrate.s.sol
+│   └── SafeYieldPresaleDeploymentPatch5.s.sol
 
 src/
 ├── interfaces/
