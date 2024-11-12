@@ -3,7 +3,7 @@
 pragma solidity 0.8.26;
 
 import { ISafeYieldStaking } from "./interfaces/ISafeYieldStaking.sol";
-import { ISafeYieldLockUp } from "./interfaces/ISafeYieldLockUp.sol";
+import { ISafeYieldVesting } from "./interfaces/ISafeYieldVesting.sol";
 import { ISafeYieldPreSale } from "./interfaces/ISafeYieldPreSale.sol";
 import { ISafeYieldStaking } from "./interfaces/ISafeYieldStaking.sol";
 import { ISafeYieldRewardDistributor } from "./interfaces/ISafeYieldRewardDistributor.sol";
@@ -15,12 +15,12 @@ contract SafeYieldConfigs is ISafeYieldConfigs, Ownable2Step {
     uint48 public override vestStartTime;
     ISafeYieldPreSale public override safeYieldPresale;
     ISafeYieldRewardDistributor public override safeYieldDistributor;
-    ISafeYieldLockUp public override safeYieldLockUp;
+    ISafeYieldVesting public override safeYieldVesting;
     ISafeYieldStaking public override safeYieldStaking;
 
     event SafeYieldLpSet(address indexed LPset, uint256 indexed vestStart);
     event PresaleSet(address indexed presale);
-    event LockUpSet(address indexed lockUp);
+    event VestingSet(address indexed Vesting);
     event SafeStakingUpdated(address indexed newStaking);
     event RewardDistributorSet(address indexed distributor);
 
@@ -35,7 +35,7 @@ contract SafeYieldConfigs is ISafeYieldConfigs, Ownable2Step {
 
         vestStartTime = uint48(block.timestamp);
 
-        emit SafeYieldLpSet(lp,block.timestamp);
+        emit SafeYieldLpSet(lp, block.timestamp);
     }
 
     function setPresale(address _presale) external override onlyOwner {
@@ -46,14 +46,13 @@ contract SafeYieldConfigs is ISafeYieldConfigs, Ownable2Step {
         emit PresaleSet(_presale);
     }
 
-    function setLockUp(address _lockUp) external override onlyOwner {
-        if (_lockUp == address(0)) revert SYC__INVALID_ADDRESS();
+    function setVesting(address _Vesting) external override onlyOwner {
+        if (_Vesting == address(0)) revert SYC__INVALID_ADDRESS();
 
-        safeYieldLockUp = ISafeYieldLockUp(_lockUp);
+        safeYieldVesting = ISafeYieldVesting(_Vesting);
 
-        emit LockUpSet(_lockUp);
+        emit VestingSet(_Vesting);
     }
-
 
     function updateSafeStaking(address _newStaking) external override onlyOwner {
         if (_newStaking == address(0)) revert SYC__INVALID_ADDRESS();

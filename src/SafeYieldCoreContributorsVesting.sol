@@ -5,18 +5,18 @@ pragma solidity 0.8.26;
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
-import { ISafeYieldCoreContributorsLockUp } from "./interfaces/ISafeYieldCoreContributorsLockUp.sol";
+import { ISafeYieldCoreContributorsVesting } from "./interfaces/ISafeYieldCoreContributorsVesting.sol";
 import { ISafeToken } from "./interfaces/ISafeToken.sol";
 import { VestingSchedule } from "./types/SafeTypes.sol";
 import { Ownable2Step, Ownable } from "@openzeppelin/contracts/access/Ownable2Step.sol";
 /**
- * @title SafeYieldCoreContributorsLockUp
+ * @title SafeYieldCoreContributorsVesting
  * @dev This contract manages the vesting for 12 months and allocation of 1 Million SAY tokens for core contributors,
  *   allowing claim and mint operations with pausable functionality.
  * @author @0xm00k
  */
 
-contract SafeYieldCoreContributorsLockUp is ISafeYieldCoreContributorsLockUp, Ownable2Step, Pausable {
+contract SafeYieldCoreContributorsVesting is ISafeYieldCoreContributorsVesting, Ownable2Step, Pausable {
     using Math for uint256;
     using SafeERC20 for ISafeToken;
     /*//////////////////////////////////////////////////////////////

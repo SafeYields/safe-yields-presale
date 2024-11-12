@@ -3,7 +3,7 @@
 pragma solidity 0.8.26;
 
 import { ISafeYieldStaking } from "./interfaces/ISafeYieldStaking.sol";
-import { ISafeYieldLockUp } from "./interfaces/ISafeYieldLockUp.sol";
+import { ISafeYieldVesting } from "./interfaces/ISafeYieldVesting.sol";
 import { ISafeYieldPreSale } from "./interfaces/ISafeYieldPreSale.sol";
 import { ISafeYieldConfigs } from "./interfaces/ISafeYieldConfigs.sol";
 import { VestingSchedule } from "./types/SafeTypes.sol";
@@ -13,7 +13,7 @@ import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Ownable, Ownable2Step } from "@openzeppelin/contracts/access/Ownable2Step.sol";
 
-contract SafeYieldLockUp is ISafeYieldLockUp, Ownable2Step, Pausable {
+contract SafeYieldVesting is ISafeYieldVesting, Ownable2Step, Pausable {
     using Math for uint256;
     using SafeERC20 for IERC20;
     /*//////////////////////////////////////////////////////////////

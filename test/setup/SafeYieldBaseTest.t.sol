@@ -11,9 +11,9 @@ import { RewardMockToken } from "../mocks/RewardMockToken.sol";
 import { SafeYieldRewardDistributorMock } from "../mocks/SafeYieldRewardDistributorMock.sol";
 import { SafeYieldPresale } from "src/SafeYieldPresale.sol";
 import { SafeYieldStaking } from "src/SafeYieldStaking.sol";
-import { SafeYieldCoreContributorsLockUp } from "src/SafeYieldCoreContributorsLockUp.sol";
+import { SafeYieldCoreContributorsVesting } from "src/SafeYieldCoreContributorsVesting.sol";
 import { SafeYieldTokenDistributor } from "src/SafeYieldTokenDistributor.sol";
-import { SafeYieldLockUp } from "src/SafeYieldLockUp.sol";
+import { SafeYieldVesting } from "src/SafeYieldVesting.sol";
 import { SafeYieldConfigs } from "src/SafeYieldConfigs.sol";
 import { SafeYieldAirdrop } from "src/SafeYieldAirdrop.sol";
 import { SafeYieldTWAP } from "src/SafeYieldTWAP.sol";
@@ -49,8 +49,8 @@ abstract contract SafeYieldBaseTest is Test {
     bytes32 public merkleRoot = 0x09d4267a42b2b82ffc3599f877a3305637af8394f4d19ffb1fafdc9ab482c47b;
 
     SafeYieldRewardDistributorMock public distributor;
-    SafeYieldLockUp public safeYieldLockUp;
-    SafeYieldCoreContributorsLockUp public contributorLockUp;
+    SafeYieldVesting public safeYieldVesting;
+    SafeYieldCoreContributorsVesting public contributorVesting;
     SafeYieldConfigs public configs;
     SafeYieldPresale public presale;
     SafeYieldStaking public staking;
@@ -110,7 +110,7 @@ abstract contract SafeYieldBaseTest is Test {
             protocolAdmin
         );
 
-        safeYieldLockUp = new SafeYieldLockUp(protocolAdmin, address(staking), address(configs));
+        safeYieldVesting = new SafeYieldVesting(protocolAdmin, address(staking), address(configs));
 
         distributor = new SafeYieldRewardDistributorMock(
             address(safeToken), address(usdc), teamOperations, usdcBuyback, address(staking), address(twap)
@@ -118,30 +118,30 @@ abstract contract SafeYieldBaseTest is Test {
 
         airdrop = new SafeYieldAirdrop(address(safeToken), address(configs), protocolAdmin);
 
-        contributorLockUp = new SafeYieldCoreContributorsLockUp(protocolAdmin, address(safeToken));
+        contributorVesting = new SafeYieldCoreContributorsVesting(protocolAdmin, address(safeToken));
 
         safeToken.setAllocationLimit(address(distributor), STAKING_MAX_SUPPLY);
         safeToken.setAllocationLimit(address(presale), PRE_SALE_MAX_SUPPLY);
-        safeToken.setAllocationLimit(address(contributorLockUp), CORE_CONTRIBUTORS_TOTAL_SAY_AMOUNT);
+        safeToken.setAllocationLimit(address(contributorVesting), CORE_CONTRIBUTORS_TOTAL_SAY_AMOUNT);
 
         staking.addCallback(address(tokensDistributor));
 
         staking.approveStakingAgent(address(presale), true);
         staking.approveStakingAgent(protocolAdmin, true);
         staking.approveStakingAgent(address(airdrop), true);
-        staking.approveStakingAgent(address(safeYieldLockUp), true);
+        staking.approveStakingAgent(address(safeYieldVesting), true);
 
         configs.setPresale(address(presale));
         configs.updateSafeStaking(address(staking));
         configs.setRewardDistributor(address(distributor));
-        configs.setLockUp(address(safeYieldLockUp));
+        configs.setVesting(address(safeYieldVesting));
 
-        contributorLockUp.mintSayAllocation(CORE_CONTRIBUTORS_TOTAL_SAY_AMOUNT);
+        contributorVesting.mintSayAllocation(CORE_CONTRIBUTORS_TOTAL_SAY_AMOUNT);
         presale.mintPreSaleAllocation(PRE_SALE_MAX_SUPPLY);
         distributor.mintStakingEmissionAllocation(STAKING_MAX_SUPPLY);
 
-        safeYieldLockUp.approveVestingAgent(address(staking), true);
-        safeYieldLockUp.approveVestingAgent(protocolAdmin, true);
+        safeYieldVesting.approveVestingAgent(address(staking), true);
+        safeYieldVesting.approveVestingAgent(protocolAdmin, true);
 
         airdrop.setMerkleRoot(merkleRoot);
 

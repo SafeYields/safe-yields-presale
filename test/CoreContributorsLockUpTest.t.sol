@@ -4,49 +4,49 @@ pragma solidity 0.8.26;
 
 import { console } from "forge-std/Test.sol";
 import { SafeYieldBaseTest } from "./setup/SafeYieldBaseTest.t.sol";
-import { SafeYieldCoreContributorsLockUp } from "src/SafeYieldCoreContributorsLockUp.sol";
+import { SafeYieldCoreContributorsVesting } from "src/SafeYieldCoreContributorsVesting.sol";
 import { VestingSchedule } from "src/types/SafeTypes.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
-contract CoreContributorLockUpTest is SafeYieldBaseTest {
+contract CoreContributorVestingTest is SafeYieldBaseTest {
     using Math for uint256;
 
     function testSayTokenContractSetCorrectly() public view {
-        assertEq(address(contributorLockUp.sayToken()), address(safeToken));
+        assertEq(address(contributorVesting.sayToken()), address(safeToken));
     }
 
     function testAddCoreMember() public {
         vm.prank(protocolAdmin);
 
-        contributorLockUp.addMember(ALICE, 10_000e18);
+        contributorVesting.addMember(ALICE, 10_000e18);
 
-        VestingSchedule memory aliceSchedule = contributorLockUp.getSchedules(ALICE);
+        VestingSchedule memory aliceSchedule = contributorVesting.getSchedules(ALICE);
 
         assertEq(aliceSchedule.totalAmount, 10_000e18);
         assertEq(aliceSchedule.start, block.timestamp);
-        assertEq(aliceSchedule.duration, contributorLockUp.CORE_CONTRIBUTORS_VESTING_DURATION());
+        assertEq(aliceSchedule.duration, contributorVesting.CORE_CONTRIBUTORS_VESTING_DURATION());
     }
 
     function testNewVestingScheduleForExistingCoreMemberAfterDuration() public {
         vm.prank(protocolAdmin);
 
-        contributorLockUp.addMember(ALICE, 10_000e18);
+        contributorVesting.addMember(ALICE, 10_000e18);
 
-        VestingSchedule memory aliceSchedule = contributorLockUp.getSchedules(ALICE);
+        VestingSchedule memory aliceSchedule = contributorVesting.getSchedules(ALICE);
 
         assertEq(aliceSchedule.totalAmount, 10_000e18);
         assertEq(aliceSchedule.start, block.timestamp);
-        assertEq(aliceSchedule.duration, contributorLockUp.CORE_CONTRIBUTORS_VESTING_DURATION());
+        assertEq(aliceSchedule.duration, contributorVesting.CORE_CONTRIBUTORS_VESTING_DURATION());
 
         skip(365 * 24 * 60 * 60 seconds); // 1 year
 
-        contributorLockUp.unlockedAmount(ALICE);
+        contributorVesting.unlockedAmount(ALICE);
 
         vm.prank(protocolAdmin);
 
-        contributorLockUp.addMember(ALICE, 12_000e18);
+        contributorVesting.addMember(ALICE, 12_000e18);
 
-        VestingSchedule memory aliceSchedule2 = contributorLockUp.getSchedules(ALICE);
+        VestingSchedule memory aliceSchedule2 = contributorVesting.getSchedules(ALICE);
 
         /**
          * When alice gets a new Schedule , she should receive all her SAY after one year
@@ -58,7 +58,7 @@ contract CoreContributorLockUpTest is SafeYieldBaseTest {
         assertEq(aliceSchedule2.totalAmount, 12_000e18);
         assertEq(aliceSchedule2.start, block.timestamp);
         assertEq(aliceSchedule2.amountClaimed, 0);
-        assertEq(aliceSchedule2.duration, contributorLockUp.CORE_CONTRIBUTORS_VESTING_DURATION());
+        assertEq(aliceSchedule2.duration, contributorVesting.CORE_CONTRIBUTORS_VESTING_DURATION());
     }
 
     function testAddMultipleCoreMembersShouldRevertIfArrayMismatch() public {
@@ -71,8 +71,8 @@ contract CoreContributorLockUpTest is SafeYieldBaseTest {
         totalAmounts[0] = 30_000e18;
 
         vm.startPrank(protocolAdmin);
-        vm.expectRevert(SafeYieldCoreContributorsLockUp.SY_CCLU__LENGTH_MISMATCH.selector);
-        contributorLockUp.addMultipleMembers(members, totalAmounts);
+        vm.expectRevert(SafeYieldCoreContributorsVesting.SY_CCLU__LENGTH_MISMATCH.selector);
+        contributorVesting.addMultipleMembers(members, totalAmounts);
     }
 
     function testAddMultipleCoreMembers() public {
@@ -87,18 +87,18 @@ contract CoreContributorLockUpTest is SafeYieldBaseTest {
         skip(10 minutes);
 
         vm.startPrank(protocolAdmin);
-        contributorLockUp.addMultipleMembers(members, totalAmounts);
+        contributorVesting.addMultipleMembers(members, totalAmounts);
 
-        VestingSchedule memory aliceSchedule = contributorLockUp.getSchedules(ALICE);
-        VestingSchedule memory charlieSchedule = contributorLockUp.getSchedules(CHARLIE);
+        VestingSchedule memory aliceSchedule = contributorVesting.getSchedules(ALICE);
+        VestingSchedule memory charlieSchedule = contributorVesting.getSchedules(CHARLIE);
 
         assertEq(aliceSchedule.totalAmount, 30_000e18);
         assertEq(aliceSchedule.start, block.timestamp);
-        assertEq(aliceSchedule.duration, contributorLockUp.CORE_CONTRIBUTORS_VESTING_DURATION());
+        assertEq(aliceSchedule.duration, contributorVesting.CORE_CONTRIBUTORS_VESTING_DURATION());
 
         assertEq(charlieSchedule.totalAmount, 10_000e18);
         assertEq(charlieSchedule.start, block.timestamp);
-        assertEq(charlieSchedule.duration, contributorLockUp.CORE_CONTRIBUTORS_VESTING_DURATION());
+        assertEq(charlieSchedule.duration, contributorVesting.CORE_CONTRIBUTORS_VESTING_DURATION());
     }
 
     function testUnlockCoreMembersSayTokens() public {
@@ -111,11 +111,11 @@ contract CoreContributorLockUpTest is SafeYieldBaseTest {
         uint256 bobSayBalancePrior = safeToken.balanceOf(BOB);
 
         vm.startPrank(BOB);
-        contributorLockUp.claimSayTokens();
+        contributorVesting.claimSayTokens();
 
         uint256 bobSayBalanceAfter = safeToken.balanceOf(BOB);
 
-        VestingSchedule memory bobSchedule = contributorLockUp.getSchedules(BOB);
+        VestingSchedule memory bobSchedule = contributorVesting.getSchedules(BOB);
 
         uint256 timePassed = block.timestamp - timeStart;
 
@@ -130,8 +130,8 @@ contract CoreContributorLockUpTest is SafeYieldBaseTest {
         uint256 timeStarted = block.timestamp;
 
         vm.startPrank(protocolAdmin);
-        contributorLockUp.addMember(ALICE, 10_000e18);
-        contributorLockUp.addMember(BOB, 10_000e18);
+        contributorVesting.addMember(ALICE, 10_000e18);
+        contributorVesting.addMember(BOB, 10_000e18);
         vm.stopPrank();
 
         uint256 aliceSayBalancePrior = safeToken.balanceOf(ALICE);
@@ -143,11 +143,11 @@ contract CoreContributorLockUpTest is SafeYieldBaseTest {
         skip(1 days);
 
         vm.startPrank(ALICE);
-        contributorLockUp.claimSayTokens();
+        contributorVesting.claimSayTokens();
 
         uint256 aliceSayBalanceAfterFirstUnlock = safeToken.balanceOf(ALICE);
 
-        VestingSchedule memory aliceSchedule = contributorLockUp.getSchedules(ALICE);
+        VestingSchedule memory aliceSchedule = contributorVesting.getSchedules(ALICE);
 
         uint256 aliceFirstUnlockTimePassed = block.timestamp - timeStarted;
 
@@ -164,12 +164,12 @@ contract CoreContributorLockUpTest is SafeYieldBaseTest {
 
         skip(5 days);
         vm.startPrank(BOB);
-        contributorLockUp.claimSayTokens();
+        contributorVesting.claimSayTokens();
         vm.stopPrank();
 
         uint256 bobSayBalanceAfterFirstUnlock = safeToken.balanceOf(BOB);
 
-        VestingSchedule memory bobSchedule = contributorLockUp.getSchedules(BOB);
+        VestingSchedule memory bobSchedule = contributorVesting.getSchedules(BOB);
 
         uint256 bobFirstUnlockTimePassed = block.timestamp - timeStarted;
 
@@ -188,7 +188,7 @@ contract CoreContributorLockUpTest is SafeYieldBaseTest {
 
         //alice unlocks 1 year later
         vm.startPrank(ALICE);
-        contributorLockUp.claimSayTokens();
+        contributorVesting.claimSayTokens();
         vm.stopPrank();
 
         uint256 aliceSayBalanceAfterLastUnlock = safeToken.balanceOf(ALICE);
@@ -201,7 +201,7 @@ contract CoreContributorLockUpTest is SafeYieldBaseTest {
 
         //bob unlocks 1 year later
         vm.startPrank(BOB);
-        contributorLockUp.claimSayTokens();
+        contributorVesting.claimSayTokens();
         vm.stopPrank();
 
         uint256 bobSayBalanceAfterLastUnlock = safeToken.balanceOf(BOB);
@@ -221,9 +221,9 @@ contract CoreContributorLockUpTest is SafeYieldBaseTest {
         uint256 numberOfMembers,
         uint256 time
     ) public {
-        sayAllocation = bound(sayAllocation, 50_000e18, contributorLockUp.CORE_CONTRIBUTORS_TOTAL_SAY_AMOUNT());
+        sayAllocation = bound(sayAllocation, 50_000e18, contributorVesting.CORE_CONTRIBUTORS_TOTAL_SAY_AMOUNT());
         numberOfMembers = bound(numberOfMembers, 2, 20);
-        time = bound(time, block.timestamp, contributorLockUp.CORE_CONTRIBUTORS_VESTING_DURATION());
+        time = bound(time, block.timestamp, contributorVesting.CORE_CONTRIBUTORS_VESTING_DURATION());
 
         (address[] memory members, uint128[] memory totalAllocations) =
             getMembersAndAllocations(uint128(sayAllocation), numberOfMembers);
@@ -233,15 +233,15 @@ contract CoreContributorLockUpTest is SafeYieldBaseTest {
         uint256 timeStarted = block.timestamp;
 
         vm.startPrank(protocolAdmin);
-        contributorLockUp.addMultipleMembers(members, totalAllocations);
+        contributorVesting.addMultipleMembers(members, totalAllocations);
 
         skip(time);
 
         //assertions
         for (uint256 i; i < members.length; i++) {
-            if (contributorLockUp.unlockedAmount(address(uint160(i + 50))) != 0) {
+            if (contributorVesting.unlockedAmount(address(uint160(i + 50))) != 0) {
                 vm.startPrank(address(uint160(i + 50)));
-                contributorLockUp.claimSayTokens();
+                contributorVesting.claimSayTokens();
                 vm.stopPrank();
             } else {
                 continue;
@@ -251,7 +251,7 @@ contract CoreContributorLockUpTest is SafeYieldBaseTest {
         uint256 timePassed = block.timestamp - timeStarted;
 
         for (uint256 i; i < members.length; i++) {
-            VestingSchedule memory userSchedule = contributorLockUp.getSchedules(address(uint160(i + 50)));
+            VestingSchedule memory userSchedule = contributorVesting.getSchedules(address(uint160(i + 50)));
             if (userSchedule.totalAmount != 0) {
                 uint256 expectedSayAmount = block.timestamp >= block.timestamp + userSchedule.duration
                     ? userSchedule.totalAmount
@@ -268,7 +268,7 @@ contract CoreContributorLockUpTest is SafeYieldBaseTest {
 
     function addCoreMember(address user, uint128 totalAmount) internal {
         vm.prank(protocolAdmin);
-        contributorLockUp.addMember(user, totalAmount);
+        contributorVesting.addMember(user, totalAmount);
     }
 
     function getMembersAndAllocations(uint128 sayAllocation, uint256 numberOfMembers)

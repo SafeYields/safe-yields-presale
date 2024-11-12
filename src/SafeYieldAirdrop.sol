@@ -5,7 +5,7 @@ pragma solidity 0.8.26;
 import { ISafeYieldAirdrop } from "./interfaces/ISafeYieldAirdrop.sol";
 import { ISafeYieldConfigs } from "./interfaces/ISafeYieldConfigs.sol";
 import { ISafeYieldStaking } from "./interfaces/ISafeYieldStaking.sol";
-import { ISafeYieldLockUp } from "./interfaces/ISafeYieldLockUp.sol";
+import { ISafeYieldVesting } from "./interfaces/ISafeYieldVesting.sol";
 import { ISafeToken } from "./interfaces/ISafeToken.sol";
 import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";

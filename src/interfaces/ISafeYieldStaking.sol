@@ -12,7 +12,7 @@ interface ISafeYieldStaking {
 
     function updateRewards() external;
 
-    function stakeFor(address user, uint128 amount, bool lockUp) external;
+    function stakeFor(address user, uint128 amount, bool Vesting) external;
 
     function addCallback(address callback) external;
 

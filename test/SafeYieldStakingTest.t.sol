@@ -306,7 +306,7 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
 
         skip(1 weeks);
 
-        VestingSchedule memory aliceVestingSchedule1 = safeYieldLockUp.getSchedules(ALICE);
+        VestingSchedule memory aliceVestingSchedule1 = safeYieldVesting.getSchedules(ALICE);
         assertEq(aliceVestingSchedule1.start, 0);
         assertEq(aliceVestingSchedule1.totalAmount, 2_000e18);
 
@@ -329,7 +329,7 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         staking.unstakeVestedTokens();
         vm.stopPrank();
 
-        VestingSchedule memory aliceVestingSchedule2 = safeYieldLockUp.getSchedules(ALICE);
+        VestingSchedule memory aliceVestingSchedule2 = safeYieldVesting.getSchedules(ALICE);
         assertEq(aliceVestingSchedule2.start, configs.vestStartTime());
         assertEq(aliceVestingSchedule2.amountClaimed, 400e18);
         assertEq(safeToken.balanceOf(ALICE), 400e18);
@@ -350,7 +350,7 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
 
         skip(1 weeks);
 
-        VestingSchedule memory aliceVestingSchedule1 = safeYieldLockUp.getSchedules(ALICE);
+        VestingSchedule memory aliceVestingSchedule1 = safeYieldVesting.getSchedules(ALICE);
         assertEq(aliceVestingSchedule1.start, 0);
         assertEq(aliceVestingSchedule1.totalAmount, 2_000e18);
 
@@ -361,9 +361,9 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         skip(30 * 24 * 60 * 60 seconds); //30 days
 
         vm.prank(ALICE);
-        safeYieldLockUp.unlock_sSayTokens();
+        safeYieldVesting.unlock_sSayTokens();
 
-        VestingSchedule memory aliceVestingSchedule2 = safeYieldLockUp.getSchedules(ALICE);
+        VestingSchedule memory aliceVestingSchedule2 = safeYieldVesting.getSchedules(ALICE);
 
         assertEq(aliceVestingSchedule2.amountClaimed, 400e18);
         assertEq(IERC20(address(staking)).balanceOf(ALICE), 400e18);
@@ -389,7 +389,7 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         staking.stakeFor(ALICE, 2_000e18, true);
         vm.stopPrank();
 
-        VestingSchedule memory aliceVestingSchedule1 = safeYieldLockUp.getSchedules(ALICE);
+        VestingSchedule memory aliceVestingSchedule1 = safeYieldVesting.getSchedules(ALICE);
         assertEq(aliceVestingSchedule1.start, 0);
         assertEq(aliceVestingSchedule1.totalAmount, 2_000e18);
 
@@ -399,7 +399,7 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         staking.stakeFor(ALICE, 2_000e18, true);
         vm.stopPrank();
 
-        VestingSchedule memory aliceVestingSchedule2 = safeYieldLockUp.getSchedules(ALICE);
+        VestingSchedule memory aliceVestingSchedule2 = safeYieldVesting.getSchedules(ALICE);
         assertEq(aliceVestingSchedule2.start, 0);
         assertEq(aliceVestingSchedule2.totalAmount, 4_000e18);
 
@@ -412,7 +412,7 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         staking.stakeFor(ALICE, 2_000e18, true);
         vm.stopPrank();
 
-        VestingSchedule memory aliceVestingSchedule3 = safeYieldLockUp.getSchedules(ALICE);
+        VestingSchedule memory aliceVestingSchedule3 = safeYieldVesting.getSchedules(ALICE);
         assertEq(aliceVestingSchedule3.start, block.timestamp);
         assertEq(aliceVestingSchedule3.totalAmount, 2_000e18);
     }
@@ -428,7 +428,7 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         staking.stakeFor(ALICE, 2_000e18, true);
         vm.stopPrank();
 
-        VestingSchedule memory aliceVestingSchedule1 = safeYieldLockUp.getSchedules(ALICE);
+        VestingSchedule memory aliceVestingSchedule1 = safeYieldVesting.getSchedules(ALICE);
         assertEq(aliceVestingSchedule1.start, block.timestamp);
         assertEq(aliceVestingSchedule1.totalAmount, 2_000e18);
     }

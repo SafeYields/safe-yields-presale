@@ -4,7 +4,7 @@ pragma solidity 0.8.26;
 
 import { VestingSchedule, PreSaleState } from "../types/SafeTypes.sol";
 
-interface ISafeYieldLockUp {
+interface ISafeYieldVesting {
     function vestFor(address user, uint256 amount) external;
 
     function setConfig(address configs) external;

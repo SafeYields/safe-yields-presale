@@ -6,11 +6,11 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Script, console } from "forge-std/Script.sol";
 import { SafeYieldPresale, ISafeYieldPreSale } from "src/SafeYieldPresale.sol";
 import { SafeYieldStaking, ISafeYieldStaking, Stake } from "src/SafeYieldStaking.sol";
-import { SafeYieldLockUp } from "src/SafeYieldLockUp.sol";
+import { SafeYieldVesting } from "src/SafeYieldVesting.sol";
 import { SafeYieldRewardDistributor, ISafeYieldRewardDistributor } from "src/SafeYieldRewardDistributor.sol";
 import { SafeYieldTokenDistributor } from "src/SafeYieldTokenDistributor.sol";
 import { SafeYieldAirdrop } from "src/SafeYieldAirdrop.sol";
-import { SafeYieldCoreContributorsLockUp } from "src/SafeYieldCoreContributorsLockUp.sol";
+import { SafeYieldCoreContributorsVesting } from "src/SafeYieldCoreContributorsVesting.sol";
 import { SafeToken, ISafeToken } from "src/SafeToken.sol";
 import { SafeYieldConfigs } from "src/SafeYieldConfigs.sol";
 
@@ -40,11 +40,11 @@ contract SafeYieldPresaleDeploymentPath5 is Script {
 
     SafeYieldStaking public syStaking;
     SafeYieldConfigs public syConfig;
-    SafeYieldLockUp public syLockUp;
+    SafeYieldVesting public syVesting;
     SafeYieldPresale public syPresale;
     SafeYieldTokenDistributor public syTokenDistributor;
     SafeYieldAirdrop public syAirdrop;
-    SafeYieldCoreContributorsLockUp public syCoreContributorsLockUp;
+    SafeYieldCoreContributorsVesting public syCoreContributorsVesting;
 
     function run() public {
         uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PK_DL");
@@ -68,7 +68,7 @@ contract SafeYieldPresaleDeploymentPath5 is Script {
 
         syConfig = new SafeYieldConfigs(SY_ADMIN);
 
-        syCoreContributorsLockUp = new SafeYieldCoreContributorsLockUp(SY_ADMIN, SAY_TOKEN);
+        syCoreContributorsVesting = new SafeYieldCoreContributorsVesting(SY_ADMIN, SAY_TOKEN);
 
         syPresale = new SafeYieldPresale(
             SAY_TOKEN,
@@ -84,7 +84,7 @@ contract SafeYieldPresaleDeploymentPath5 is Script {
 
         syStaking = new SafeYieldStaking(SAY_TOKEN, USDC_ARB, address(syConfig));
 
-        syLockUp = new SafeYieldLockUp(SY_ADMIN, address(syStaking), address(syConfig));
+        syVesting = new SafeYieldVesting(SY_ADMIN, address(syStaking), address(syConfig));
 
         syAirdrop = new SafeYieldAirdrop(SAY_TOKEN, address(syConfig), SY_ADMIN);
 
@@ -94,7 +94,7 @@ contract SafeYieldPresaleDeploymentPath5 is Script {
         syConfig.setPresale(address(syPresale));
         syConfig.updateSafeStaking(address(syStaking));
         syConfig.setRewardDistributor(address(OLD_REWARD_DISTRIBUTOR));
-        syConfig.setLockUp(address(syLockUp));
+        syConfig.setVesting(address(syVesting));
 
         /**
          * To account for tokens minted during the previous presale, we subtract them from the main allocation.
@@ -105,22 +105,22 @@ contract SafeYieldPresaleDeploymentPath5 is Script {
         //set say token allocations
         sayToken.setAllocationLimit(address(syPresale), sayAmountRemainingForPresale);
 
-        sayToken.setAllocationLimit(address(syCoreContributorsLockUp), CORE_CONTRIBUTORS_TOTAL_SAY_AMOUNT);
+        sayToken.setAllocationLimit(address(syCoreContributorsVesting), CORE_CONTRIBUTORS_TOTAL_SAY_AMOUNT);
         //set staking configs
         syStaking.addCallback(address(syTokenDistributor));
 
         syStaking.approveStakingAgent(address(syPresale), true);
         syStaking.approveStakingAgent(SY_ADMIN, true);
         syStaking.approveStakingAgent(address(syAirdrop), true);
-        syStaking.approveStakingAgent(address(syLockUp), true);
+        syStaking.approveStakingAgent(address(syVesting), true);
 
         //mint allocations
-        syCoreContributorsLockUp.mintSayAllocation(CORE_CONTRIBUTORS_TOTAL_SAY_AMOUNT);
+        syCoreContributorsVesting.mintSayAllocation(CORE_CONTRIBUTORS_TOTAL_SAY_AMOUNT);
         syPresale.mintPreSaleAllocation(sayAmountRemainingForPresale);
 
         //approve lock up vesting agents
-        syLockUp.approveVestingAgent(address(syStaking), true);
-        syLockUp.approveVestingAgent(SY_ADMIN, true);
+        syVesting.approveVestingAgent(address(syStaking), true);
+        syVesting.approveVestingAgent(SY_ADMIN, true);
 
         //validate contracts
         _validateConfigs(sayAmountRemainingForPresale);
@@ -136,8 +136,8 @@ contract SafeYieldPresaleDeploymentPath5 is Script {
         console.log("Staking", address(syStaking));
         console.log("Presale", address(syPresale));
         console.log("Configs", address(syConfig));
-        console.log("LockUp", address(syLockUp));
-        console.log("CoreContributorsLockUp", address(syCoreContributorsLockUp));
+        console.log("Vesting", address(syVesting));
+        console.log("CoreContributorsVesting", address(syCoreContributorsVesting));
         console.log("TokenYieldDistributor", address(syTokenDistributor));
         console.log("Airdrop", address(syAirdrop));
         console.log("");
@@ -167,27 +167,27 @@ contract SafeYieldPresaleDeploymentPath5 is Script {
         require(syStaking.getAllCallbacks().length == 1, "Invalid number of callbacks");
         require(address(syStaking.getCallback(0)) == address(syTokenDistributor), "Invalid callback");
 
-        //validate lockup configurations
-        require(address(syLockUp.safeYieldConfigs()) == address(syConfig), "Invalid config address");
-        require(address(syLockUp.sSayToken()) == address(syStaking), "Invalid sSafeToken token address");
-        require(syLockUp.approvedVestingAgents(address(syStaking)) == true, "Staking contract not approved");
-        require(syLockUp.approvedVestingAgents(SY_ADMIN) == true, "Admin not approved");
+        //validate Vesting configurations
+        require(address(syVesting.safeYieldConfigs()) == address(syConfig), "Invalid config address");
+        require(address(syVesting.sSayToken()) == address(syStaking), "Invalid sSafeToken token address");
+        require(syVesting.approvedVestingAgents(address(syStaking)) == true, "Staking contract not approved");
+        require(syVesting.approvedVestingAgents(SY_ADMIN) == true, "Admin not approved");
 
         //validate airdrop
         require(address(syAirdrop.sayToken()) == address(sayToken), "Invalid safeToken token address");
         require(address(syAirdrop.safeYieldConfigs()) == address(syConfig), "Invalid config address");
 
         //validate core contributors
-        require(address(syCoreContributorsLockUp.sayToken()) == address(sayToken), "Invalid safeToken token address");
+        require(address(syCoreContributorsVesting.sayToken()) == address(sayToken), "Invalid safeToken token address");
         require(
-            sayToken.balanceOf(address(syCoreContributorsLockUp)) == CORE_CONTRIBUTORS_TOTAL_SAY_AMOUNT,
-            "Invalid core contributors lockup allocation"
+            sayToken.balanceOf(address(syCoreContributorsVesting)) == CORE_CONTRIBUTORS_TOTAL_SAY_AMOUNT,
+            "Invalid core contributors Vesting allocation"
         );
 
         //configs
         require(address(syConfig.safeYieldPresale()) == address(syPresale), "Invalid presale address");
         require(address(syConfig.safeYieldDistributor()) == address(oldDistributor), "Invalid reward distributor");
-        require(address(syConfig.safeYieldLockUp()) == address(syLockUp), "Invalid presale address");
+        require(address(syConfig.safeYieldVesting()) == address(syVesting), "Invalid presale address");
         require(address(syConfig.safeYieldStaking()) == address(syStaking), "Invalid presale address");
 
         // token distributor

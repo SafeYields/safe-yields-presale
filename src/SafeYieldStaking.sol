@@ -12,7 +12,7 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { PreSaleState, Stake } from "./types/SafeTypes.sol";
 import { ISafeYieldConfigs } from "./interfaces/ISafeYieldConfigs.sol";
 import { ISafeYieldStaking } from "./interfaces/ISafeYieldStaking.sol";
-import { ISafeYieldLockUp } from "./interfaces/ISafeYieldLockUp.sol";
+import { ISafeYieldVesting } from "./interfaces/ISafeYieldVesting.sol";
 import { ISafeYieldPreSale } from "./interfaces/ISafeYieldPreSale.sol";
 import { ISafeYieldRewardDistributor } from "./interfaces/ISafeYieldRewardDistributor.sol";
 import { ISafeYieldStakingCallback } from "./interfaces/ISafeYieldStakingCallback.sol";
@@ -120,7 +120,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
         safeYieldConfigs = ISafeYieldConfigs(safeYieldConfig);
     }
 
-    function stakeFor(address user, uint128 amount, bool lockUp) external override whenNotPaused isValidStakingAgent {
+    function stakeFor(address user, uint128 amount, bool Vesting) external override whenNotPaused isValidStakingAgent {
         if (user == address(0)) revert SYST__INVALID_ADDRESS();
         if (amount == 0) revert SYST__INVALID_STAKE_AMOUNT();
 
@@ -137,12 +137,12 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
 
         _stake(user, amount);
 
-        if (lockUp) {
-            ISafeYieldLockUp safeYieldLockUp = safeYieldConfigs.safeYieldLockUp(); //cache
+        if (Vesting) {
+            ISafeYieldVesting safeYieldVesting = safeYieldConfigs.safeYieldVesting(); //cache
 
-            _mint(address(safeYieldLockUp), amount);
+            _mint(address(safeYieldVesting), amount);
 
-            safeYieldLockUp.vestFor(user, amount);
+            safeYieldVesting.vestFor(user, amount);
         } else {
             _mint(user, amount);
         }
@@ -171,9 +171,9 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
 
         claimRewards(msg.sender);
 
-        ISafeYieldLockUp safeYieldLockUp = safeYieldConfigs.safeYieldLockUp(); //cache
+        ISafeYieldVesting safeYieldVesting = safeYieldConfigs.safeYieldVesting(); //cache
 
-        uint256 amountStakedVested = safeYieldLockUp.unlock_sSayTokensFor(msg.sender);
+        uint256 amountStakedVested = safeYieldVesting.unlock_sSayTokensFor(msg.sender);
 
         _unStake(msg.sender, uint128(amountStakedVested));
 

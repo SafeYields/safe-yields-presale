@@ -3,7 +3,7 @@
 pragma solidity 0.8.26;
 
 import { ISafeYieldStaking } from "./ISafeYieldStaking.sol";
-import { ISafeYieldLockUp } from "./ISafeYieldLockUp.sol";
+import { ISafeYieldVesting } from "./ISafeYieldVesting.sol";
 import { ISafeYieldPreSale } from "./ISafeYieldPreSale.sol";
 import { ISafeYieldStaking } from "./ISafeYieldStaking.sol";
 import { ISafeYieldRewardDistributor } from "./ISafeYieldRewardDistributor.sol";
@@ -17,15 +17,15 @@ interface ISafeYieldConfigs {
 
     function safeYieldDistributor() external view returns (ISafeYieldRewardDistributor);
 
-    function safeYieldLockUp() external view returns (ISafeYieldLockUp);
+    function safeYieldVesting() external view returns (ISafeYieldVesting);
 
     function safeYieldStaking() external view returns (ISafeYieldStaking);
 
-    function setIDO(address lp) external ;
+    function setIDO(address lp) external;
 
     function setPresale(address _presale) external;
 
-    function setLockUp(address _lockUp) external;
+    function setVesting(address _Vesting) external;
 
     function updateSafeStaking(address _newStaking) external;
 

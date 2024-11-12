@@ -5,8 +5,8 @@ src/
 │   ├── ISafeToken.sol
 │   ├── ISafeYieldAirdrop.sol
 │   ├── ISafeYieldConfigs.sol
-│   └── ISafeYieldCoreContributorsLockUp.sol
-│   └── ISafeYieldLockUp.sol
+│   └── ISafeYieldCoreContributorsVesting.sol
+│   └── ISafeYieldVesting.sol
 │   └── ISafeYieldPresale.sol
 │   └── ISafeYieldRewardDistributor.sol
 │   └── ISafeYieldStaking.sol
@@ -18,8 +18,8 @@ src/
 ├── SafeToken.sol
 ├── SafeYieldAirdrop.sol
 ├── SafeYieldConfigs.sol
-├── SafeYieldCoreContributorsLockUp.sol
-├── SafeYieldLockUp.sol
+├── SafeYieldCoreContributorsVesting.sol
+├── SafeYieldVesting.sol
 ├── SafeYieldPresale.sol
 ├── SafeYieldRewardDistributor.sol
 ├── SafeYieldStaking.sol

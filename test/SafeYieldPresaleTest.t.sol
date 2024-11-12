@@ -3,7 +3,7 @@ pragma solidity 0.8.26;
 
 import { console } from "forge-std/Test.sol";
 import { SafeYieldPresale } from "src/SafeYieldPresale.sol";
-import { SafeYieldLockUp } from "src/SafeYieldLockUp.sol";
+import { SafeYieldVesting } from "src/SafeYieldVesting.sol";
 import { PreSaleState, VestingSchedule } from "src/types/SafeTypes.sol";
 import { SafeYieldBaseTest } from "./setup/SafeYieldBaseTest.t.sol";
 
@@ -347,7 +347,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         presale.deposit(1_500e6, bytes32(0));
     }
 
-    function testBuySafeTokensWithReferrerAndClaimSafeTokensFromLockUp() public startPresale {
+    function testBuySafeTokensWithReferrerAndClaimSafeTokensFromVesting() public startPresale {
         vm.startPrank(ALICE);
         usdc.approve(address(presale), 1_500e6);
 
@@ -389,15 +389,13 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
 
         uint256 aliceTotalStaked = aliceCommissionFromBOB + 1_500e18;
 
-        uint256 monthsElapsed = (block.timestamp * 10_000) / safeYieldLockUp.ONE_MONTH();
+        uint256 monthsElapsed = (block.timestamp * 10_000) / safeYieldVesting.ONE_MONTH();
 
-          console.log("Month elapsed - t",monthsElapsed);
-
-
+        console.log("Month elapsed - t", monthsElapsed);
 
         uint256 unlockedPercentage = (monthsElapsed * 2_000) / 10_000;
 
-             console.log("unlockedPercentage - t",unlockedPercentage);
+        console.log("unlockedPercentage - t", unlockedPercentage);
 
         uint256 aliceCalculatedSafe = (unlockedPercentage * aliceTotalStaked) / 10_000;
 

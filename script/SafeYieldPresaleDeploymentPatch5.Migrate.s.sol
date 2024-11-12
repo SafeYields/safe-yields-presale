@@ -6,11 +6,11 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Script, console } from "forge-std/Script.sol";
 import { SafeYieldPresale, ISafeYieldPreSale } from "src/SafeYieldPresale.sol";
 import { SafeYieldStaking, ISafeYieldStaking, Stake } from "src/SafeYieldStaking.sol";
-import { SafeYieldLockUp } from "src/SafeYieldLockUp.sol";
+import { SafeYieldVesting } from "src/SafeYieldVesting.sol";
 import { SafeYieldRewardDistributor, ISafeYieldRewardDistributor } from "src/SafeYieldRewardDistributor.sol";
 import { SafeYieldTokenDistributor } from "src/SafeYieldTokenDistributor.sol";
 import { SafeYieldAirdrop } from "src/SafeYieldAirdrop.sol";
-import { SafeYieldCoreContributorsLockUp } from "src/SafeYieldCoreContributorsLockUp.sol";
+import { SafeYieldCoreContributorsVesting } from "src/SafeYieldCoreContributorsVesting.sol";
 import { SafeToken, ISafeToken } from "src/SafeToken.sol";
 import { SafeYieldConfigs } from "src/SafeYieldConfigs.sol";
 
