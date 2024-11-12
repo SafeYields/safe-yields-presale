@@ -88,8 +88,8 @@ contract GMXHandler is BaseStrategyHandler {
         onlyController
         returns (bytes32 orderId)
     {
-        (uint256 orderAmount ,uint128 controllerStrategyId,,) =
-            abi.decode(handlerData, (uint256,uint128, address, bool));
+        (uint256 orderAmount, uint128 controllerStrategyId,,) =
+            abi.decode(handlerData, (uint256, uint128, address, bool));
 
         if (strategyPositionId[controllerStrategyId] != 0) revert SY_HDL__POSITION_EXIST();
 
@@ -159,7 +159,7 @@ contract GMXHandler is BaseStrategyHandler {
     /// @param cancelOrderData Encoded data containing the order ID to be canceled.
     /// @dev This function decodes the `cancelOrderData` to extract the `orderId`, checks if the order exists,
     ///      and then calls the `cancelOrder` function on the `exchangeRouter'.
-    function cancelOrder(bytes memory cancelOrderData) external override  {
+    function cancelOrder(bytes memory cancelOrderData) external override {
         (bool success,) = address(exchangeRouter).call(cancelOrderData);
 
         if (!success) revert SY_HDL__CALL_FAILED();
@@ -222,4 +222,6 @@ contract GMXHandler is BaseStrategyHandler {
     }
 
     fallback() external payable { }
+
+    receive() external payable { }
 }

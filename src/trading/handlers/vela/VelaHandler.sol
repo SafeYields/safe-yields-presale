@@ -26,17 +26,17 @@ contract VelaHandler is BaseStrategyHandler {
     }
 
     function opStrats() public payable {
-        uint256[] memory params = new uint256[](4);
-        params[0] = 168331567680524983643408631905913;
-        params[1] = 250;
-        params[2] = 50000000000000000000000000000000;
-        params[3] = 1325000000000000000000000000000000;
+        // uint256[] memory params = new uint256[](4);
+        // params[0] = 168331567680524983643408631905913;
+        // params[1] = 250;
+        // params[2] = 50000000000000000000000000000000;
+        // params[3] = 1325000000000000000000000000000000;
 
-        bytes memory data = abi.encodeWithSignature(
-            "newPositionOrder(uint256,bool,uint8,uint256[],address)", 8, true, OrderType.MARKET, params, address(0)
-        );
+        // bytes memory data = abi.encodeWithSignature(
+        //     "newPositionOrder(uint256,bool,uint8,uint256[],address)", 8, true, OrderType.MARKET, params, address(0)
+        // );
 
-        (bool success,) = payable(address(vault)).call(data);
+        // (bool success,) = payable(address(vault)).call(data);
     }
 
     function openStrategy(bytes memory handlerData, bytes memory openStrategyData)
@@ -44,7 +44,7 @@ contract VelaHandler is BaseStrategyHandler {
         payable
         override
         onlyController
-        returns (bytes32)
+        returns (bytes32 key)
     {
         (uint256 amount, uint128 controllerStrategyId,,) = abi.decode(handlerData, (uint256, uint128, address, bool));
 
@@ -57,7 +57,8 @@ contract VelaHandler is BaseStrategyHandler {
         (bool success,) = address(vault).call(openStrategyData);
 
         if (!success) revert SY_HDL__CALL_FAILED();
-        
+
+        console.logBytes32(key);
     }
 
     //note change input.
@@ -85,4 +86,6 @@ contract VelaHandler is BaseStrategyHandler {
     { }
 
     fallback() external payable { }
+
+    receive() external payable { }
 }

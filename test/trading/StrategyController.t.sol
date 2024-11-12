@@ -124,6 +124,8 @@ contract StrategyControllerTest is SafeYieldTradingBaseTest {
     function testGMX__ExecuteOrder() public {
         bytes32 key = testGMX__AddNewOrder();
 
+        console.logBytes32(key);
+
         //SetPricesParams
         address[] memory tokens = new address[](2);
         address[] memory providers = new address[](2);
