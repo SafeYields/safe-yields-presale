@@ -27,6 +27,40 @@ contract CoreContributorLockUpTest is SafeYieldBaseTest {
         assertEq(aliceSchedule.duration, contributorLockUp.CORE_CONTRIBUTORS_VESTING_DURATION());
     }
 
+    function testNewVestingScheduleForExistingCoreMemberAfterDuration() public {
+        vm.prank(protocolAdmin);
+
+        contributorLockUp.addMember(ALICE, 10_000e18);
+
+        VestingSchedule memory aliceSchedule = contributorLockUp.getSchedules(ALICE);
+
+        assertEq(aliceSchedule.totalAmount, 10_000e18);
+        assertEq(aliceSchedule.start, block.timestamp);
+        assertEq(aliceSchedule.duration, contributorLockUp.CORE_CONTRIBUTORS_VESTING_DURATION());
+
+        skip(365 * 24 * 60 * 60 seconds); // 1 year
+
+        contributorLockUp.unlockedAmount(ALICE);
+
+        vm.prank(protocolAdmin);
+
+        contributorLockUp.addMember(ALICE, 12_000e18);
+
+        VestingSchedule memory aliceSchedule2 = contributorLockUp.getSchedules(ALICE);
+
+        /**
+         * When alice gets a new Schedule , she should receive all her SAY after one year
+         */
+        uint256 aliceTotalSayBalance = safeToken.balanceOf(ALICE);
+
+        assertEq(aliceTotalSayBalance, 10_000e18);
+
+        assertEq(aliceSchedule2.totalAmount, 12_000e18);
+        assertEq(aliceSchedule2.start, block.timestamp);
+        assertEq(aliceSchedule2.amountClaimed, 0);
+        assertEq(aliceSchedule2.duration, contributorLockUp.CORE_CONTRIBUTORS_VESTING_DURATION());
+    }
+
     function testAddMultipleCoreMembersShouldRevertIfArrayMismatch() public {
         address[] memory members = new address[](2);
 
