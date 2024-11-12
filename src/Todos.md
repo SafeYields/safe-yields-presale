@@ -20,12 +20,13 @@ User buys say tokens:
 
 Tests:
 
-- test for revesting
+- test for re-vesting
 
 //! Write script
 
 Task:
+
 1. separate scripts
-2. fixes 
+2. fixes
 3. new branch
-3. scope 
+4. scope

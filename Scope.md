@@ -1,4 +1,4 @@
-### All Contracts in `src` are in scope except `trading` & `uniswapV3` folders.
+### All Contracts in `src` are in scope except `trading` folders.
 
 src/
 ├── interfaces/
@@ -15,6 +15,8 @@ src/
 │   └── ISafeYieldTWAP.sol
 ├── types/
 |   └── SafeTypes.sol
+├── uniswapV3/
+|   └── OracleLibrary.sol
 ├── SafeToken.sol
 ├── SafeYieldAirdrop.sol
 ├── SafeYieldConfigs.sol
