@@ -285,18 +285,6 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
     }
 
     /**
-     * @dev Recover tokens sent to the contract
-     * @param amount The amount of tokens to recover
-     */
-    function recoverSafeTokens(uint256 amount) external onlyOwner preSaleEnded {
-        if (amount == 0) revert SYPS__INVALID_AMOUNT();
-
-        safeToken.safeTransfer(owner(), amount);
-
-        emit SafeTokensRecovered(amount);
-    }
-
-    /**
      * @dev Redeem USDC commission
      * @notice This function can only be called by the referrer
      */
