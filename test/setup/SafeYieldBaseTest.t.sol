@@ -134,7 +134,7 @@ abstract contract SafeYieldBaseTest is Test {
         configs.setPresale(address(presale));
         configs.updateSafeStaking(address(staking));
         configs.setRewardDistributor(address(distributor));
-        configs.setVesting(address(safeYieldVesting));
+        configs.setSafeYieldVesting(address(safeYieldVesting));
 
         contributorVesting.mintSayAllocation(CORE_CONTRIBUTORS_TOTAL_SAY_AMOUNT);
         presale.mintPreSaleAllocation(PRE_SALE_MAX_SUPPLY);

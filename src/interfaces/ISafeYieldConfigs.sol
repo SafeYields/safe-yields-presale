@@ -25,7 +25,7 @@ interface ISafeYieldConfigs {
 
     function setPresale(address _presale) external;
 
-    function setVesting(address _Vesting) external;
+    function setSafeYieldVesting(address _Vesting) external;
 
     function updateSafeStaking(address _newStaking) external;
 

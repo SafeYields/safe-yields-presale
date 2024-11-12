@@ -94,7 +94,7 @@ contract SafeYieldPresaleDeploymentPath5 is Script {
         syConfig.setPresale(address(syPresale));
         syConfig.updateSafeStaking(address(syStaking));
         syConfig.setRewardDistributor(address(OLD_REWARD_DISTRIBUTOR));
-        syConfig.setVesting(address(syVesting));
+        syConfig.setSafeYieldVesting(address(syVesting));
 
         /**
          * To account for tokens minted during the previous presale, we subtract them from the main allocation.
