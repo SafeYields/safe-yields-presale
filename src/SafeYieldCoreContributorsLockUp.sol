@@ -9,13 +9,13 @@ import { ISafeYieldCoreContributorsLockUp } from "./interfaces/ISafeYieldCoreCon
 import { ISafeToken } from "./interfaces/ISafeToken.sol";
 import { VestingSchedule } from "./types/SafeTypes.sol";
 import { Ownable2Step, Ownable } from "@openzeppelin/contracts/access/Ownable2Step.sol";
-
 /**
  * @title SafeYieldCoreContributorsLockUp
  * @dev This contract manages the vesting for 12 months and allocation of 1 Million SAY tokens for core contributors,
  *   allowing claim and mint operations with pausable functionality.
  * @author @0xm00k
  */
+
 contract SafeYieldCoreContributorsLockUp is ISafeYieldCoreContributorsLockUp, Ownable2Step, Pausable {
     using Math for uint256;
     using SafeERC20 for ISafeToken;
@@ -47,6 +47,11 @@ contract SafeYieldCoreContributorsLockUp is ISafeYieldCoreContributorsLockUp, Ow
     error SY_CCLU__NO_SAY_TO_UNLOCK();
     error SY_CCLU__INVALID_AMOUNT();
     error SY_CCLU__NO_MORE_SAY();
+    error SY_CCLU__ONLY();
+
+    /*//////////////////////////////////////////////////////////////
+                               MODIFIERS
+    //////////////////////////////////////////////////////////////*/
 
     constructor(address protocolAdmin, address _sayToken) Ownable(protocolAdmin) {
         if (protocolAdmin == address(0) || _sayToken == address(0)) revert SY_CCLU__INVALID_ADDRESS();
@@ -95,6 +100,10 @@ contract SafeYieldCoreContributorsLockUp is ISafeYieldCoreContributorsLockUp, Ow
         _unpause();
     }
 
+    function getSchedules(address user) external view returns (VestingSchedule memory schedule) {
+        return schedules[user];
+    }
+
     function addMember(address _member, uint128 totalAmount) public override onlyOwner {
         if (_member == address(0)) revert SY_CCLU__INVALID_ADDRESS();
         if (totalAmount < 1e18) revert SY_CCLU__INVALID_AMOUNT();
@@ -122,14 +131,16 @@ contract SafeYieldCoreContributorsLockUp is ISafeYieldCoreContributorsLockUp, Ow
          */
         if (totalAmount == 0) return;
 
-        //! review check if new member is added after duration passed
-        //! add a test
-        if (schedules[_member].start == 0) {
+        if (block.timestamp >= schedules[_member].start + schedules[_member].duration) {
+            if (unlockedAmount(_member) != 0) claimSayTokensFor(_member);
+
             schedules[_member].start = uint48(block.timestamp);
             schedules[_member].duration = CORE_CONTRIBUTORS_VESTING_DURATION;
+            schedules[_member].amountClaimed = 0;
+            schedules[_member].totalAmount = totalAmount;
+        } else {
+            schedules[_member].totalAmount += totalAmount;
         }
-
-        schedules[_member].totalAmount += totalAmount;
 
         totalSayTokensAllocated += totalAmount;
 
@@ -164,7 +175,17 @@ contract SafeYieldCoreContributorsLockUp is ISafeYieldCoreContributorsLockUp, Ow
         }
     }
 
-    function getSchedules(address user) external view returns (VestingSchedule memory schedule) {
-        return schedules[user];
+    function claimSayTokensFor(address member) public override onlyOwner {
+        uint256 releasableSAY = unlockedAmount(member);
+
+        if (releasableSAY == 0) {
+            return;
+        }
+
+        schedules[member].amountClaimed += uint128(releasableSAY);
+
+        sayToken.safeTransfer(member, releasableSAY);
+
+        emit SayTokensUnlocked(member, releasableSAY);
     }
 }

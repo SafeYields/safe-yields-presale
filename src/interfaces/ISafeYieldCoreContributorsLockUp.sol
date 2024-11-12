@@ -13,6 +13,8 @@ interface ISafeYieldCoreContributorsLockUp {
 
     function vestedAmount(address member) external view returns (uint256 vestedAmount);
 
+    function claimSayTokensFor(address member) external;
+
     function claimSayTokens() external;
 
     function pause() external;
