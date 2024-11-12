@@ -26,6 +26,79 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         assertLt(minAllocation, maxAllocation);
     }
 
+    function testShouldFailIfEitherCommissionIsSetAboveBPS_MAX() public {
+        vm.startPrank(protocolAdmin);
+
+        vm.expectRevert(SafeYieldPresale.SYPS__INVALID_REFER_COMMISSION_PERCENTAGE.selector);
+        presale.setReferrerCommissionBps(10_000, 10_000);
+    }
+
+    function testShouldFailIfInvalidAddressSetAsMultiSig() public {
+        vm.startPrank(protocolAdmin);
+
+        vm.expectRevert(SafeYieldPresale.SYPS__INVALID_ADDRESS.selector);
+        presale.setProtocolMultisig(address(0));
+    }
+
+    function testMultiSigSetCorrectly() public {
+        vm.startPrank(protocolAdmin);
+
+        presale.setProtocolMultisig(makeAddr("Presale Multisig"));
+
+        assertEq(presale.protocolMultisig(), makeAddr("Presale Multisig"));
+    }
+
+    function testSetAllocationIsSetCorrectly() public {
+        vm.startPrank(protocolAdmin);
+
+        presale.setAllocationsPerWallet(1_500e18, uint128(PRE_SALE_MAX_SUPPLY));
+
+        assertEq(presale.minAllocationPerWallet(), 1_500e18);
+        assertEq(presale.maxAllocationPerWallet(), uint128(PRE_SALE_MAX_SUPPLY));
+    }
+
+    function testShouldFailTransferRemainingSAYDuringPresaleLIVE() public {
+        vm.startPrank(protocolAdmin);
+
+        vm.expectRevert(SafeYieldPresale.SYPS__PRESALE_LIVE.selector);
+        presale.transferRemainingSayToken(makeAddr("New Receiver"));
+    }
+
+    function testTransferRemainingSAY() public startEndPresale {
+        vm.startPrank(protocolAdmin);
+
+        uint256 presaleSAYBalance = safeToken.balanceOf(address(presale));
+
+        presale.transferRemainingSayToken(makeAddr("New Receiver"));
+
+        assertEq(safeToken.balanceOf(makeAddr("New Receiver")), presaleSAYBalance);
+    }
+
+    function testSetNewConfig() public {
+        vm.startPrank(protocolAdmin);
+
+        presale.setConfig(makeAddr("NewConfig"));
+
+        assertEq(address(presale.safeYieldConfigs()), makeAddr("NewConfig"));
+    }
+
+    function testSetReferrerCommissionBpsCorrectly() public {
+        vm.startPrank(protocolAdmin);
+
+        presale.setReferrerCommissionBps(200, 300);
+
+        assertEq(presale.referrerCommissionSafeTokenBps(), 300);
+        assertEq(presale.referrerCommissionUsdcBps(), 200);
+    }
+
+    function testSetTokenPriceCorrectly() public {
+        vm.startPrank(protocolAdmin);
+
+        presale.setTokenPrice(0.6e18);
+
+        assertEq(presale.tokenPrice(), 0.6e18);
+    }
+
     function testTokenPriceIsSetCorrectly() public view {
         uint256 tokenPrice = presale.tokenPrice();
 

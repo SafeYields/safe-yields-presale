@@ -5,6 +5,27 @@ import { SafeYieldAirdrop } from "src/SafeYieldAirdrop.sol";
 import { SafeYieldBaseTest } from "./setup/SafeYieldBaseTest.t.sol";
 
 contract SafeYieldAirdropTest is SafeYieldBaseTest {
+    function testShouldFailIfInvalidMerkleIsSet() public {
+        vm.startPrank(protocolAdmin);
+        vm.expectRevert(SafeYieldAirdrop.SYA__INVALID_MERKLE_ROOT.selector);
+        airdrop.setMerkleRoot(bytes32(0));
+    }
+
+    function testShouldFailIfClawBackAmountIsZero() public {
+        vm.startPrank(protocolAdmin);
+
+        vm.expectRevert(SafeYieldAirdrop.SYA__INVALID_AMOUNT.selector);
+        airdrop.clawBackSayTokens(0);
+    }
+
+    function testSetNewConfig() public {
+        vm.startPrank(protocolAdmin);
+
+        airdrop.setConfig(makeAddr("NewConfig"));
+
+        assertEq(address(airdrop.safeYieldConfigs()), makeAddr("NewConfig"));
+    }
+
     function testShouldFailIfAmountIsZero() public {
         bytes32[] memory aliceMerkleProof = new bytes32[](2);
 

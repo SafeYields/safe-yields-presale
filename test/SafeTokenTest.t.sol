@@ -47,4 +47,10 @@ contract SafeTokenTest is SafeYieldBaseTest {
         vm.prank(NOT_MINTER);
         safeToken.mint(1_000e18);
     }
+
+    function testBurnShouldFailIfNotBURNER_ROLE() public {
+        vm.expectRevert(abi.encodeWithSelector(SafeToken.SY__ONLY_BURNER_ROLE.selector));
+        vm.prank(NOT_MINTER);
+        safeToken.burn(address(0x20), 50e18);
+    }
 }

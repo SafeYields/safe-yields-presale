@@ -2,6 +2,7 @@
 pragma solidity 0.8.26;
 
 import { console } from "forge-std/Test.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeYieldPresale } from "src/SafeYieldPresale.sol";
 import { SafeYieldBaseTest } from "./setup/SafeYieldBaseTest.t.sol";
 import { SafeYieldStaking, Stake } from "src/SafeYieldStaking.sol";
@@ -13,6 +14,51 @@ contract SafeYieldTokenDistributorTest is SafeYieldBaseTest {
     /*//////////////////////////////////////////////////////////////
                               NORMAL TESTS
     //////////////////////////////////////////////////////////////*/
+
+    function testSetNewConfig() public {
+        vm.startPrank(protocolAdmin);
+
+        tokensDistributor.setConfig(makeAddr("NewConfig"));
+
+        assertEq(address(tokensDistributor.safeYieldConfigs()), makeAddr("NewConfig"));
+    }
+
+    function testRetrieveTokens() public startEndPresale {
+        vm.prank(protocolAdmin);
+        configs.setIDO(makeAddr("SafeYieldLP"));
+        vm.stopPrank();
+
+        address[] memory rewardAssets = new address[](1);
+        rewardAssets[0] = address(rewardToken);
+
+        uint128[] memory amounts = new uint128[](1);
+        amounts[0] = 500e18;
+
+        skip(5 minutes);
+
+        _transferSafeTokens(ALICE, 10_000e18);
+
+        skip(5 minutes);
+
+        //alice stakes
+        vm.startPrank(ALICE);
+        safeToken.approve(address(staking), 10_000e18);
+        staking.stake(2_000e18);
+        vm.stopPrank();
+
+        vm.startPrank(protocolAdmin);
+        rewardToken.approve(address(tokensDistributor), amounts[0]);
+        tokensDistributor.depositReward(rewardAssets, amounts);
+        vm.stopPrank();
+
+        uint256 protocolRewardTokenBalancePrior = rewardToken.balanceOf(protocolAdmin);
+
+        vm.prank(protocolAdmin);
+        tokensDistributor.retrieve(address(rewardToken), 100e18);
+
+        assertEq(rewardToken.balanceOf(protocolAdmin), protocolRewardTokenBalancePrior + 100e18);
+    }
+
     function testDepositRewardAsset() public startEndPresale {
         vm.prank(protocolAdmin);
         configs.setIDO(makeAddr("SafeYieldLP"));
@@ -136,9 +182,13 @@ contract SafeYieldTokenDistributorTest is SafeYieldBaseTest {
 
         skip(5 minutes);
 
+        uint256 aliceRewardTokenPrior = IERC20(address(rewardToken)).balanceOf(ALICE);
+
         //alice claims
         vm.startPrank(ALICE);
-        tokensDistributor.claimRewards(address(rewardToken));
+        tokensDistributor.claimAllRewards();
+
+        assertGt(IERC20(address(rewardToken)).balanceOf(ALICE), aliceRewardTokenPrior);
     }
 
     function testRewardsAccrued__MultipleOps() public startEndPresale {

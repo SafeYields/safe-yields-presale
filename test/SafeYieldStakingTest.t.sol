@@ -31,6 +31,55 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         staking.stake(100e6);
     }
 
+    function testShouldFailIfApproveAgentIsInvalid() public {
+        vm.prank(protocolAdmin);
+        vm.expectRevert(SafeYieldStaking.SYST__INVALID_ADDRESS.selector);
+
+        staking.approveStakingAgent(address(0), true);
+    }
+
+    function testIfApproveAgentIsSetCorrectly() public {
+        vm.prank(protocolAdmin);
+
+        staking.approveStakingAgent(makeAddr("New Agent"), true);
+
+        assertEq(staking.approvedStakingAgent(makeAddr("New Agent")), true);
+    }
+
+    function testSetNewConfig() public {
+        vm.startPrank(protocolAdmin);
+
+        staking.setConfig(makeAddr("NewConfig"));
+
+        assertEq(address(staking.safeYieldConfigs()), makeAddr("NewConfig"));
+    }
+
+    function testShouldFailAddCallbackIfAddressIsZero() public {
+        vm.startPrank(protocolAdmin);
+
+        vm.expectRevert(SafeYieldStaking.SYST__INVALID_ADDRESS.selector);
+        staking.addCallback(address(0));
+    }
+
+    function testAddCallBackIsAddedCorrectly() public {
+        vm.startPrank(protocolAdmin);
+
+        staking.addCallback(makeAddr("New Callback"));
+
+        assertEq(staking.getAllCallbacks().length, 2);
+        assertEq(staking.getCallback(1), makeAddr("New Callback"));
+    }
+
+    function testRemoveCallBackIsRemovedCorrectly() public {
+        vm.startPrank(protocolAdmin);
+
+        staking.addCallback(makeAddr("New Callback"));
+
+        staking.removeCallback(makeAddr("New Callback"));
+
+        assertEq(staking.getAllCallbacks().length, 1);
+    }
+
     function testStakeForShouldFailIfPresaleIsLiveAndCallerIsNotPresale() public startPresale {
         vm.expectRevert(SafeYieldStaking.SYST__STAKING_LOCKED.selector);
         vm.prank(ALICE);
