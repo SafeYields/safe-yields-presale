@@ -11,6 +11,15 @@ import { ISafeYieldStaking } from "../src/interfaces/ISafeYieldStaking.sol";
 import { ISafeYieldStakingCallback } from "./interfaces/ISafeYieldStakingCallback.sol";
 import { ISafeYieldTokensDistributor } from "./interfaces/ISafeYieldTokensDistributor.sol";
 
+/**
+ * @title SafeYieldTokenDistributor contract
+ * @dev The SafeYieldTokenDistributor contract is a reward distribution system
+ *  designed to distribute tokens to users based on their staking balance.
+ *  It interacts with a staking contract and allows rewards to be deposited,
+ *  claimed, and managed for multiple reward tokens.
+ *
+ * @author 0xm00k
+ */
 contract SafeYieldTokenDistributor is ISafeYieldTokensDistributor, Ownable2Step, Pausable {
     using SafeERC20 for IERC20;
 
@@ -52,13 +61,15 @@ contract SafeYieldTokenDistributor is ISafeYieldTokensDistributor, Ownable2Step,
     }
 
     constructor(address protocolAdmin, address _safeYieldConfig) Ownable(protocolAdmin) {
-        if (_safeYieldConfig == address(0) || protocolAdmin == address(0)) revert SYTD__INVALID_ADDRESS();
+        if (_safeYieldConfig == address(0)) revert SYTD__INVALID_ADDRESS();
 
         safeYieldConfigs = ISafeYieldConfigs(_safeYieldConfig);
     }
 
     function depositReward(address[] calldata rewardAssets, uint128[] calldata amounts) external onlyOwner {
         if (rewardAssets.length != amounts.length) revert SYTD__LENGTH_MISMATCH();
+
+        ISafeYieldStaking staking = safeYieldConfigs.safeYieldStaking();
 
         for (uint256 i; i < rewardAssets.length; i++) {
             address rewardAsset = rewardAssets[i];
@@ -76,8 +87,7 @@ contract SafeYieldTokenDistributor is ISafeYieldTokensDistributor, Ownable2Step,
 
             IERC20(rewardAsset).safeTransferFrom(msg.sender, address(this), amount);
 
-            rewardToken.accRewardPerShare +=
-                (amount * DIVISION_FACTOR) / safeYieldConfigs.safeYieldStaking().totalStaked();
+            rewardToken.accRewardPerShare += (amount * DIVISION_FACTOR) / staking.totalStaked();
 
             emit RewardDeposited(msg.sender, rewardAsset, amount);
         }

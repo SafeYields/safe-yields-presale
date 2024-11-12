@@ -13,6 +13,16 @@ import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Ownable, Ownable2Step } from "@openzeppelin/contracts/access/Ownable2Step.sol";
 
+/**
+ * @title SafeYieldAirdrop contract
+ * @dev This contract handles the vesting of tokens for users.
+ *  It manages the distribution of sSayToken
+ *  based on a vesting schedule, allowing users to claim their tokens over time.
+ *  Vesting for presale buyers will span 5 months, with 20% of their allocation unlocked each month,
+ *  while the tokens are automatically staked.
+ *
+ * @author 0xm00k
+ */
 contract SafeYieldVesting is ISafeYieldVesting, Ownable2Step, Pausable {
     using Math for uint256;
     using SafeERC20 for IERC20;
@@ -63,17 +73,8 @@ contract SafeYieldVesting is ISafeYieldVesting, Ownable2Step, Pausable {
         _;
     }
 
-    /**
-     * TODO
-     * during presale, no vesting start date is known.
-     * For each user buying then, their vesting start date is 0
-     * Once IDO has started, admin should set the start date.
-     * All users who bought during presale will have their tokens start vesting at this date.
-     *
-     * After IDO is live, use block timestamp as start date for new users.
-     */
     constructor(address protocolAdmin, address _sSayToken, address safeYieldConfig) Ownable(protocolAdmin) {
-        if (protocolAdmin == address(0) || safeYieldConfig == address(0) || _sSayToken == address(0)) {
+        if (safeYieldConfig == address(0) || _sSayToken == address(0)) {
             revert SYLU__INVALID_ADDRESS();
         }
 
@@ -81,6 +82,14 @@ contract SafeYieldVesting is ISafeYieldVesting, Ownable2Step, Pausable {
         sSayToken = IERC20(_sSayToken);
     }
 
+    /**
+     * during presale, no vesting start date is known.
+     * For each user buying then, their vesting start date is 0
+     * Once IDO has started, admin should set the start date.
+     * All users who bought during presale will have their tokens start vesting at this date.
+     *
+     * After IDO is live, use block timestamp as start date for new users.
+     */
     function vestFor(address user, uint256 amount) external override whenNotPaused isValidVestingAgent {
         if (user == address(0)) revert SYLU__INVALID_ADDRESS();
         if (amount == 0) revert SYLU__INVALID_AMOUNT();

@@ -13,6 +13,16 @@ import { Ownable, Ownable2Step } from "@openzeppelin/contracts/access/Ownable2St
 import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+/**
+ * @title SafeYieldAirdrop contract
+ * @dev The SafeYieldAirdrop contract facilitates the distribution of tokens (Say Tokens)
+ *   to eligible users via a Merkle-based airdrop,
+ *   allowing them to stake and vest their tokens (Vesting will span 5 months, with 20% of their allocation unlocked each month).
+ *   It includes functionality for pausing/unpausing, clawing back unclaimed tokens,
+ *   and updating the configuration and Merkle root.
+ *
+ * @author 0xm00k
+ */
 contract SafeYieldAirdrop is ISafeYieldAirdrop, Ownable2Step, Pausable {
     using SafeERC20 for ISafeToken;
 
@@ -43,7 +53,7 @@ contract SafeYieldAirdrop is ISafeYieldAirdrop, Ownable2Step, Pausable {
     error SYA__INVALID_PROOF_LENGTH();
 
     constructor(address _sayToken, address _safeYieldConfigs, address protocolAdmin) Ownable(protocolAdmin) {
-        if (_sayToken == address(0) || protocolAdmin == address(0) || _safeYieldConfigs == address(0)) {
+        if (_sayToken == address(0) || _safeYieldConfigs == address(0)) {
             revert SYA__INVALID_ADDRESS();
         }
 
@@ -88,7 +98,7 @@ contract SafeYieldAirdrop is ISafeYieldAirdrop, Ownable2Step, Pausable {
 
         sayToken.safeTransfer(owner(), amount);
 
-        emit SayTokensClawedBack(msg.sender, amount);
+        emit SayTokensClawedBack(owner(), amount);
     }
 
     function pause() external override onlyOwner {

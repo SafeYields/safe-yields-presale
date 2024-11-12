@@ -19,9 +19,9 @@ import { ISafeYieldStakingCallback } from "./interfaces/ISafeYieldStakingCallbac
 
 /**
  * @title SafeYieldStaking contract
- * @dev This contract is used for staking SafeToken.
- * users receive sSafeToken as receipt tokens.
- * Users can earn SafeToken and USDC as rewards.
+ * @dev  staking mechanism for SAY token
+ *   where users can stake tokens to earn rewards in the form of both SafeToken and USDC.
+ *
  * @author 0xm00k
  */
 contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
@@ -256,7 +256,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
         emit StakingAgentApproved(agent, isApproved);
     }
 
-    function getCallback(uint256 index) public view returns (address) {
+    function getCallback(uint256 index) external view returns (address) {
         if (index >= callbacks.length()) {
             revert SYST__NO_CALLBACK_INDEX();
         }
@@ -268,6 +268,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
     }
 
     function addCallback(address callback) external override onlyOwner {
+        if (callback == address(0)) revert SYST__INVALID_ADDRESS();
         bool added = callbacks.add(callback);
 
         if (!added) {
@@ -277,6 +278,8 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
     }
 
     function removeCallback(address callback) external override onlyOwner {
+        if (callback == address(0)) revert SYST__INVALID_ADDRESS();
+
         bool removed = callbacks.remove(callback);
 
         if (!removed) {
@@ -287,7 +290,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
     }
 
     /**
-     * @dev Pause the presale
+     * @dev Pause the Staking
      * @notice This function can only be called by the owner()
      */
     function pause() external override onlyOwner {
@@ -295,7 +298,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
     }
 
     /**
-     * @dev Unpause the presale
+     * @dev Unpause the
      * @notice This function can only be called by the owner()
      */
     function unpause() external override onlyOwner {
@@ -443,7 +446,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
         super._update(from, to, value);
     }
 
-    function _stake(address _user, uint128 amount) internal {
+    function _stake(address _user, uint128 amount) private {
         updateRewards();
 
         userStake[_user].stakeAmount += amount;
@@ -459,7 +462,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
         );
     }
 
-    function _unStake(address _user, uint128 _amount) internal {
+    function _unStake(address _user, uint128 _amount) private {
         userStake[_user].stakeAmount -= _amount;
 
         userStake[_user].usdcRewardsDebt -= SafeCast.toInt128(

@@ -15,6 +15,14 @@ import { ISafeYieldPreSale } from "./interfaces/ISafeYieldPreSale.sol";
 import { ISafeToken } from "./interfaces/ISafeToken.sol";
 import { PreSaleState, ReferrerInfo, ReferrerRecipient } from "./types/SafeTypes.sol";
 
+/**
+ * @title SafeYieldPresale contract
+ * @dev  presale management system for a token sale,
+ *  specifically designed to facilitate the purchase of SAY tokens using USDC.
+ *  Also incorporates a referral system that allows users to earn commissions(both SAY and USDC) by referring others.
+ *
+ * @author 0xm00k
+ */
 contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
     using Math for uint128;
     using Math for uint256;

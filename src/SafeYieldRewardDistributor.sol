@@ -12,6 +12,13 @@ import { ISafeYieldRewardDistributor } from "./interfaces/ISafeYieldRewardDistri
 import { SafeYieldTWAP } from "./SafeYieldTWAP.sol";
 import { ISafeYieldStaking } from "./interfaces/ISafeYieldStaking.sol";
 
+/**
+ * @title SafeYieldRewardDistributor contract
+ * @dev  is designed to manage the distribution of staking rewards,
+ *  including both SAFE token and USDC, for a set of approved contracts.
+ *
+ * @author 0xm00k
+ */
 contract SafeYieldRewardDistributor is ISafeYieldRewardDistributor, Ownable2Step {
     using SafeERC20 for IERC20;
     using SafeERC20 for ISafeToken;

@@ -12,7 +12,8 @@ import { Ownable2Step, Ownable } from "@openzeppelin/contracts/access/Ownable2St
 /**
  * @title SafeYieldCoreContributorsVesting
  * @dev This contract manages the vesting for 12 months and allocation of 1 Million SAY tokens for core contributors,
- *   allowing claim and mint operations with pausable functionality.
+ *  allowing claim and mint operations with pausable functionality.
+ *
  * @author @0xm00k
  */
 
@@ -47,14 +48,13 @@ contract SafeYieldCoreContributorsVesting is ISafeYieldCoreContributorsVesting, 
     error SY_CCLU__NO_SAY_TO_UNLOCK();
     error SY_CCLU__INVALID_AMOUNT();
     error SY_CCLU__NO_MORE_SAY();
-    error SY_CCLU__ONLY();
 
     /*//////////////////////////////////////////////////////////////
                                MODIFIERS
     //////////////////////////////////////////////////////////////*/
 
     constructor(address protocolAdmin, address _sayToken) Ownable(protocolAdmin) {
-        if (protocolAdmin == address(0) || _sayToken == address(0)) revert SY_CCLU__INVALID_ADDRESS();
+        if (_sayToken == address(0)) revert SY_CCLU__INVALID_ADDRESS();
 
         sayToken = ISafeToken(_sayToken);
     }
@@ -150,7 +150,7 @@ contract SafeYieldCoreContributorsVesting is ISafeYieldCoreContributorsVesting, 
     function unlockedAmount(address member) public view override returns (uint256 unlocked) {
         VestingSchedule memory schedule = schedules[member];
 
-        if (schedule.totalAmount == 0 || block.timestamp < schedule.cliff) {
+        if (schedule.totalAmount == 0) {
             return 0;
         }
 
@@ -161,9 +161,7 @@ contract SafeYieldCoreContributorsVesting is ISafeYieldCoreContributorsVesting, 
     function vestedAmount(address member) public view override returns (uint256) {
         VestingSchedule memory schedule = schedules[member];
 
-        if (block.timestamp < schedule.cliff) {
-            return 0;
-        } else if (block.timestamp >= schedule.start + schedule.duration) {
+        if (block.timestamp >= schedule.start + schedule.duration) {
             return schedule.totalAmount;
         } else {
             uint256 durationPassed = block.timestamp - schedule.start;
