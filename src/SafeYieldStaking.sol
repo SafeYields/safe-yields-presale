@@ -298,7 +298,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
     }
 
     /**
-     * @dev Unpause the
+     * @dev Unpause the staking
      * @notice This function can only be called by the owner()
      */
     function unpause() external override onlyOwner {
