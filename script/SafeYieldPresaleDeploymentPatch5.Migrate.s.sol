@@ -7,12 +7,7 @@ import { Script, console } from "forge-std/Script.sol";
 import { SafeYieldPresale, ISafeYieldPreSale } from "src/SafeYieldPresale.sol";
 import { SafeYieldStaking, ISafeYieldStaking, Stake } from "src/SafeYieldStaking.sol";
 import { SafeYieldVesting } from "src/SafeYieldVesting.sol";
-import { SafeYieldRewardDistributor, ISafeYieldRewardDistributor } from "src/SafeYieldRewardDistributor.sol";
-import { SafeYieldTokenDistributor } from "src/SafeYieldTokenDistributor.sol";
-import { SafeYieldAirdrop } from "src/SafeYieldAirdrop.sol";
-import { SafeYieldCoreContributorsVesting } from "src/SafeYieldCoreContributorsVesting.sol";
 import { SafeToken, ISafeToken } from "src/SafeToken.sol";
-import { SafeYieldConfigs } from "src/SafeYieldConfigs.sol";
 
 contract SafeYieldDeploymentMigrateUsers is Script {
     address public constant OLD_STAKING = 0xBF220A4C1Ae2367508de12E84BbadfFF6D5698E0;
