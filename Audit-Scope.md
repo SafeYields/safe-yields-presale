@@ -1,4 +1,4 @@
-### All Contracts in `src` are in scope except `trading` folders.
+### All Contracts in `src` are in scope except files in the `trading` folders.
 
 src/
 ├── interfaces/
