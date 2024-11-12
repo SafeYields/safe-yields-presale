@@ -18,6 +18,24 @@ contract SafeYieldAirdropTest is SafeYieldBaseTest {
         airdrop.clawBackSayTokens(0);
     }
 
+    function testClawBackSayTokens() public {
+        vm.startPrank(protocolAdmin);
+        presale.endPresale();
+        vm.stopPrank();
+
+        vm.prank(protocolAdmin);
+        presale.transferRemainingSayToken(address(airdrop));
+
+        uint256 sayTokenAirdropBalance = safeToken.balanceOf(address(airdrop));
+
+        uint256 protocolSayBalancePrior = safeToken.balanceOf(address(protocolAdmin));
+
+        vm.startPrank(protocolAdmin);
+        airdrop.clawBackSayTokens(sayTokenAirdropBalance);
+
+        assertEq(safeToken.balanceOf(address(protocolAdmin)), protocolSayBalancePrior + sayTokenAirdropBalance);
+    }
+
     function testSetNewConfig() public {
         vm.startPrank(protocolAdmin);
 
