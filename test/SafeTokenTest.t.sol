@@ -53,4 +53,15 @@ contract SafeTokenTest is SafeYieldBaseTest {
         vm.prank(NOT_MINTER);
         safeToken.burn(address(0x20), 50e18);
     }
+
+    function testBurnSafeTokens() public {
+        vm.startPrank(protocolAdmin);
+
+        safeToken.grantRole(keccak256("BURNER_ROLE"), protocolAdmin);
+
+        uint256 sayBalancePrior = safeToken.balanceOf(address(presale));
+        safeToken.burn(address(presale), 50e18);
+
+        assertEq(safeToken.balanceOf(address(presale)), sayBalancePrior - 50e18);
+    }
 }

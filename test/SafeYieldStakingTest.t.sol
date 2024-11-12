@@ -61,6 +61,23 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         staking.addCallback(address(0));
     }
 
+    function testShouldFailIfIndexIsGreaterThanCallbackLength() public {
+        vm.expectRevert(SafeYieldStaking.SYST__NO_CALLBACK_INDEX.selector);
+        staking.getCallback(3);
+    }
+
+    function testShouldFailIfCallbackAlreadyAdded() public {
+        vm.startPrank(protocolAdmin);
+        vm.expectRevert(SafeYieldStaking.SYST__CALLBACK_ALREADY_REGISTERED.selector);
+        staking.addCallback(address(tokensDistributor));
+    }
+
+    function testShouldFailIfCallbackNotFound() public {
+        vm.startPrank(protocolAdmin);
+        vm.expectRevert(SafeYieldStaking.SYST__CALLBACK_NOT_FOUND.selector);
+        staking.removeCallback(makeAddr("Unknown"));
+    }
+
     function testAddCallBackIsAddedCorrectly() public {
         vm.startPrank(protocolAdmin);
 

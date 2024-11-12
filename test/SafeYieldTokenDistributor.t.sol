@@ -53,10 +53,13 @@ contract SafeYieldTokenDistributorTest is SafeYieldBaseTest {
 
         uint256 protocolRewardTokenBalancePrior = rewardToken.balanceOf(protocolAdmin);
 
+        vm.deal(address(tokensDistributor), 10e18);
+
         vm.prank(protocolAdmin);
         tokensDistributor.retrieve(address(rewardToken), 100e18);
 
         assertEq(rewardToken.balanceOf(protocolAdmin), protocolRewardTokenBalancePrior + 100e18);
+        assertEq(address(protocolAdmin).balance, 10e18);
     }
 
     function testDepositRewardAsset() public startEndPresale {
