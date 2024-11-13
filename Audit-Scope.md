@@ -1,7 +1,7 @@
 ### All Contracts in `src` and `script` are in scope except files in the `trading` folders.
 
 ├── script/
-│   ├── SafeYieldPresaleDeploymentPatch5.Migrate.s.sol
+│   ├── SafeYieldStakingMigrationScript.s.sol
 │   └── SafeYieldPresaleDeploymentPatch5.s.sol
 
 src/
