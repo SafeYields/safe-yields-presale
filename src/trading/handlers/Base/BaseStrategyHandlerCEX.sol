@@ -1,10 +1,10 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
-import { IBaseStrategyHandler } from "./interfaces/IBaseStrategyHandler.sol";
+import { IBaseStrategyHandlerCEX } from "./interfaces/IBaseStrategyHandlerCEX.sol";
 import { IERC20 } from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 
-abstract contract BaseStrategyHandlerCEX is IBaseStrategyHandler {
+abstract contract BaseStrategyHandlerCEX is IBaseStrategyHandlerCEX {
     address public override strategyController;
     address public fundManager;
     IERC20 public usdcToken;
@@ -16,8 +16,7 @@ abstract contract BaseStrategyHandlerCEX is IBaseStrategyHandler {
     error SY_B_SH_UNIMPLEMENTED();
     error SY_B_SH_INVALID_ADDRESS();
 
-    error SY_HDL__POSITION_EXIST();
-    error SY_HDL__CALL_FAILED();
+   
 
     modifier onlyController() {
         if (msg.sender != strategyController) revert SYSH_NOT_CONTROLLER();
@@ -35,19 +34,10 @@ abstract contract BaseStrategyHandlerCEX is IBaseStrategyHandler {
         revert SY_B_SH_UNIMPLEMENTED();
     }
 
-    function cancelOrder(bytes memory) external virtual onlyController {
-        revert SY_B_SH_UNIMPLEMENTED();
-    }
-
-    function modifyStrategy(bytes memory) external payable virtual onlyController {
-        revert SY_B_SH_UNIMPLEMENTED();
-    }
 
     function exitStrategy(uint256 finalBalance,uint128 strategyId) external payable virtual onlyController {
         revert SY_B_SH_UNIMPLEMENTED();
     }
-
-    //function getStrategies() external view returns()
 
     function getStrategyPositionId(uint128 controllerStrategyId)
         external

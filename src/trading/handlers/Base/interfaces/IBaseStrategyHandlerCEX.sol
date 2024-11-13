@@ -27,17 +27,6 @@ interface IBaseStrategyHandlerCEX {
         address trader
     ) external payable returns (bytes32);
 
-    /**
-     * @notice Cancels an existing order
-     * @param data Encoded data containing order details
-     */
-    function cancelOrder(bytes memory data) external;
-
-    /**
-     * @notice Modifies an existing strategy
-     * @param data Encoded data containing modification details
-     */
-    function modifyStrategy(bytes memory data) external payable;
 
     /**
      * @notice Exits an existing strategy position

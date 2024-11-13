@@ -167,7 +167,4 @@ contract CEXHandler is BaseStrategyHandlerCEX {
         return 0;
     }
 
-    function modifyStrategy(bytes memory) external payable override { }
-    function cancelOrder(bytes memory) external override { }
-    function confirmExitStrategy(bytes32) external override { }
 }
