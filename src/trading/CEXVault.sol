@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
-import { ERC4626, ERC20, IERC20, IERC20Metadata } from "lib/openzeppelin-contracts/contracts/token/ERC20/extensions/ERC4626.sol";
+import { ERC4626Upgradeable } from "lib/openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC4626Upgradeable.sol";
+import { IERC20 } from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
-import { Math } from "lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
-import { Ownable } from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
+import { OwnableUpgradeable } from "lib/openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol";
 import { UUPSUpgradeable } from "lib/openzeppelin-contracts-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 /**
  * @notice Gas optimized ERC4626 vault that handles multiple users efficiently
  */
-contract CEXVault is ERC4626, Ownable , UUPSUpgradeable {
+contract CEXVault is ERC4626Upgradeable, OwnableUpgradeable , UUPSUpgradeable {
     using SafeERC20 for IERC20;
 
     /*//////////////////////////////////////////////////////////////
@@ -217,6 +217,7 @@ contract CEXVault is ERC4626, Ownable , UUPSUpgradeable {
         withdrawalsPaused = true;
         emit DepositWithdrawalPaused();
     }
+    function _authorizeUpgrade(address) internal override onlyOwner {}
 
     
 }
