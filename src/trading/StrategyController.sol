@@ -6,7 +6,6 @@ import { SafeERC20 } from "lib/openzeppelin-contracts/contracts/token/ERC20/util
 import { AccessControl } from "lib/openzeppelin-contracts/contracts/access/AccessControl.sol";
 import { OrderType, Strategy } from "./types/StrategyControllerTypes.sol";
 import { IStrategyFundManager } from "./interfaces/IStrategyFundManager.sol";
-import { ICEXVault } from "./interfaces/ICEXVault.sol";
 import { IStrategyController } from "./interfaces/IStrategyController.sol";
 import { IBaseStrategyHandler } from "./handlers/Base/interfaces/IBaseStrategyHandler.sol";
 
@@ -22,7 +21,6 @@ contract StrategyController is /*IStrategyController,*/ AccessControl {
     uint128 public strategyCount;
     address[] public strategyHandlers;
     IStrategyFundManager public fundManager;
-    ICEXVault public cexVault;
     IERC20 public usdcToken;
 
     mapping(uint256 strategyId => Strategy) public strategies;
@@ -72,14 +70,13 @@ contract StrategyController is /*IStrategyController,*/ AccessControl {
         _;
     }
 
-    constructor(address _usdcToken, address _fundManager,  address _cexVault,address _protocolAdmin, address _sayTrader) {
+    constructor(address _usdcToken, address _fundManager,address _protocolAdmin, address _sayTrader) {
         if (_usdcToken == address(0) || _fundManager == address(0) || _protocolAdmin == address(0)) {
             revert SYSC__INVALID_ADDRESS();
         }
         _grantRole(DEFAULT_ADMIN_ROLE, _protocolAdmin);
         _grantRole(SAY_TRADER_ROLE, _sayTrader);
 
-        cexVault = ICEXVault(_cexVault);
         fundManager = IStrategyFundManager(_fundManager);
         usdcToken = IERC20(_usdcToken);
     }
@@ -112,28 +109,6 @@ contract StrategyController is /*IStrategyController,*/ AccessControl {
 
         emit StrategyOpened(strategyId, strategyHandler, market, amount, isLong, orderType, orderId);
     }
-
-    function openStrategyCEX(
-        uint256 cexType,
-        address trader,
-        uint256 amount
-    ) external payable onlyRole(SAY_TRADER_ROLE) {
-        // Fund the strategy through CEX fund manager
-        bytes32 orderId =cexVault.fundStrategy(trader, amount);
-
-        uint128 strategyId = ++strategyCount;
-
-        // Update strategy details
-        strategies[strategyId].id = strategyId;
-        strategies[strategyId].amountFunded = amount;
-        strategies[strategyId].token = address(usdcToken);
-        strategies[strategyId].handler = trader;
-        strategies[strategyId].lastFundedAt = uint48(block.timestamp);
-        strategies[strategyId].isMatured = false;
-
-        emit StrategyCEXOpened(strategyId,cexType, trader, amount, orderId);
-    }
-
     function updateStrategy(
         address strategyHandler,
         uint128 strategyId,
@@ -154,20 +129,7 @@ contract StrategyController is /*IStrategyController,*/ AccessControl {
     {
         IBaseStrategyHandler(strategyHandler).exitStrategy(strategyId, exchangeData);
     }
-      function exitStrategyCEX(
-        address trader, 
-        uint128 strategyId,
-        uint256 amount,
-        int256 pnl
-    ) external payable onlyRole(SAY_TRADER_ROLE) {
-        // Return funds to the CEX fund manager
-        cexVault.returnStrategyFunds(trader,amount, pnl);
-        
-        strategies[strategyId].isMatured = true;
-        strategies[strategyId].pnl = pnl;
-
-    }
-
+   
     function cancelStrategy(address strategyHandler,  bytes memory exchangeData) external payable onlyRole(SAY_TRADER_ROLE){
          IBaseStrategyHandler(strategyHandler).cancelOrder(exchangeData);
     }

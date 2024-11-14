@@ -28,7 +28,7 @@ interface ICEXVault is IERC4626 {
                         STRATEGY FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    function fundStrategy(address trader, uint256 amount) external returns (bytes32);
+    function fundStrategy(address trader, uint256 amount) external ;
     function returnStrategyFunds(address trader, uint256 amount, int256 pnl) external;
 
     /*//////////////////////////////////////////////////////////////
