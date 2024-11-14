@@ -168,7 +168,7 @@ contract CEXVault is ERC4626Upgradeable,AccessControlUpgradeable , UUPSUpgradeab
      */
     function fundStrategy(address trader, uint256 amount) external onlyRole(SAY_TRADER_ROLE) {
         // Check if enough available funds
-        uint256 availableFunds = IERC20(asset()).balanceOf(address(this));
+        uint256 availableFunds = _totalAssets;
         if (amount > availableFunds) revert InsufficientAvailableFunds();
         
         fundsInTrading += amount;
