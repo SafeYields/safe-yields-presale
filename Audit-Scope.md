@@ -5,22 +5,8 @@
 │   └── SafeYieldPresaleDeploymentPatch5.s.sol
 
 src/
-├── interfaces/
-│   ├── ISafeToken.sol
-│   ├── ISafeYieldAirdrop.sol
-│   ├── ISafeYieldConfigs.sol
-│   └── ISafeYieldCoreContributorsVesting.sol
-│   └── ISafeYieldVesting.sol
-│   └── ISafeYieldPresale.sol
-│   └── ISafeYieldRewardDistributor.sol
-│   └── ISafeYieldStaking.sol
-│   └── ISafeYieldStakingCallback.sol
-│   └── ISafeYieldTokenDistributor.sol
-│   └── ISafeYieldTWAP.sol
 ├── types/
 |   └── SafeTypes.sol
-├── uniswapV3/
-|   └── OracleLibrary.sol
 ├── SafeToken.sol
 ├── SafeYieldAirdrop.sol
 ├── SafeYieldConfigs.sol
