@@ -10,6 +10,7 @@ import { IExchangeRouter } from "./interfaces/IExchangeRouter.sol";
 import { IReader } from "./interfaces/IReader.sol";
 import { PositionProps } from "./types/PositionTypes.sol";
 import { OrderProps } from "./types/OrderTypes.sol";
+import { console } from "forge-std/Test.sol";
 
 /**
  * @title GMXHandler
@@ -88,8 +89,8 @@ contract GMXHandler is BaseStrategyHandler {
         onlyController
         returns (bytes32 orderId)
     {
-        (uint256 orderAmount, uint128 controllerStrategyId,,) =
-            abi.decode(handlerData, (uint256, uint128, address, bool));
+        (uint256 orderAmount, uint256 executionFee, uint128 controllerStrategyId,,) =
+            abi.decode(handlerData, (uint256, uint256, uint128, address, bool));
 
         if (strategyPositionId[controllerStrategyId] != 0) revert SY_HDL__POSITION_EXIST();
 
@@ -97,7 +98,7 @@ contract GMXHandler is BaseStrategyHandler {
 
         //call exchangeRouter sendWNT tokens to pay fee.
         bytes memory sendExecutionFeeData =
-            abi.encodeWithSelector(exchangeRouter.sendWnt.selector, orderVault, 66774344000000);
+            abi.encodeWithSelector(exchangeRouter.sendWnt.selector, orderVault, executionFee);
 
         //send collateral
         bytes memory sendCollateralData =
@@ -110,7 +111,7 @@ contract GMXHandler is BaseStrategyHandler {
         //! remove address
         IERC20(usdcToken).approve(0x7452c558d45f8afC8c83dAe62C3f8A5BE19c71f6, orderAmount);
 
-        bytes[] memory resultData = exchangeRouter.multicall{ value: 66774344000000 }(multicallData);
+        bytes[] memory resultData = exchangeRouter.multicall{ value: executionFee }(multicallData);
 
         orderId = abi.decode(resultData[2], (bytes32));
     }
@@ -166,19 +167,30 @@ contract GMXHandler is BaseStrategyHandler {
     }
 
     /// @notice Modifies an existing strategy order on the GMX exchange router.
-    /// @param exchangeData Encoded data containing the order details to be modified.
+    /// @param exchangeDataParams Encoded data containing the order details to be modified.
     /// - orderId: The ID of the order to be modified.
     /// - acceptablePrice: The acceptable price for the order.
     /// - triggerPrice: The price at which the order will be triggered.
     /// @dev This function decodes the `exchangeData`, checks if the order exists and is a limit order,
     ///      and then calls the `updateOrder` function on the `exchangeRouter`.
-    function modifyStrategy(bytes memory exchangeData) external payable override onlyController {
-        (bytes32 orderId, uint256 acceptablePrice, uint256 triggerPrice) =
-            abi.decode(exchangeData, (bytes32, uint256, uint256));
+    function modifyStrategy(bytes memory exchangeDataParams) external payable override onlyController {
+        (
+            bytes32 orderKey,
+            uint256 sizeDeltaUsd,
+            uint256 acceptablePrice,
+            uint256 triggerPrice,
+            uint256 minOutputAmount,
+            bool autoCancel
+        ) = abi.decode(exchangeDataParams, (bytes32, uint256, uint256, uint256, uint256, bool));
 
-        if (!checkOrderExist(orderId)) revert SY_HDL__NO_ORDER();
+        console.logBytes32(orderKey);
+        console.log("Size", sizeDeltaUsd);
 
-        OrderProps memory order = gmxReader.getOrder(dataStore, orderId);
+        OrderProps memory order = gmxReader.getOrder(dataStore, orderKey);
+
+        console.log(order.addresses.account);
+
+        if (!checkOrderExist(order)) revert SY_HDL__NO_ORDER();
 
         if (
             uint256(order.numbers.orderType) == uint256(GMXOrderType.MarketIncrease)
@@ -187,10 +199,10 @@ contract GMXHandler is BaseStrategyHandler {
             revert SY_HDL__NOT_LIMIT_ORDER();
         }
 
-        exchangeRouter.updateOrder(orderId, 0, acceptablePrice, triggerPrice, 0, false);
+        exchangeRouter.updateOrder(orderKey, sizeDeltaUsd, acceptablePrice, triggerPrice, minOutputAmount, autoCancel);
     }
 
-    //!we need an ownable??
+    //!add ownable
     function setOrderVault(address newOrderVault) external {
         address oldOrderVault = orderVault;
 
@@ -215,10 +227,8 @@ contract GMXHandler is BaseStrategyHandler {
         key = keccak256(abi.encode(account, market, collateralToken, isLong));
     }
 
-    function checkOrderExist(bytes32 orderId) internal view returns (bool) {
-        OrderProps memory order = gmxReader.getOrder(dataStore, orderId);
-
-        return order.addresses.account != address(0);
+    function checkOrderExist(OrderProps memory _order) internal pure returns (bool) {
+        return _order.addresses.account != address(0);
     }
 
     fallback() external payable { }
