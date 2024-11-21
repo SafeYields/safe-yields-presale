@@ -77,6 +77,7 @@ contract StrategyController is /*IStrategyController,*/ AccessControl {
         address strategyHandler,
         address market,
         uint256 amount,
+        uint256 executionFee,
         bool isLong,
         OrderType orderType,
         bytes memory exchangeData
@@ -85,7 +86,7 @@ contract StrategyController is /*IStrategyController,*/ AccessControl {
 
         uint128 strategyId = ++strategyCount;
 
-        bytes memory handlerData = abi.encode(amount, strategyId, market, isLong);
+        bytes memory handlerData = abi.encode(amount, executionFee, strategyId, market, isLong);
 
         bytes32 orderId = IBaseStrategyHandler(strategyHandler).openStrategy(handlerData, exchangeData);
 
@@ -123,8 +124,12 @@ contract StrategyController is /*IStrategyController,*/ AccessControl {
         IBaseStrategyHandler(strategyHandler).exitStrategy(strategyId, exchangeData);
     }
 
-    function cancelStrategy(address strategyHandler,  bytes memory exchangeData) external payable onlyRole(SAY_TRADER_ROLE){
-         IBaseStrategyHandler(strategyHandler).cancelOrder(exchangeData);
+    function cancelStrategy(address strategyHandler, bytes memory exchangeData)
+        external
+        payable
+        onlyRole(SAY_TRADER_ROLE)
+    {
+        IBaseStrategyHandler(strategyHandler).cancelOrder(exchangeData);
     }
 
     function confirmExitStrategy(address strategyHandler, uint128 strategyId, bytes32 positionKey)
