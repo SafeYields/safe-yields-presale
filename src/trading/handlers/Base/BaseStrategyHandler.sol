@@ -12,6 +12,7 @@ abstract contract BaseStrategyHandler is IBaseStrategyHandler {
 
     mapping(uint128 controllerStrategyId => uint256 positionId) internal strategyPositionId;
     uint128 public strategyCounts;
+    //!mapping to target
 
     error SYSH_NOT_CONTROLLER();
     error SY_B_SH_UNIMPLEMENTED();
@@ -59,5 +60,9 @@ abstract contract BaseStrategyHandler is IBaseStrategyHandler {
     {
         id256 = strategyPositionId[controllerStrategyId];
         idBytes32 = bytes32(id256);
+    }
+
+    function executeData(address target, bytes memory handlerData) external onlyController {
+        (bool success,) = address(target).call(handlerData);
     }
 }
