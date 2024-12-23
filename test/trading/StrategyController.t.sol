@@ -10,12 +10,13 @@ import { IOrderVault } from "src/trading/handlers/vela/interfaces/IOrderVault.so
 import { IExchangeRouter } from "src/trading/handlers/gmx/interfaces/IExchangeRouter.sol";
 import { IReader } from "src/trading/handlers/gmx/interfaces/IReader.sol";
 import { IDataStore } from "src/trading/handlers/gmx/interfaces/IDataStore.sol";
+import { ExchangeRouter } from "test/gmx2/contracts/router/ExchangeRouter.sol";
 import { IPositionVault } from "src/trading/handlers/vela/interfaces/IPositionVault.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { UserDepositDetails } from "src/trading/StrategyFundManager.sol";
 import { OrderType } from "src/trading/types/StrategyControllerTypes.sol";
 import { Order } from "src/trading/handlers/vela/types/VelaTypes.sol";
-import { OracleUtils } from "test/gmx/contracts/oracle/OracleUtils.sol";
+import { OracleUtils } from "test/gmx2/contracts/oracle/OracleUtils.sol";
 import { PositionProps } from "src/trading/handlers/gmx/types/PositionTypes.sol";
 import { OrderProps } from "src/trading/handlers/gmx/types/OrderTypes.sol";
 import {
@@ -27,9 +28,9 @@ import {
     SetPricesParams,
     CreateOrderParamsNumbers
 } from "src/trading/handlers/gmx/types/GMXTypes.sol";
-import { OrderHandler } from "test/gmx/contracts/exchange/OrderHandler.sol";
-import { Oracle } from "test/gmx/contracts/oracle/Oracle.sol";
-import { AggregatorV2V3Interface } from "test/gmx/contracts/oracle/AggregatorV2V3Interface.sol";
+import { OrderHandler } from "test/gmx2/contracts/exchange/OrderHandler.sol";
+import { Oracle } from "test/gmx2/contracts/oracle/Oracle.sol";
+import { AggregatorV2V3Interface } from "test/gmx2/contracts/oracle/AggregatorV2V3Interface.sol";
 
 import { IOrderHandler } from "src/trading/handlers/gmx/interfaces/IOrderHandler.sol";
 
@@ -115,15 +116,13 @@ contract StrategyControllerTest is SafeYieldTradingBaseTest {
             data2
         );
 
-        console.logBytes32(orderKey);
-
         OrderProps memory order = reader.getOrder(address(dataStore), orderKey);
 
         assertEq(order.addresses.account, address(gmxHandler));
         assertEq(order.addresses.initialCollateralToken, USDC_ARB);
         assertEq(order.numbers.sizeDeltaUsd, 209517740254460100375000000000000000);
 
-        //! assert
+        //! assertions
         //! 1. fund manager
         //! 2. controller
         //! 3. balance difference
@@ -191,6 +190,72 @@ contract StrategyControllerTest is SafeYieldTradingBaseTest {
         return orderKey;
     }
 
+    function testGMX__UpdatePosition() public {
+        testGMX__ExecuteOrder();
+
+        vm.roll(394428852);
+
+        console.log("ETH balance", (0xb2A9137Dbb99CB4db4cD99e0d5A431aC38E6EeE2).balance);
+        console.log("USDC_BALANCE", IERC20(USDC_ARB).balanceOf(0xb2A9137Dbb99CB4db4cD99e0d5A431aC38E6EeE2));
+
+        address[] memory swapPath = new address[](0);
+
+        CreateOrderParams memory params = CreateOrderParams({
+            addresses: CreateOrderParamsAddresses({
+                receiver: 0xb2A9137Dbb99CB4db4cD99e0d5A431aC38E6EeE2,
+                cancellationReceiver: address(0),
+                callbackContract: address(0),
+                uiFeeReceiver: 0xff00000000000000000000000000000000000001,
+                market: 0x0418643F94Ef14917f1345cE5C460C37dE463ef7,
+                initialCollateralToken: 0xaf88d065e77c8cC2239327C5EDb3A432268e5831,
+                swapPath: swapPath
+            }),
+            numbers: CreateOrderParamsNumbers({
+                sizeDeltaUsd: 209517740254460100375000000000000000,
+                initialCollateralDeltaAmount: 0,
+                triggerPrice: 0,
+                acceptablePrice: 3947042505160081271952838,
+                executionFee: 275023333689000,
+                callbackGasLimit: 0,
+                minOutputAmount: 0
+            }),
+            orderType: GMXOrderType.MarketDecrease, // Example: Market increase position
+            decreasePositionSwapType: DecreasePositionSwapType.NoSwap, // Example: No swap
+            isLong: true, // Example: Long position
+            shouldUnwrapNativeToken: false, // Example: Do not unwrap native token
+            autoCancel: false, // Example: Do not auto-cancel
+            referralCode: 0x0000000000000000000000000000000000000000000000000000000000000000
+        });
+
+        bytes memory data2 = abi.encodeWithSelector(exchangeRouter.createOrder.selector, params);
+
+        bytes[] memory multicallData = new bytes[](3);
+
+        //call exchangeRouter sendWNT tokens to pay fee.
+        bytes memory sendExecutionFeeData = abi.encodeWithSelector(
+            exchangeRouter.sendWnt.selector, 0x31eF83a530Fde1B38EE9A18093A333D8Bbbc40D5, 275023333689000
+        );
+
+        //send collateral
+        bytes memory sendCollateralData = abi.encodeWithSelector(
+            exchangeRouter.sendTokens.selector, USDC_ARB, 0x31eF83a530Fde1B38EE9A18093A333D8Bbbc40D5, 7727441812
+        );
+
+        multicallData[0] = sendExecutionFeeData;
+        multicallData[1] = sendCollateralData;
+        multicallData[2] = data2;
+
+        bytes32 key = getOrderKey();
+
+        transferUSDC(0xb2A9137Dbb99CB4db4cD99e0d5A431aC38E6EeE2, 7727441812);
+
+        vm.startPrank(0xb2A9137Dbb99CB4db4cD99e0d5A431aC38E6EeE2);
+
+        IERC20(USDC_ARB).approve(0x7452c558d45f8afC8c83dAe62C3f8A5BE19c71f6, 7727441812);
+
+        exchangeRouter.multicall{ value: 275023333689000 }(multicallData);
+    }
+
     /**
      */
     function testGMX__ModifyOrder() public {
@@ -249,10 +314,6 @@ contract StrategyControllerTest is SafeYieldTradingBaseTest {
 
         SetPricesParams memory oracleParams = SetPricesParams({ tokens: tokens, providers: providers, data: data });
 
-        orderHandler = new OrderHandler(roleStore, dataStore, eventEmitter, oracle, orderVault, swapHandler, refStorage);
-
-        vm.etch(address(0xB0Fc2a48b873da40e7bc25658e5E6137616AC2Ee), address(orderHandler).code);
-
         vm.startPrank(ORDER_KEEPER);
 
         IOrderHandler orderHandlerOn = IOrderHandler(0xB0Fc2a48b873da40e7bc25658e5E6137616AC2Ee);
@@ -284,7 +345,7 @@ contract StrategyControllerTest is SafeYieldTradingBaseTest {
     function testGMX__CreateNewOrderMock() public {
         vm.roll(274428852);
 
-        IExchangeRouter exchangeRouter = IExchangeRouter(0x69C527fC77291722b52649E45c838e41be8Bf5d5);
+        exchangeRouter = IExchangeRouter(0x69C527fC77291722b52649E45c838e41be8Bf5d5);
 
         console.log("ETH balance", (0xb2A9137Dbb99CB4db4cD99e0d5A431aC38E6EeE2).balance);
         console.log("USDC_BALANCE", IERC20(USDC_ARB).balanceOf(0xb2A9137Dbb99CB4db4cD99e0d5A431aC38E6EeE2));
