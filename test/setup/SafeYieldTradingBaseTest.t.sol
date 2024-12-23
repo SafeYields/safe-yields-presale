@@ -9,16 +9,23 @@ import { GMXHandler } from "src/trading/handlers/gmx/GMXHandler.sol";
 import { VelaHandler } from "src/trading/handlers/vela/VelaHandler.sol";
 import { ArbSysMock } from "../mocks/ArbSysMock.sol";
 import { IRoleStore } from "test/trading/IRoleStore.sol";
+import { IExchangeRouter } from "src/trading/handlers/gmx/interfaces/IExchangeRouter.sol";
+
 //import { IOrderHandler } from "src/trading/handlers/gmx/interfaces/IOrderHandler.sol";
 import { Test, console } from "forge-std/Test.sol";
-import { OrderHandler } from "test/gmx/contracts/exchange/OrderHandler.sol";
-import { IReferralStorage } from "test/gmx/contracts/referral/IReferralStorage.sol";
-import { RoleStore } from "test/gmx/contracts/role/RoleStore.sol";
-import { EventEmitter } from "test/gmx/contracts/event/EventEmitter.sol";
-import { Oracle } from "test/gmx/contracts/oracle/Oracle.sol";
-import { OrderVault } from "test/gmx/contracts/order/OrderVault.sol";
-import { SwapHandler } from "test/gmx/contracts/swap/SwapHandler.sol";
-import { DataStore } from "test/gmx/contracts/data/DataStore.sol";
+import { OrderHandler, IOrderHandler } from "test/gmx2/contracts/exchange/OrderHandler.sol";
+import { IReferralStorage } from "test/gmx2/contracts/referral/IReferralStorage.sol";
+import { RoleStore } from "test/gmx2/contracts/role/RoleStore.sol";
+import { EventEmitter } from "test/gmx2/contracts/event/EventEmitter.sol";
+import { Oracle } from "test/gmx2/contracts/oracle/Oracle.sol";
+import { OrderVault } from "test/gmx2/contracts/order/OrderVault.sol";
+import { SwapHandler } from "test/gmx2/contracts/swap/SwapHandler.sol";
+import { DataStore } from "test/gmx2/contracts/data/DataStore.sol";
+import { IDepositHandler } from "test/gmx2/contracts/exchange/IDepositHandler.sol";
+import { IWithdrawalHandler } from "test/gmx2/contracts/exchange/IWithdrawalHandler.sol";
+import { IShiftHandler } from "test/gmx2/contracts/exchange/IShiftHandler.sol";
+import { Router } from "test/gmx2/contracts/router/Router.sol";
+import { IExternalHandler } from "test/gmx2/contracts/external/IExternalHandler.sol";
 import { FeeManager } from "../mocks/gmx/FeeManager.sol";
 import { IReader } from "src/trading/handlers/gmx/interfaces/IReader.sol";
 
@@ -44,11 +51,14 @@ contract SafeYieldTradingBaseTest is Test {
     OrderVault orderVault = OrderVault(payable(0x31eF83a530Fde1B38EE9A18093A333D8Bbbc40D5));
     SwapHandler swapHandler = SwapHandler(0xb0c681DE9CB4B75eD0A620c04A958Bc05f4087b7);
     IReferralStorage refStorage = IReferralStorage(0xe6fab3F0c7199b0d34d7FbE83394fc0e0D06e99d);
+    Router router = Router(0x7452c558d45f8afC8c83dAe62C3f8A5BE19c71f6);
+    IDepositHandler depositHandler = IDepositHandler(0x321f3739983CC3E911fd67a83d1ee76238894Bd0);
+    IWithdrawalHandler withdrawalHandler = IWithdrawalHandler(0xA19fA3F0D8E7b7A8963420De504b624167e709B2);
+    IShiftHandler shiftHandler = IShiftHandler(0xEa90EC1228F7D1b3D47D84d1c9D46dBDFEfF7709);
+    IExternalHandler externalHandler = IExternalHandler(0x389CEf541397e872dC04421f166B5Bc2E0b374a5);
+    IReader reader = IReader(0x23D4Da5C7C6902D4C86d551CaE60d5755820df9E);
 
-    IReader public reader = IReader(0x23D4Da5C7C6902D4C86d551CaE60d5755820df9E);
-
-    //IRoleStore roleStore = IRoleStore(0x3c3d99FD298f679DBC2CEcd132b4eC4d0F5e6e72);
-    // IOrderHandler orderHandler = IOrderHandler(0xB0Fc2a48b873da40e7bc25658e5E6137616AC2Ee);
+    IOrderHandler iOrderHandler = IOrderHandler(0xB0Fc2a48b873da40e7bc25658e5E6137616AC2Ee);
 
     GMXHandler gmxHandler;
     VelaHandler velaHandler;
@@ -57,10 +67,16 @@ contract SafeYieldTradingBaseTest is Test {
 
     OrderHandler public orderHandler;
 
+    IExchangeRouter exchangeRouter;
+
     function setUp() public {
         arbitrumFork = vm.createFork("arbitrum_rpc");
 
         vm.selectFork(arbitrumFork);
+
+        orderHandler = new OrderHandler(roleStore, dataStore, eventEmitter, oracle, orderVault, swapHandler, refStorage);
+
+        vm.etch(address(0xB0Fc2a48b873da40e7bc25658e5E6137616AC2Ee), address(orderHandler).code);
 
         arbSysMock = new ArbSysMock();
         vm.etch(address(0x0000000000000000000000000000000000000064), address(arbSysMock).code);
@@ -94,6 +110,8 @@ contract SafeYieldTradingBaseTest is Test {
         );
 
         fundManager.setStrategyController(address(controller));
+
+        exchangeRouter = IExchangeRouter(GMX__EXCHANGE_ROUTER);
 
         vm.stopPrank();
     }
