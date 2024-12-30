@@ -255,6 +255,8 @@ contract SafeYieldPresale is ISafeYieldPreSale, Pausable, Ownable2Step {
      * @param _price The token price to set with 18 decimal of precision
      */
     function setTokenPrice(uint128 _price) external override onlyOwner {
+        if (currentPreSaleState == PreSaleState.Live) revert SYPS__PRESALE_LIVE();
+
         if (_price == 0) revert SYPS__INVALID_TOKEN_PRICE();
 
         tokenPrice = _price;
