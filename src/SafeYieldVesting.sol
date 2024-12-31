@@ -128,13 +128,7 @@ contract SafeYieldVesting is ISafeYieldVesting, Ownable2Step, Pausable, Reentran
         emit VestingAgentApproved(agent, isApproved);
     }
 
-    function unlock_sSayTokens()
-        public
-        override
-        whenNotPaused
-        nonReentrant
-        returns (uint256 stakedSayTokensAvailable)
-    {
+    function unlock_sSayTokens() public override whenNotPaused returns (uint256 stakedSayTokensAvailable) {
         stakedSayTokensAvailable = unlockedStakedSayToken(msg.sender);
 
         if (stakedSayTokensAvailable == 0) return 0;
