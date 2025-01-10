@@ -114,6 +114,7 @@ struct CreateOrderParamsNumbers {
     uint256 executionFee;
     uint256 callbackGasLimit;
     uint256 minOutputAmount;
+    uint256 validFromTime;
 }
 
 struct CreateOrderParamsAddresses {
