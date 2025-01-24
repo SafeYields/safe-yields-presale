@@ -320,6 +320,8 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         staking.stakeFor(ALICE, 2_000e18, true);
         vm.stopPrank();
 
+        skip(30 * 24 * 60 * 60 seconds); //1 month
+
         vm.prank(protocolAdmin);
         configs.setIDO(makeAddr("SafeYieldLP"));
 
@@ -329,6 +331,14 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         vm.startPrank(ALICE);
         staking.unstakeVestedTokens();
         vm.stopPrank();
+
+        uint256 timestamp = block.timestamp - safeYieldVesting.ONE_MONTH();
+
+        uint256 monthsElapsed = (timestamp * 10_000) / safeYieldVesting.ONE_MONTH();
+
+        uint256 unlockedPercentage = (monthsElapsed * 2_000) / 10_000;
+
+        uint256 aliceCalculatedSafe = (unlockedPercentage * 2_000e18) / 10_000;
 
         /**
          * after a month alice can claim 400 Safe tokens
@@ -370,16 +380,18 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         Stake memory aliceStake = staking.getUserStake(ALICE);
         assertEq(aliceStake.stakeAmount, 2_000e18);
 
-        skip(1 weeks);
-
         VestingSchedule memory aliceVestingSchedule1 = safeYieldVesting.getSchedules(ALICE);
         assertEq(aliceVestingSchedule1.start, 0);
         assertEq(aliceVestingSchedule1.totalAmount, 2_000e18);
+
+        skip(30 * 24 * 60 * 60 seconds); //30 days
 
         //after admin sets start time when IDO has ended.
         vm.prank(protocolAdmin);
         configs.setIDO(makeAddr("SafeYieldLP"));
 
+        //432001
+        //2592000
         /**
          * when user is claiming safe the user start time should be equal to vestStart time
          */
@@ -395,10 +407,18 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         staking.unstakeVestedTokens();
         vm.stopPrank();
 
+        uint256 timestamp = block.timestamp - aliceVestingSchedule1.cliff;
+
+        uint256 monthsElapsed = (timestamp * 10_000) / safeYieldVesting.ONE_MONTH();
+
+        uint256 unlockedPercentage = (monthsElapsed * 2_000) / 10_000;
+
+        uint256 aliceCalculatedSafe = (unlockedPercentage * 2_000e18) / 10_000;
+
         VestingSchedule memory aliceVestingSchedule2 = safeYieldVesting.getSchedules(ALICE);
         assertEq(aliceVestingSchedule2.start, configs.vestStartTime());
-        assertEq(aliceVestingSchedule2.amountClaimed, 400e18);
-        assertEq(safeToken.balanceOf(ALICE), 400e18);
+        assertEq(aliceVestingSchedule2.amountClaimed, aliceCalculatedSafe);
+        assertEq(safeToken.balanceOf(ALICE), aliceCalculatedSafe);
     }
 
     function testUnlocksSayAndUnstake() public startEndPresale {
@@ -420,6 +440,8 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         assertEq(aliceVestingSchedule1.start, 0);
         assertEq(aliceVestingSchedule1.totalAmount, 2_000e18);
 
+        skip(30 * 24 * 60 * 60 seconds); //30 days
+
         //after admin sets start time when IDO has ended.
         vm.prank(protocolAdmin);
         configs.setIDO(makeAddr("SafeYieldLP"));
@@ -431,8 +453,16 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
 
         VestingSchedule memory aliceVestingSchedule2 = safeYieldVesting.getSchedules(ALICE);
 
-        assertEq(aliceVestingSchedule2.amountClaimed, 400e18);
-        assertEq(IERC20(address(staking)).balanceOf(ALICE), 400e18);
+        uint256 timestamp = block.timestamp - aliceVestingSchedule1.cliff;
+
+        uint256 monthsElapsed = (timestamp * 10_000) / safeYieldVesting.ONE_MONTH();
+
+        uint256 unlockedPercentage = (monthsElapsed * 2_000) / 10_000;
+
+        uint256 aliceCalculatedSafe = (unlockedPercentage * 2_000e18) / 10_000;
+
+        assertEq(aliceVestingSchedule2.amountClaimed, aliceCalculatedSafe);
+        assertEq(IERC20(address(staking)).balanceOf(ALICE), aliceCalculatedSafe);
         assertEq(safeToken.balanceOf(ALICE), 0);
 
         vm.prank(ALICE);
@@ -761,12 +791,10 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         staking.stakeFor(ALICE, uint128(amount), true);
         vm.stopPrank();
 
-        skip(5 minutes);
+        skip(30 * 24 * 60 * 60 seconds); //1 month
 
         vm.prank(protocolAdmin);
         configs.setIDO(makeAddr("SafeYieldLP"));
-
-        skip(5 minutes);
 
         skip(30 * 24 * 60 * 60 seconds); //1 month
 
@@ -775,12 +803,19 @@ contract SafeYieldStakingTest is SafeYieldBaseTest {
         staking.unstakeVestedTokens();
         vm.stopPrank();
 
+        uint256 timestamp = block.timestamp - safeYieldVesting.ONE_MONTH();
+
+        uint256 monthsElapsed = (timestamp * 10_000) / safeYieldVesting.ONE_MONTH();
+
+        uint256 unlockedPercentage = (monthsElapsed * 2_000) / 10_000;
+
+        uint256 aliceCalculatedSafe = (unlockedPercentage * amount) / 10_000;
+
         /**
          * after a month alice can claim 400 Safe tokens
          * as 20% of 2_000 each month is 400
          */
-        uint256 calculatedSafeBalance = (2_000 * amount) / 10_000;
-        assertEq(safeToken.balanceOf(ALICE), calculatedSafeBalance);
+        assertEq(safeToken.balanceOf(ALICE), aliceCalculatedSafe);
     }
 
     function testFuzz_StakeTokens(address userA, address userB, uint256 amount) public startEndPresale {

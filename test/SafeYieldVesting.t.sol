@@ -52,7 +52,7 @@ contract SafeYieldVestingTest is SafeYieldBaseTest {
         assertEq(aliceSchedule.start, 0);
         assertEq(aliceSchedule.totalAmount, 1_000e18);
         assertEq(aliceSchedule.amountClaimed, 0);
-        assertEq(aliceSchedule.cliff, 0);
+        assertEq(aliceSchedule.cliff, safeYieldVesting.ONE_MONTH());
         assertEq(aliceSchedule.duration, safeYieldVesting.VESTING_DURATION());
     }
 }

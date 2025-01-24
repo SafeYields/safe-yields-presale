@@ -447,7 +447,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         presale.endPresale();
         vm.stopPrank();
 
-        skip(5 minutes);
+        skip(30 * 24 * 60 * 60 seconds); //1 month);
 
         vm.prank(protocolAdmin);
         configs.setIDO(makeAddr("SafeYieldLP"));
@@ -457,12 +457,14 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
          */
         skip(45 * 24 * 60 * 60 seconds); //45 days
 
+        uint256 timeStamp = 45 * 24 * 60 * 60 seconds;
+
         //claim safe tokens
         uint256 aliceCommissionFromBOB = (500 * 1_000e18) / 10_000;
 
         uint256 aliceTotalStaked = aliceCommissionFromBOB + 1_500e18;
 
-        uint256 monthsElapsed = (block.timestamp * 10_000) / safeYieldVesting.ONE_MONTH();
+        uint256 monthsElapsed = (timeStamp * 10_000) / safeYieldVesting.ONE_MONTH();
 
         console.log("Month elapsed - t", monthsElapsed);
 
@@ -574,7 +576,7 @@ contract SafeYieldPresaleTest is SafeYieldBaseTest {
         vm.prank(protocolAdmin);
         presale.endPresale();
 
-        skip(5 minutes);
+        skip(30 * 24 * 60 * 60 seconds); //1 month);
 
         vm.prank(protocolAdmin);
         configs.setIDO(makeAddr("SafeYieldLP"));

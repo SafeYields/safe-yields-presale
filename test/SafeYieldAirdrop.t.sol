@@ -118,22 +118,20 @@ contract SafeYieldAirdropTest is SafeYieldBaseTest {
 
         /**
          * alice claims after 1.5 month
+         * cliff is 1 month
+         * alice can start vesting after the first month
          */
         skip(45 * 24 * 60 * 60 seconds);
 
-        uint256 aliceFirstMonthCalculated = (2_000 * 1_000e18) / 10_000;
-        uint256 aliceSecondMonthCalculated = (1_000 * 1_000e18) / 10_000;
+        uint256 aliceFirsMonthCalculated = (1_000 * 1_000e18) / 10_000;
 
         vm.startPrank(ALICE);
         staking.unstakeVestedTokens();
         vm.stopPrank();
         /**
          * First month:
-         * Alice : 20% * 1_000e18  = 200e18
-         * Second month:
          * Alice : 10% * 1_000e18  = 100e18
-         * total safe tokens = 200e18 + 100e18 = 300e18
          */
-        assertEq(safeToken.balanceOf(ALICE), aliceFirstMonthCalculated + aliceSecondMonthCalculated);
+        assertEq(safeToken.balanceOf(ALICE), aliceFirsMonthCalculated);
     }
 }
