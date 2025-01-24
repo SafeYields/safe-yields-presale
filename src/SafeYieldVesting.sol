@@ -2,16 +2,17 @@
 
 pragma solidity 0.8.26;
 
-import { ISafeYieldStaking } from "./interfaces/ISafeYieldStaking.sol";
-import { ISafeYieldVesting } from "./interfaces/ISafeYieldVesting.sol";
-import { ISafeYieldPreSale } from "./interfaces/ISafeYieldPreSale.sol";
-import { ISafeYieldConfigs } from "./interfaces/ISafeYieldConfigs.sol";
-import { VestingSchedule } from "./types/SafeTypes.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Ownable, Ownable2Step } from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import { ISafeYieldStaking } from "./interfaces/ISafeYieldStaking.sol";
+import { ISafeYieldVesting } from "./interfaces/ISafeYieldVesting.sol";
+import { ISafeYieldPreSale } from "./interfaces/ISafeYieldPreSale.sol";
+import { ISafeYieldConfigs } from "./interfaces/ISafeYieldConfigs.sol";
+import { VestingSchedule } from "./types/SafeTypes.sol";
 
 /**
  * @title SafeYieldAirdrop contract
@@ -23,7 +24,7 @@ import { Ownable, Ownable2Step } from "@openzeppelin/contracts/access/Ownable2St
  *
  * @author 0xm00k
  */
-contract SafeYieldVesting is ISafeYieldVesting, Ownable2Step, Pausable {
+contract SafeYieldVesting is ISafeYieldVesting, Ownable2Step, Pausable, ReentrancyGuard {
     using Math for uint256;
     using SafeERC20 for IERC20;
     /*//////////////////////////////////////////////////////////////
@@ -90,7 +91,7 @@ contract SafeYieldVesting is ISafeYieldVesting, Ownable2Step, Pausable {
      *
      * After IDO is live, use block timestamp as start date for new users.
      */
-    function vestFor(address user, uint256 amount) external override whenNotPaused isValidVestingAgent {
+    function vestFor(address user, uint256 amount) external override whenNotPaused nonReentrant isValidVestingAgent {
         if (user == address(0)) revert SYLU__INVALID_ADDRESS();
         if (amount == 0) revert SYLU__INVALID_AMOUNT();
 

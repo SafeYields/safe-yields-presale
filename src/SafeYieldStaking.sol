@@ -6,6 +6,7 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
 import { Ownable2Step, Ownable } from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -24,7 +25,7 @@ import { ISafeYieldStakingCallback } from "./interfaces/ISafeYieldStakingCallbac
  *
  * @author 0xm00k
  */
-contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
+contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable, ReentrancyGuard {
     using Math for uint256;
     using Math for int256;
     using Math for uint128;
@@ -157,7 +158,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
         emit Staked(user, amount);
     }
 
-    function unstakeVestedTokens() external override canUnstakeVested whenNotPaused {
+    function unstakeVestedTokens() external override whenNotPaused canUnstakeVested nonReentrant {
         uint256 len = callbacks.length();
 
         for (uint256 i; i < len;) {
@@ -218,7 +219,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable {
         emit Staked(msg.sender, amount);
     }
 
-    function unStake(uint128 amount) external override whenNotPaused lockStaking {
+    function unStake(uint128 amount) external override whenNotPaused lockStaking nonReentrant {
         if (amount == 0) revert SYST__INVALID_STAKE_AMOUNT();
         if (userStake[msg.sender].stakeAmount < amount) revert SYST__INSUFFICIENT_STAKE();
 

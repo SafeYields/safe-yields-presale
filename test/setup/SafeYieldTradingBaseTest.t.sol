@@ -38,10 +38,10 @@ contract SafeYieldTradingBaseTest is Test {
     address public VELA_VAULT = 0xC4ABADE3a15064F9E3596943c699032748b13352;
     address public USDC_ARB = 0xaf88d065e77c8cC2239327C5EDb3A432268e5831;
 
-    address public GMX__EXCHANGE_ROUTER = 0x69C527fC77291722b52649E45c838e41be8Bf5d5;
+    address public GMX__EXCHANGE_ROUTER = 0x900173A66dbD345006C51fA35fA3aB760FcD843b;
     address public GMX__ORDER_VAULT = 0x31eF83a530Fde1B38EE9A18093A333D8Bbbc40D5;
     address public GMX__DATA_STORE = 0xFD70de6b91282D8017aA4E741e9Ae325CAb992d8;
-    address public GMX__READER = 0x23D4Da5C7C6902D4C86d551CaE60d5755820df9E;
+    address public GMX__READER = 0x0537C767cDAC0726c76Bb89e92904fe28fd02fE1;
     address public GMX__DEPLOYER = 0xE7BfFf2aB721264887230037940490351700a068;
 
     RoleStore roleStore = RoleStore(0x3c3d99FD298f679DBC2CEcd132b4eC4d0F5e6e72);
@@ -49,16 +49,16 @@ contract SafeYieldTradingBaseTest is Test {
     EventEmitter eventEmitter = EventEmitter(0xC8ee91A54287DB53897056e12D9819156D3822Fb);
     Oracle oracle = Oracle(0xb8fc96d7a413C462F611A7aC0C912c2FE26EAbC4);
     OrderVault orderVault = OrderVault(payable(0x31eF83a530Fde1B38EE9A18093A333D8Bbbc40D5));
-    SwapHandler swapHandler = SwapHandler(0xb0c681DE9CB4B75eD0A620c04A958Bc05f4087b7);
+    SwapHandler swapHandler = SwapHandler(0x9CbB37630d65324af064F28CCD9dF6E667Cb16F1);
     IReferralStorage refStorage = IReferralStorage(0xe6fab3F0c7199b0d34d7FbE83394fc0e0D06e99d);
     Router router = Router(0x7452c558d45f8afC8c83dAe62C3f8A5BE19c71f6);
     IDepositHandler depositHandler = IDepositHandler(0x321f3739983CC3E911fd67a83d1ee76238894Bd0);
     IWithdrawalHandler withdrawalHandler = IWithdrawalHandler(0xA19fA3F0D8E7b7A8963420De504b624167e709B2);
     IShiftHandler shiftHandler = IShiftHandler(0xEa90EC1228F7D1b3D47D84d1c9D46dBDFEfF7709);
     IExternalHandler externalHandler = IExternalHandler(0x389CEf541397e872dC04421f166B5Bc2E0b374a5);
-    IReader reader = IReader(0x23D4Da5C7C6902D4C86d551CaE60d5755820df9E);
+    IReader reader = IReader(0x0537C767cDAC0726c76Bb89e92904fe28fd02fE1);
 
-    IOrderHandler iOrderHandler = IOrderHandler(0xB0Fc2a48b873da40e7bc25658e5E6137616AC2Ee);
+    IOrderHandler iOrderHandler = IOrderHandler(0xe68CAAACdf6439628DFD2fe624847602991A31eB);
 
     GMXHandler gmxHandler;
     VelaHandler velaHandler;
@@ -76,7 +76,7 @@ contract SafeYieldTradingBaseTest is Test {
 
         orderHandler = new OrderHandler(roleStore, dataStore, eventEmitter, oracle, orderVault, swapHandler, refStorage);
 
-        vm.etch(address(0xB0Fc2a48b873da40e7bc25658e5E6137616AC2Ee), address(orderHandler).code);
+        vm.etch(address(0xe68CAAACdf6439628DFD2fe624847602991A31eB), address(orderHandler).code);
 
         arbSysMock = new ArbSysMock();
         vm.etch(address(0x0000000000000000000000000000000000000064), address(arbSysMock).code);

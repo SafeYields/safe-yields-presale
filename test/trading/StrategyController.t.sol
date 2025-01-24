@@ -90,6 +90,8 @@ contract StrategyControllerTest is SafeYieldTradingBaseTest {
                 callbackGasLimit: 0,
                 minOutputAmount: 0,
                 validFromTime: 0
+                minOutputAmount: 0,
+                validFromTime: 0
             }),
             orderType: GMXOrderType.MarketIncrease, // Example: Market increase position
             decreasePositionSwapType: DecreasePositionSwapType.NoSwap, // Example: No swap
