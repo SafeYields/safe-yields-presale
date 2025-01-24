@@ -111,6 +111,7 @@ contract SafeYieldVesting is ISafeYieldVesting, Ownable2Step, Pausable, Reentran
             schedules[user].duration = VESTING_DURATION;
             schedules[user].amountClaimed = 0;
             schedules[user].totalAmount = uint128(amount);
+            schedules[user].cliff = ONE_MONTH;
 
             if (isBeforeIDO) userHasVestedBeforeIDO[user] = true;
         } else {
@@ -170,7 +171,7 @@ contract SafeYieldVesting is ISafeYieldVesting, Ownable2Step, Pausable, Reentran
     function unlockedStakedSayToken(address user) public override returns (uint256 unlocked) {
         VestingSchedule memory schedule = schedules[user];
 
-        if (schedule.totalAmount == 0) {
+        if (schedule.totalAmount == 0 || block.timestamp < schedule.cliff) {
             return 0;
         }
 
@@ -192,10 +193,10 @@ contract SafeYieldVesting is ISafeYieldVesting, Ownable2Step, Pausable, Reentran
             schedule.start = vestStartTime;
         }
 
-        if (block.timestamp >= schedule.start + schedule.duration) {
+        if (block.timestamp >= schedule.cliff + schedule.duration) {
             return schedule.totalAmount;
         } else {
-            uint256 durationPassed = block.timestamp - schedule.start;
+            uint256 durationPassed = block.timestamp - schedule.cliff;
 
             /**
              * Alice total Vested = 1000 tokens
