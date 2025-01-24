@@ -88,7 +88,8 @@ contract StrategyControllerTest is SafeYieldTradingBaseTest {
                 acceptablePrice: 3947042505160081271952838,
                 executionFee: 275023333689000,
                 callbackGasLimit: 0,
-                minOutputAmount: 0
+                minOutputAmount: 0,
+                validFromTime: 0
             }),
             orderType: GMXOrderType.MarketIncrease, // Example: Market increase position
             decreasePositionSwapType: DecreasePositionSwapType.NoSwap, // Example: No swap
@@ -157,7 +158,8 @@ contract StrategyControllerTest is SafeYieldTradingBaseTest {
                 acceptablePrice: 863268000000000000000000000,
                 executionFee: 269195862000000,
                 callbackGasLimit: 0,
-                minOutputAmount: 0
+                minOutputAmount: 0,
+                validFromTime: 0
             }),
             orderType: GMXOrderType.LimitIncrease, // Example: Market increase position
             decreasePositionSwapType: DecreasePositionSwapType.NoSwap, // Example: No swap
@@ -206,7 +208,7 @@ contract StrategyControllerTest is SafeYieldTradingBaseTest {
                 cancellationReceiver: address(0),
                 callbackContract: address(0),
                 uiFeeReceiver: 0xff00000000000000000000000000000000000001,
-                market: 0x0418643F94Ef14917f1345cE5C460C37dE463ef7,
+                market: address(gmxHandler),
                 initialCollateralToken: 0xaf88d065e77c8cC2239327C5EDb3A432268e5831,
                 swapPath: swapPath
             }),
@@ -217,7 +219,8 @@ contract StrategyControllerTest is SafeYieldTradingBaseTest {
                 acceptablePrice: 3947042505160081271952838,
                 executionFee: 275023333689000,
                 callbackGasLimit: 0,
-                minOutputAmount: 0
+                minOutputAmount: 0,
+                validFromTime: 0
             }),
             orderType: GMXOrderType.MarketDecrease, // Example: Market increase position
             decreasePositionSwapType: DecreasePositionSwapType.NoSwap, // Example: No swap
@@ -369,7 +372,8 @@ contract StrategyControllerTest is SafeYieldTradingBaseTest {
                 acceptablePrice: 3947042505160081271952838,
                 executionFee: 275023333689000,
                 callbackGasLimit: 0,
-                minOutputAmount: 0
+                minOutputAmount: 0,
+                validFromTime: 0
             }),
             orderType: GMXOrderType.MarketIncrease, // Example: Market increase position
             decreasePositionSwapType: DecreasePositionSwapType.NoSwap, // Example: No swap

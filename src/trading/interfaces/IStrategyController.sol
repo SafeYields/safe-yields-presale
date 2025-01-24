@@ -7,7 +7,15 @@ import { IStrategyFundManager } from "./IStrategyFundManager.sol";
 interface IStrategyController {
     function executeStrategy(address strategyHandler, uint256 amount) external;
 
-    function openStrategy() external;
+    function openStrategy(
+        address strategyHandler,
+        address market,
+        uint256 amount,
+        uint256 executionFee,
+        bool isLong,
+        OrderType orderType,
+        bytes memory exchangeData
+    ) external payable;
 
     function closeStrategy(uint256 strategyId) external;
 
@@ -19,6 +27,8 @@ interface IStrategyController {
         uint256 tpUpdate,
         uint256 leverageUpdate
     ) external;
+
+    function exitStrategy(address strategyHandler, uint128 strategyId, bytes memory exchangeData) external payable;
 
     function strategyCount() external view returns (uint128);
 
