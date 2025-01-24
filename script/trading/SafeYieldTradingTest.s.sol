@@ -52,7 +52,7 @@ contract SafeYieldTradingTest is Script {
 
         CreateOrderParams memory longCreateParams = CreateOrderParams({
             addresses: CreateOrderParamsAddresses({
-                receiver: GMX_HANDLER,
+                receiver: address(GMX_HANDLER),
                 cancellationReceiver: address(0),
                 callbackContract: address(0),
                 uiFeeReceiver: 0xff00000000000000000000000000000000000001,
@@ -92,7 +92,7 @@ contract SafeYieldTradingTest is Script {
         //     OrderType.MARKET,
         //     longData
         // );
-        controller.exitStrategy(GMX_HANDLER, strategyId, exchangeData);
+        // controller.exitStrategy(GMX_HANDLER, strategyId, exchangeData);
 
         vm.stopBroadcast();
     }
