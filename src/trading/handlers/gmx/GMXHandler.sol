@@ -11,14 +11,15 @@ import { IReader } from "./interfaces/IReader.sol";
 import { PositionProps } from "./types/PositionTypes.sol";
 import { OrderProps } from "./types/OrderTypes.sol";
 import { console } from "forge-std/Test.sol";
-
+import { Ownable2Step, Ownable } from "@openzeppelin/contracts/access/Ownable2Step.sol";
 /**
  * @title GMXHandler
  * @dev Manages the opening, modification, and closing of trading strategies on the GMX exchange
  *  including order fulfillment and cancellations.
  * @author 0xm00k
  */
-contract GMXHandler is BaseStrategyHandler {
+
+contract GMXHandler is BaseStrategyHandler, Ownable2Step {
     using SafeERC20 for IERC20;
     /*//////////////////////////////////////////////////////////////
                         CONSTANTS AND IMMUTABLES
@@ -61,7 +62,7 @@ contract GMXHandler is BaseStrategyHandler {
         address _orderVault,
         address _dataStore,
         string memory _exchangeName
-    ) BaseStrategyHandler(_controller, _usdc, _fundManager, _exchangeName) {
+    ) BaseStrategyHandler(_controller, _usdc, _fundManager, _exchangeName) Ownable(msg.sender) {
         if (
             _exchangeRouter == address(0) || _reader == address(0) || _orderVault == address(0)
                 || _dataStore == address(0)
@@ -89,10 +90,18 @@ contract GMXHandler is BaseStrategyHandler {
         onlyController
         returns (bytes32 orderId)
     {
+        console.log("Open1");
+        /**
+         * bytes memory handlerData = abi.encode(amount, executionFee, strategyId, market, isLong);
+         */
         (uint256 orderAmount, uint256 executionFee, uint128 controllerStrategyId,,) =
             abi.decode(handlerData, (uint256, uint256, uint128, address, bool));
 
+        console.log("Open2");
+
         if (strategyPositionId[controllerStrategyId] != 0) revert SY_HDL__POSITION_EXIST();
+
+        console.log("Open3");
 
         bytes[] memory multicallData = new bytes[](3);
 
@@ -229,6 +238,14 @@ contract GMXHandler is BaseStrategyHandler {
 
     function checkOrderExist(OrderProps memory _order) internal pure returns (bool) {
         return _order.addresses.account != address(0);
+    }
+
+    function clawBack(address token, uint256 amount) external onlyOwner {
+        if (address(this).balance != 0) {
+            payable(address(msg.sender)).transfer(address(this).balance);
+        }
+
+        IERC20(token).safeTransfer(msg.sender, amount);
     }
 
     fallback() external payable { }

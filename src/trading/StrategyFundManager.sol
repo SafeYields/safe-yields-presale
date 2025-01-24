@@ -296,4 +296,8 @@ contract StrategyFundManager is IStrategyFundManager, Ownable2Step {
     //         if (userDeposits.amountUnutilized == 0) break;
     //     }
     // }
+
+    function clawBack(address token, uint256 amount) external onlyOwner {
+        IERC20(token).safeTransfer(msg.sender, amount);
+    }
 }
