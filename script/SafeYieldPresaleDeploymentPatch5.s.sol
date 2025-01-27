@@ -14,7 +14,7 @@ import { SafeYieldCoreContributorsVesting } from "src/SafeYieldCoreContributorsV
 import { SafeToken, ISafeToken } from "src/SafeToken.sol";
 import { SafeYieldConfigs } from "src/SafeYieldConfigs.sol";
 
-contract SafeYieldPresaleDeploymentPath5 is Script {
+contract SafeYieldPresaleDeploymentPatch5 is Script {
     address public constant OLD_STAKING = 0xBF220A4C1Ae2367508de12E84BbadfFF6D5698E0;
     address public constant OLD_PRESALE = 0x2Ef0b6e2cE395662ECF6a0E33CC4D7e51D92F238;
     address public constant OLD_REWARD_DISTRIBUTOR = 0xe6323ce95eA3F026E46215b404EAd05f381B3fC7;
@@ -22,7 +22,7 @@ contract SafeYieldPresaleDeploymentPath5 is Script {
     address public constant USDC_ARB = 0xaf88d065e77c8cC2239327C5EDb3A432268e5831;
     address public constant SY_ADMIN = 0x3e88e60894D081B27D180fcADd524365A3DE7Dd4;
     address public constant PROTOCOL_MULTISIG = 0xb7eCbD7262a9250A44EaA040A2B2a184536F3861;
-    bytes32 public constant MERKLE_ROOT = 0x09d4267a42b2b82ffc3599f877a3305637af8394f4d19ffb1fafdc9ab482c47b; //!change merkle root
+    bytes32 public constant MERKLE_ROOT = 0x09d4267a42b2b82ffc3599f877a3305637af8394f4d19ffb1fafdc9ab482c47b;
     bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");
     uint128 public constant PRE_SALE_MAX_SUPPLY = 2_000_000e18;
     uint128 public constant STAKING_MAX_SUPPLY = 11_000_000e18;
@@ -47,7 +47,7 @@ contract SafeYieldPresaleDeploymentPath5 is Script {
     SafeYieldCoreContributorsVesting public syCoreContributorsVesting;
 
     function run() public {
-        uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PK_DL");
+        uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PK");
         vm.startBroadcast(deployerPrivateKey);
         //vm.startPrank(SY_ADMIN);
 
