@@ -12,6 +12,8 @@ interface ISafeYieldStaking {
 
     function updateRewards() external;
 
+    function stakeForMany(address[] calldata users, uint128[] calldata amounts, bool Vesting) external;
+
     function stakeFor(address user, uint128 amount, bool Vesting) external;
 
     function addCallback(address callback) external;

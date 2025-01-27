@@ -121,7 +121,15 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable, R
         safeYieldConfigs = ISafeYieldConfigs(safeYieldConfig);
     }
 
-    function stakeFor(address user, uint128 amount, bool Vesting) external override whenNotPaused isValidStakingAgent {
+    function stakeForMany(address[] calldata users, uint128[] calldata amounts, bool Vesting) external override {
+        uint256 len = users.length;
+
+        for (uint256 i; i < len; i++) {
+            stakeFor(users[i], amounts[i], Vesting);
+        }
+    }
+
+    function stakeFor(address user, uint128 amount, bool Vesting) public override whenNotPaused isValidStakingAgent {
         if (user == address(0)) revert SYST__INVALID_ADDRESS();
         if (amount == 0) revert SYST__INVALID_STAKE_AMOUNT();
 
@@ -130,7 +138,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable, R
         uint256 len = callbacks.length();
 
         for (uint256 i; i < len;) {
-            ISafeYieldStakingCallback(callbacks.at(i)).handleActionBefore(user, SafeYieldStaking.stakeFor.selector);
+            ISafeYieldStakingCallback(callbacks.at(i)).handleActionBefore(user, this.stakeFor.selector);
             unchecked {
                 ++i;
             }
@@ -149,7 +157,7 @@ contract SafeYieldStaking is ISafeYieldStaking, Ownable2Step, ERC20, Pausable, R
         }
 
         for (uint256 i; i < len;) {
-            ISafeYieldStakingCallback(callbacks.at(i)).handleActionAfter(user, SafeYieldStaking.stakeFor.selector);
+            ISafeYieldStakingCallback(callbacks.at(i)).handleActionAfter(user, this.stakeFor.selector);
             unchecked {
                 ++i;
             }
