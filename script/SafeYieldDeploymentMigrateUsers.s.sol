@@ -32,42 +32,39 @@ contract SafeYieldDeploymentMigrateUsers is Script {
         //stake for OldStaking users
         _stakeForMultipleUsers(safeAllocated);
 
-        //assertions
-        _assertMultipleUserStakeForNewStaking();
-
         vm.stopBroadcast();
     }
 
     function _stakeForMultipleUsers(uint256 totalStakedSay) internal {
-        address[] memory userAddresses = getOldStakingUserAddresses();
-
         //approve total amounts to stake
         sayToken.approve(address(syStaking), totalStakedSay);
 
-        uint256 numOfUsers = userAddresses.length;
+        (address[] memory userAddresses, uint128[] memory amounts) = getOldStakingUserAddresses();
 
-        for (uint256 i = 0; i < numOfUsers; i++) {
-            //stake for them
-            syStaking.stakeFor(userAddresses[i], oldStaking.getUserStake(userAddresses[i]).stakeAmount, true);
-        }
+        syStaking.stakeForMany(userAddresses, amounts, true);
+
+        _assertMultipleUserStakeForNewStaking(userAddresses);
     }
 
-    function _assertMultipleUserStakeForNewStaking() internal view {
-        address[] memory userAddresses = getOldStakingUserAddresses();
+    function _assertMultipleUserStakeForNewStaking(address[] memory users) internal view {
+        uint256 numOfUsers = users.length;
 
-        uint256 numOfUsers = userAddresses.length;
-
-        for (uint256 i = 0; i < numOfUsers; i++) {
+        for (uint256 i; i < numOfUsers; i++) {
             //assert new stake amounts
-            require(syStaking.getUserStake(userAddresses[i]).stakeAmount > 0, "Invalid user stake amount");
+            require(syStaking.getUserStake(users[i]).stakeAmount > 0, "Invalid user stake amount");
         }
 
         //say token config
         require(sayToken.totalSupply() == 20_000_000e18, "Total supply not reached");
     }
 
-    function getOldStakingUserAddresses() internal pure returns (address[] memory userAddresses) {
+    function getOldStakingUserAddresses()
+        internal
+        view
+        returns (address[] memory userAddresses, uint128[] memory userStakeAmounts)
+    {
         userAddresses = new address[](36);
+        userStakeAmounts = new uint128[](36);
 
         userAddresses[0] = 0x82368563257B056Ae3d5eB9434C8AA4E0FA3526E;
         userAddresses[1] = 0xE5ce4Cf297919e96aDf2D32B05a93C42A36013Bd;
@@ -105,5 +102,9 @@ contract SafeYieldDeploymentMigrateUsers is Script {
         userAddresses[33] = 0x3BD358b35b6Ff3cADf01Ac118b3d21Ee62E56C0C;
         userAddresses[34] = 0xEeE9Ef09B9D9dE0B8aA47A781bA7aCF87818C05f;
         userAddresses[35] = 0x12f6471bF62193467e0985CAD1747d077dfc0723;
+
+        for (uint256 j; j < userAddresses.length; j++) {
+            userStakeAmounts[j] = oldStaking.getUserStake(userAddresses[j]).stakeAmount;
+        }
     }
 }
