@@ -46,7 +46,7 @@ abstract contract SafeYieldBaseTest is Test {
     address public NOT_ADMIN = makeAddr("notAdmin");
     address public NOT_MINTER = makeAddr("notMinter");
     address public USDC_WHALE = 0x4B16c5dE96EB2117bBE5fd171E4d203624B014aa;
-    bytes32 public merkleRoot = 0x09d4267a42b2b82ffc3599f877a3305637af8394f4d19ffb1fafdc9ab482c47b;
+    bytes32 public merkleRoot = 0xb7b9e833fe6dc0e8ab113332f7baf8bef9f5324c02d529e0ff0b11f9d53020d9;
 
     SafeYieldRewardDistributorMock public distributor;
     SafeYieldVesting public safeYieldVesting;
